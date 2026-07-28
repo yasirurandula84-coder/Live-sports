@@ -1,3 +1,4 @@
+
 // --- DATABASE & STATE MANAGEMENT ---
 const categoriesData = [
     { id: 'cricket', name: 'Cricket', icon: 'fa-baseball-bat-ball', count: 3, image: 'https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=600&auto=format&fit=crop' },
@@ -9,21 +10,21 @@ const matchesData = {
     cricket: [
         { 
             id: 'lpl-01', 
-            title: 'LPL 2026: Live Stream (Tokenized)', 
+            title: 'LPL 2026: Tokenized Live Stream', 
             time: 'Live Now', 
             status: 'LIVE', 
-            viewers: 14230, 
-            // ඔබ ළඟ ඇති Token ලින්ක් එක මෙතැනට දාන්න
+            viewers: 15420, 
             streamUrl: 'http://9937675.j13m.cc/live/fouaadkhadi/E7JWd8N9/1410913.ts?token=ShoJV0NcEgMVDABSXFIDVABXA1cAVAgFBAwAAgADWwZUXlcDBQUHDwEaSUEXREVVBwg6DFUXC1UHBABfCQZOR0RLBERvXVQbDRpcWlcHAQdTR0lHRVxcAREPAVEAAFBRCABVDxwWQFBTGl9BXQMEA1NXR0kTUEkQVkdeB1RqBgBHUQJTEg5eTFtUSUELXmhUAwgEC1UXC0YDFxxEUUYSRwtWFFpcGBJbXkwXAhBVFQpEUlFUARcdRlBaRQhMRxtHCxotfRIYElxPTAANF1lYXkRfRxFCFx1GWkZvFF1GFhdUWQxTQhYKGwcaSUEJUU9vBQoLC1RWRQ1cW0NEAhdTRx0aDFleXURWRWcVCgASDRJUUV1XBxdM', 
             tournament: 'Lanka Premier League' 
         },
-        { id: 'ind-sl', title: 'India vs Sri Lanka - 1st ODI', time: 'Tomorrow, 02:30 PM', status: 'UPCOMING', viewers: 0, streamUrl: '', tournament: 'International Tour' }
+        { id: 'ind-sl', title: 'India vs Sri Lanka - 1st ODI', time: 'Tomorrow, 02:30 PM', status: 'UPCOMING', viewers: 0, streamUrl: '', tournament: 'International Tour' },
+        { id: 'psl-02', title: 'Lahore Qalandars vs Karachi Kings', time: 'Live Now', status: 'LIVE', viewers: 9120, streamUrl: '', tournament: 'Pakistan Super League' }
     ],
     football: [
-        { id: 'UCL-final', title: 'Real Madrid vs Manchester City', time: 'Live Now', status: 'LIVE', viewers: 45200, streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', tournament: 'UEFA Champions League' }
+        { id: 'UCL-final', title: 'Real Madrid vs Manchester City', time: 'Live Now', status: 'LIVE', viewers: 48500, streamUrl: '', tournament: 'UEFA Champions League' }
     ],
     formula1: [
-        { id: 'f1-monaco', title: 'Monaco Grand Prix - Main Race', time: 'Live Now', status: 'LIVE', viewers: 29100, streamUrl: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8', tournament: 'F1 World Championship' }
+        { id: 'f1-monaco', title: 'Monaco Grand Prix - Main Race', time: 'Live Now', status: 'LIVE', viewers: 31200, streamUrl: '', tournament: 'F1 World Championship' }
     ]
 };
 
@@ -52,40 +53,42 @@ const router = {
 
 function renderHome() {
     return `
-        <div class="space-y-12">
-            <div class="relative rounded-3xl overflow-hidden glass-effect p-8 sm:p-12 border border-slate-800 shadow-2xl">
-                <div class="absolute inset-0 bg-gradient-to-r from-darkBg via-transparent to-accentPurple/20 z-0"></div>
-                <div class="relative z-10 max-w-2xl space-y-6">
-                    <span class="bg-accentNeon/10 text-accentNeon px-4 py-1.5 rounded-full text-xs font-bold tracking-widest uppercase border border-accentNeon/20">Ultimate Streaming Hub</span>
-                    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-none">Stream Live Matches in <span class="bg-gradient-to-r from-accentNeon to-purple-400 bg-clip-text text-transparent">Ultra HD</span></h1>
-                    <p class="text-slate-400 text-base sm:text-lg">Tokenized stream player with real-time community interaction.</p>
-                    <button onclick="router.navigate('categories')" class="bg-gradient-to-r from-accentNeon to-emerald-400 text-darkBg font-bold px-8 py-4 rounded-xl hover:opacity-90 transition shadow-lg shadow-accentNeon/20 flex items-center space-x-3">
+        <div style="display: flex; flex-direction: column; gap: 48px;">
+            <!-- Hero Banner -->
+            <div class="hero-banner glass-effect">
+                <div style="position: absolute; inset: 0; background: linear-gradient(90deg, #090d16 0%, transparent 70%); z-index: 1;"></div>
+                <div class="hero-content">
+                    <span class="hero-tag">Ultimate Streaming Hub</span>
+                    <h1>Stream Live Matches in <span class="gradient-text">Ultra HD</span></h1>
+                    <p>Experience zero-lag tokenized sports streaming with lightning-fast servers and interactive live chat.</p>
+                    <button onclick="router.navigate('categories')" class="btn-primary">
                         <span>Explore Matches</span>
                         <i class="fa-solid fa-arrow-right"></i>
                     </button>
                 </div>
             </div>
 
+            <!-- Categories Section -->
             <div>
-                <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-2xl font-bold tracking-tight">Top Categories</h2>
-                    <button onclick="router.navigate('categories')" class="text-accentNeon text-sm font-semibold hover:underline">View All</button>
+                <div class="section-title-row">
+                    <h2>Top Categories</h2>
+                    <button onclick="router.navigate('categories')" class="view-all-btn">View All</button>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="grid-3">
                     ${categoriesData.map(cat => `
-                        <div onclick="router.navigate('category-detail', '${cat.id}')" class="group relative rounded-2xl overflow-hidden h-60 cursor-pointer glass-effect border border-slate-800 hover:border-accentNeon/50 transition duration-300">
-                            <img src="${cat.image}" alt="${cat.name}" class="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition duration-500 opacity-40">
-                            <div class="absolute inset-0 bg-gradient-to-t from-darkBg via-darkBg/40 to-transparent"></div>
-                            <div class="absolute bottom-0 left-0 right-0 p-6 flex items-center justify-between">
+                        <div onclick="router.navigate('category-detail', '${cat.id}')" class="category-card glass-effect">
+                            <img src="${cat.image}" alt="${cat.name}">
+                            <div class="overlay"></div>
+                            <div class="content">
                                 <div>
-                                    <div class="w-10 h-10 rounded-xl bg-accentNeon/20 backdrop-blur-md flex items-center justify-center text-accentNeon mb-3">
+                                    <div class="cat-icon-box">
                                         <i class="fa-solid ${cat.icon}"></i>
                                     </div>
-                                    <h3 class="text-xl font-bold text-white">${cat.name}</h3>
-                                    <p class="text-xs text-slate-400 mt-1">${cat.count} Active Tournaments</p>
+                                    <h3 style="font-size: 20px; font-weight: 700; color: #fff;">${cat.name}</h3>
+                                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">${cat.count} Tournaments Active</p>
                                 </div>
-                                <div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-accentNeon group-hover:text-darkBg transition">
-                                    <i class="fa-solid fa-chevron-right text-sm"></i>
+                                <div class="cat-arrow">
+                                    <i class="fa-solid fa-chevron-right" style="font-size: 12px;"></i>
                                 </div>
                             </div>
                         </div>
@@ -98,16 +101,21 @@ function renderHome() {
 
 function renderCategoriesList() {
     return `
-        <div class="space-y-8">
-            <h1 class="text-3xl font-extrabold">All Categories</h1>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <div style="display: flex; flex-direction: column; gap: 32px;">
+            <h1 style="font-size: 32px; font-weight: 800;">All Categories</h1>
+            <div class="grid-3">
                 ${categoriesData.map(cat => `
-                    <div onclick="router.navigate('category-detail', '${cat.id}')" class="group relative rounded-2xl overflow-hidden h-60 cursor-pointer glass-effect border border-slate-800 hover:border-accentNeon/50 transition">
-                        <img src="${cat.image}" alt="${cat.name}" class="absolute inset-0 w-full h-full object-cover opacity-40 group-hover:scale-105 transition">
-                        <div class="absolute inset-0 bg-gradient-to-t from-darkBg to-transparent"></div>
-                        <div class="absolute bottom-0 left-0 right-0 p-6">
-                            <h3 class="text-2xl font-bold text-white">${cat.name}</h3>
-                            <p class="text-sm text-accentNeon mt-1">${cat.count} Matches Available</p>
+                    <div onclick="router.navigate('category-detail', '${cat.id}')" class="category-card glass-effect">
+                        <img src="${cat.image}" alt="${cat.name}">
+                        <div class="overlay"></div>
+                        <div class="content">
+                            <div>
+                                <h3 style="font-size: 24px; font-weight: 700; color: #fff;">${cat.name}</h3>
+                                <p style="font-size: 13px; color: #00ffcc; margin-top: 4px; font-weight: 600;">${cat.count} Matches Available</p>
+                            </div>
+                            <div class="cat-arrow">
+                                <i class="fa-solid fa-chevron-right" style="font-size: 12px;"></i>
+                            </div>
                         </div>
                     </div>
                 `).join('')}
@@ -121,35 +129,40 @@ function renderCategoryDetail(catId) {
     const category = categoriesData.find(c => c.id === catId);
 
     return `
-        <div class="space-y-8">
-            <div class="flex items-center space-x-4">
-                <button onclick="router.navigate('home')" class="w-10 h-10 rounded-xl glass-effect flex items-center justify-center hover:bg-slate-800 transition">
+        <div style="display: flex; flex-direction: column; gap: 32px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button onclick="router.navigate('home')" class="back-btn glass-effect" style="color: #fff;">
                     <i class="fa-solid fa-arrow-left"></i>
+                    <span>Back</span>
                 </button>
                 <div>
-                    <h1 class="text-3xl font-extrabold">${category ? category.name : 'Matches'}</h1>
-                    <p class="text-sm text-slate-400">Select a match card below to watch stream</p>
+                    <h1 style="font-size: 30px; font-weight: 800;">${category ? category.name : 'Matches'}</h1>
+                    <p style="font-size: 14px; color: #94a3b8; margin-top: 2px;">Select a match card below to watch stream & join chat</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid-3">
                 ${matches.map(match => `
-                    <div onclick="router.navigate('watch', {catId: '${catId}', matchId: '${match.id}'})" class="glass-effect rounded-2xl p-6 border border-slate-800 hover:border-accentNeon/40 cursor-pointer transition group relative flex flex-col justify-between">
+                    <div onclick="router.navigate('watch', {catId: '${catId}', matchId: '${match.id}'})" class="match-card glass-effect">
                         <div>
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wider ${match.status === 'LIVE' ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'bg-slate-800 text-slate-400'}">
-                                    ${match.status === 'LIVE' ? '<i class="fa-solid fa-circle text-[8px] animate-pulse mr-1.5 text-red-500"></i> LIVE NOW' : match.status}
+                            <div class="flex-between">
+                                <span class="match-status ${match.status === 'LIVE' ? 'status-live' : 'status-upcoming'}">
+                                    ${match.status === 'LIVE' ? '<i class="fa-solid fa-circle" style="font-size: 6px;"></i> LIVE' : match.status}
                                 </span>
-                                <span class="text-xs text-slate-400 font-medium">${match.tournament}</span>
+                                <span style="font-size: 12px; color: #94a3b8; font-weight: 600;">${match.tournament}</span>
                             </div>
-                            <h3 class="text-lg font-bold text-slate-100 group-hover:text-accentNeon transition mb-3">${match.title}</h3>
-                            <p class="text-sm text-slate-400"><i class="fa-regular fa-clock mr-2"></i>${match.time}</p>
+                            <h3 class="match-title">${match.title}</h3>
+                            <div class="match-meta">
+                                <i class="fa-regular fa-clock"></i>
+                                <span>${match.time}</span>
+                            </div>
                         </div>
-                        <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between text-sm">
-                            <span class="text-slate-400"><i class="fa-solid fa-users mr-2 text-accentNeon"></i>${match.viewers.toLocaleString()} Watching</span>
-                            <span class="font-bold text-accentNeon group-hover:translate-x-1 transition flex items-center space-x-1">
-                                <span>Watch</span> <i class="fa-solid fa-arrow-right text-xs"></i>
-                            </span>
+                        <div class="match-footer">
+                            <span style="color: #94a3b8;"><i class="fa-solid fa-users" style="color: #00ffcc; margin-right: 6px;"></i>${match.viewers.toLocaleString()} Watching</span>
+                            <div class="watch-link">
+                                <span>Watch Live</span>
+                                <i class="fa-solid fa-arrow-right" style="font-size: 12px;"></i>
+                            </div>
                         </div>
                     </div>
                 `).join('')}
@@ -162,50 +175,50 @@ function renderWatchRoom(params) {
     const match = matchesData[params.catId].find(m => m.id === params.matchId);
 
     return `
-        <div class="space-y-6">
-            <div class="flex items-center justify-between">
-                <button onclick="router.navigate('category-detail', '${params.catId}')" class="glass-effect px-4 py-2 rounded-xl text-sm font-medium hover:bg-slate-800 transition flex items-center space-x-2">
+        <div style="display: flex; flex-direction: column; gap: 24px;">
+            <div class="flex-between">
+                <button onclick="router.navigate('category-detail', '${params.catId}')" class="back-btn glass-effect" style="color: #fff;">
                     <i class="fa-solid fa-arrow-left"></i>
                     <span>Back to Matches</span>
                 </button>
-                <div class="glass-effect px-4 py-2 rounded-xl text-sm font-medium flex items-center space-x-3 border border-red-500/20">
-                    <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-                    <span class="text-slate-300">Live Viewers: <strong id="live-viewer-count" class="text-white">${match.viewers.toLocaleString()}</strong></span>
+                <div class="glass-effect" style="padding: 8px 16px; border-radius: 12px; font-size: 14px; display: flex; align-items: center; gap: 10px; border-color: rgba(239, 68, 68, 0.3);">
+                    <span class="live-dot"></span>
+                    <span style="color: #cbd5e1;">Live Viewers: <strong id="live-viewer-count" style="color: #fff;">${match.viewers.toLocaleString()}</strong></span>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <!-- Player Section -->
-                <div class="lg:col-span-2 space-y-4">
-                    <div class="relative rounded-3xl overflow-hidden glass-effect border border-slate-800 shadow-2xl aspect-video bg-black flex items-center justify-center">
-                        <video id="video-player" class="w-full h-full object-cover" controls autoplay></video>
+            <div class="watch-grid">
+                <!-- Video Stream Section -->
+                <div style="display: flex; flex-direction: column; gap: 16px;">
+                    <div class="video-container">
+                        <video id="live-player" controls autoplay muted></video>
                     </div>
                     <div>
-                        <span class="text-xs uppercase font-bold tracking-widest text-accentNeon">${match.tournament}</span>
-                        <h1 class="text-2xl font-bold mt-1">${match.title}</h1>
+                        <span style="font-size: 11px; font-weight: 700; color: #00ffcc; text-transform: uppercase; letter-spacing: 1px;">${match.tournament}</span>
+                        <h1 style="font-size: 24px; font-weight: 800; margin-top: 4px;">${match.title}</h1>
                     </div>
                 </div>
 
-                <!-- Chat Box Section -->
-                <div class="glass-effect rounded-3xl border border-slate-800 flex flex-col h-[550px] lg:h-auto overflow-hidden">
-                    <div class="p-4 border-b border-slate-800 bg-slate-900/40 flex items-center justify-between">
-                        <h3 class="font-bold text-sm tracking-wide flex items-center space-x-2">
-                            <i class="fa-solid fa-comments text-accentNeon"></i>
+                <!-- Live Chat Section -->
+                <div class="chat-box-wrapper glass-effect">
+                    <div class="chat-header">
+                        <div style="display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px;">
+                            <i class="fa-solid fa-comments" style="color: #00ffcc;"></i>
                             <span>Live Match Chat</span>
-                        </h3>
-                        <span class="text-[10px] bg-accentNeon/10 text-accentNeon px-2 py-0.5 rounded font-bold">REAL-TIME</span>
+                        </div>
+                        <span style="font-size: 10px; background: rgba(0,255,204,0.15); color: #00ffcc; padding: 3px 8px; border-radius: 6px; font-weight: 700;">REAL-TIME</span>
                     </div>
-                    
-                    <div id="chat-messages" class="flex-grow p-4 overflow-y-auto space-y-3 text-sm">
-                        <div class="bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
-                            <span class="font-bold text-accentNeon text-xs">System Admin</span>
-                            <p class="text-slate-300 text-xs mt-0.5">Stream is active. Enjoy the match!</p>
+
+                    <div id="chat-messages" class="chat-messages">
+                        <div class="chat-bubble">
+                            <span class="username">System Admin</span>
+                            <p style="color: #cbd5e1; font-size: 13px;">Welcome to the match chat! Keep comments respectful and enjoy the game.</p>
                         </div>
                     </div>
 
-                    <form id="chat-form" onsubmit="handleChatSubmit(event)" class="p-3 border-t border-slate-800 bg-slate-900/60 flex items-center space-x-2">
-                        <input type="text" id="chat-input" placeholder="Say something..." autocomplete="off" class="flex-grow bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-accentNeon transition">
-                        <button type="submit" class="bg-accentNeon text-darkBg font-bold px-4 py-2.5 rounded-xl text-xs hover:opacity-90 transition">
+                    <form id="chat-form" onsubmit="handleChatSubmit(event)" class="chat-form">
+                        <input type="text" id="chat-input" placeholder="Type your message..." autocomplete="off" class="chat-input">
+                        <button type="submit" class="chat-send-btn">
                             <i class="fa-solid fa-paper-plane"></i>
                         </button>
                     </form>
@@ -217,42 +230,42 @@ function renderWatchRoom(params) {
 
 function renderAbout() {
     return `
-        <div class="max-w-3xl mx-auto space-y-8 glass-effect p-8 sm:p-12 rounded-3xl border border-slate-800">
-            <h1 class="text-4xl font-extrabold">About VORTEX LIVE</h1>
-            <p class="text-slate-300 leading-relaxed">
-                VORTEX LIVE supports direct tokenized streaming sources for seamless high-definition sports playback.
+        <div class="glass-effect" style="max-width: 750px; margin: 0 auto; padding: 48px; border-radius: 24px; display: flex; flex-direction: column; gap: 24px;">
+            <h1 style="font-size: 36px; font-weight: 800;" class="gradient-text">About VORTEX LIVE</h1>
+            <p style="color: #cbd5e1; line-height: 1.7; font-size: 16px;">
+                VORTEX LIVE is an advanced next-generation sports streaming platform built to stream high-definition events globally without latency issues, utilizing secure token-based streaming protocols.
             </p>
         </div>
     `;
 }
 
-// --- STREAM INITIALIZER (HLS & TS SUPPORT) ---
+// --- PLAYER INIT & INTERACTION ---
 
 function initPlayer(params) {
     const match = matchesData[params.catId].find(m => m.id === params.matchId);
-    const video = document.getElementById('video-player');
+    const video = document.getElementById('live-player');
     const videoSrc = match.streamUrl;
 
-    if (Hls.isSupported() && (videoSrc.endsWith('.m3u8') || videoSrc.includes('.ts'))) {
+    if (!videoSrc) return;
+
+    if (Hls.isSupported() && (videoSrc.includes('.ts') || videoSrc.includes('.m3u8'))) {
         const hls = new Hls();
         hls.loadSource(videoSrc);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
-            video.play().catch(e => console.log("Auto-play blocked:", e));
+            video.play().catch(e => console.log("Autoplay blocked:", e));
         });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // Safari සහ iOS සඳහා natice support එක
         video.src = videoSrc;
         video.addEventListener('loadedmetadata', function() {
             video.play();
         });
     } else {
-        // සාමාන්‍ය Direct MP4 හෝ වෙනත් ලිපිනයන් සඳහා
         video.src = videoSrc;
-        video.play().catch(e => console.log("Auto-play blocked:", e));
+        video.play().catch(e => console.log("Autoplay blocked:", e));
     }
 
-    // Viewer count fluctuation simulation
+    // Viewers fluctuation
     setInterval(() => {
         const countEl = document.getElementById('live-viewer-count');
         if (countEl) {
@@ -270,14 +283,14 @@ function handleChatSubmit(event) {
     if(!msg) return;
 
     const chatContainer = document.getElementById('chat-messages');
-    const randomNames = ['CryptoKing', 'StrikerX', 'MatchLover', 'VortexUser', 'LionHeart'];
+    const randomNames = ['CryptoKing', 'StrikerX', 'MatchFan', 'VortexUser', 'LionHeart', 'SuperStriker'];
     const randomName = randomNames[Math.floor(Math.random() * randomNames.length)];
 
     const bubble = document.createElement('div');
-    bubble.className = 'bg-slate-900/60 p-2.5 rounded-xl border border-slate-800';
+    bubble.className = 'chat-bubble';
     bubble.innerHTML = `
-        <span class="font-bold text-accentNeon text-xs">${randomName}</span>
-        <p class="text-slate-300 text-xs mt-0.5">${escapeHtml(msg)}</p>
+        <span class="username">${randomName}</span>
+        <p style="color: #cbd5e1; font-size: 13px;">${escapeHtml(msg)}</p>
     `;
     
     chatContainer.appendChild(bubble);
