@@ -244,26 +244,55 @@ function renderAbout() {
 function initPlayer(params) {
     const match = matchesData[params.catId].find(m => m.id === params.matchId);
     const video = document.getElementById('live-player');
-    const videoSrc = match.streamUrl;
+    const rawVideoSrc = match.streamUrl;
 
-    if (!videoSrc) return;
+    if (!rawVideoSrc) return;
 
-    if (Hls.isSupported() && (videoSrc.includes('.ts') || videoSrc.includes('.m3u8'))) {
-        const hls = new Hls();
+    // Browser එකේ CORS සහ Headers ප්‍රශ්න මඟහරවා ගැනීමට Proxy එකක් හරහා යැවීම
+    // (ඔබට අවශ්‍ය නම් ඔබේම small proxy එකක් හෝ public cors proxy එකක් පාවිච්චි කළ හැක)
+    const videoSrc = rawVideoSrc; 
+
+    if (Hls.isSupported()) {
+        const hls = new Hls({
+            xhrSetup: function (xhr, url) {
+                // මෙහිදී බ්‍රව්සරයට දිය හැකි headers සකස් කෙරේ
+                xhr.setRequestHeader('Referer', 'https://www.fancode.com/');
+                xhr.setRequestHeader('Icy-MetaData', '1');
+            }
+        });
+        
         hls.loadSource(videoSrc);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
             video.play().catch(e => console.log("Autoplay blocked:", e));
+        });
+        
+        hls.on(Hls.Events.ERROR, function(event, data) {
+            console.error("HLS Error:", data);
+            if (data.fatal) {
+                switch(data.type) {
+                    case Hls.ErrorTypes.NetworkError:
+                        console.log("Network error try to recover...");
+                        hls.startLoad();
+                        break;
+                    case Hls.ErrorTypes.MediaError:
+                        console.log("Media error try to recover...");
+                        hls.recoverMediaError();
+                        break;
+                    default:
+                        hls.destroy();
+                        break;
+                }
+            }
         });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = videoSrc;
         video.addEventListener('loadedmetadata', function() {
             video.play();
         });
-    } else {
-        video.src = videoSrc;
-        video.play().catch(e => console.log("Autoplay blocked:", e));
     }
+}
+
 
     // Viewers fluctuation
     setInterval(() => {
