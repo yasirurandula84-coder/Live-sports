@@ -33,67 +33,73 @@ const router = {
     navigate: function(page, param = null) {
         window.scrollTo(0, 0);
         const app = document.getElementById('app');
+        if (!app) return;
         
-        if (page === 'home') {
-            app.innerHTML = renderHome();
-        } else if (page === 'categories') {
-            app.innerHTML = renderCategoriesList();
-        } else if (page === 'category-detail') {
-            app.innerHTML = renderCategoryDetail(param);
-        } else if (page === 'watch') {
-            app.innerHTML = renderWatchRoom(param);
-            initPlayer(param);
-        } else if (page === 'about') {
-            app.innerHTML = renderAbout();
+        try {
+            if (page === 'home') {
+                app.innerHTML = renderHome();
+            } else if (page === 'categories') {
+                app.innerHTML = renderCategoriesList();
+            } else if (page === 'category-detail') {
+                app.innerHTML = renderCategoryDetail(param);
+            } else if (page === 'watch') {
+                app.innerHTML = renderWatchRoom(param);
+                initPlayer(param);
+            } else if (page === 'about') {
+                app.innerHTML = renderAbout();
+            }
+        } catch (error) {
+            console.error("Navigation Error:", error);
+            app.innerHTML = `<div style="padding: 40px; text-align: center; color: #ef4444;"><h2>Something went wrong!</h2><p style="color: #94a3b8; margin-top: 10px;">Please check console for details.</p></div>`;
         }
     }
 };
 
-// --- RENDER VIEWS ---
+// --- RENDER CATEGORY DETAIL VIEW (Safe Check Added) ---
+function renderCategoryDetail(catId) {
+    // catId එක undefined වුවහොත් හෝ වැරදි වුවහොත් පළමු category එක ගැනීමට
+    const safeCatId = catId || 'cricket';
+    const matches = matchesData[safeCatId] || [];
+    const category = categoriesData.find(c => c.id === safeCatId) || categoriesData[0];
 
-function renderHome() {
     return `
-        <div style="display: flex; flex-direction: column; gap: 48px;">
-            <!-- Hero Banner -->
-            <div class="hero-banner glass-effect">
-                <div style="position: absolute; inset: 0; background: linear-gradient(90deg, #090d16 0%, transparent 70%); z-index: 1;"></div>
-                <div class="hero-content">
-                    <span class="hero-tag">Ultimate Streaming Hub</span>
-                    <h1>Stream Live Matches in <span class="gradient-text">Ultra HD</span></h1>
-                    <p>Experience zero-lag tokenized sports streaming with lightning-fast servers and interactive live chat.</p>
-                    <button onclick="router.navigate('categories')" class="btn-primary">
-                        <span>Explore Matches</span>
-                        <i class="fa-solid fa-arrow-right"></i>
-                    </button>
+        <div style="display: flex; flex-direction: column; gap: 32px;">
+            <div style="display: flex; align-items: center; gap: 16px;">
+                <button onclick="router.navigate('home')" class="back-btn glass-effect" style="color: #fff;">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Back</span>
+                </button>
+                <div>
+                    <h1 style="font-size: 30px; font-weight: 800;">${category ? category.name : 'Matches'}</h1>
+                    <p style="font-size: 14px; color: #94a3b8; margin-top: 2px;">Select a match card below to watch stream & join chat</p>
                 </div>
             </div>
 
-            <!-- Categories Section -->
-            <div>
-                <div class="section-title-row">
-                    <h2>Top Categories</h2>
-                    <button onclick="router.navigate('categories')" class="view-all-btn">View All</button>
-                </div>
-                <div class="grid-3">
-                    ${categoriesData.map(cat => `
-                        <div onclick="router.navigate('category-detail', '${cat.id}')" class="category-card glass-effect">
-                            <img src="${cat.image}" alt="${cat.name}">
-                            <div class="overlay"></div>
-                            <div class="content">
-                                <div>
-                                    <div class="cat-icon-box">
-                                        <i class="fa-solid ${cat.icon}"></i>
-                                    </div>
-                                    <h3 style="font-size: 20px; font-weight: 700; color: #fff;">${cat.name}</h3>
-                                    <p style="font-size: 12px; color: #94a3b8; margin-top: 4px;">${cat.count} Tournaments Active</p>
-                                </div>
-                                <div class="cat-arrow">
-                                    <i class="fa-solid fa-chevron-right" style="font-size: 12px;"></i>
-                                </div>
+            <div class="grid-3">
+                ${matches.length > 0 ? matches.map(match => `
+                    <div onclick="router.navigate('watch', {catId: '${safeCatId}', matchId: '${match.id}'})" class="match-card glass-effect">
+                        <div>
+                            <div class="flex-between">
+                                <span class="match-status ${match.status === 'LIVE' ? 'status-live' : 'status-upcoming'}">
+                                    ${match.status === 'LIVE' ? '<i class="fa-solid fa-circle" style="font-size: 6px;"></i> LIVE' : match.status}
+                                </span>
+                                <span style="font-size: 12px; color: #94a3b8; font-weight: 600;">${match.tournament}</span>
+                            </div>
+                            <h3 class="match-title">${match.title}</h3>
+                            <div class="match-meta">
+                                <i class="fa-regular fa-clock"></i>
+                                <span>${match.time}</span>
                             </div>
                         </div>
-                    `).join('')}
-                </div>
+                        <div class="match-footer">
+                            <span style="color: #94a3b8;"><i class="fa-solid fa-users" style="color: #00ffcc; margin-right: 6px;"></i>${match.viewers ? match.viewers.toLocaleString() : 0} Watching</span>
+                            <div class="watch-link">
+                                <span>Watch Live</span>
+                                <i class="fa-solid fa-arrow-right" style="font-size: 12px;"></i>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') : '<p style="color: #94a3b8;">No matches available in this category right now.</p>'}
             </div>
         </div>
     `;
