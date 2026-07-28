@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VORTEX LIVE - Premium Streaming</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBg: '#090d16',
+                        cardBg: '#131b2e',
+                        accentNeon: '#00ffcc',
+                        accentPurple: '#8b5cf6'
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Outfit', sans-serif; }
+        .glass-effect {
+            background: rgba(19, 27, 46, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow {
+            box-shadow: 0 0 20px rgba(0, 255, 204, 0.2);
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00ffcc; }
+    </style>
+</head>
+<body class="bg-darkBg text-slate-100 min-h-screen flex flex-col selection:bg-accentNeon selection:text-darkBg">
+
+    <!-- HEADER / NAVBAR -->
+    <header class="glass-effect sticky top-0 z-50 border-b border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="router.navigate('home')">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-accentNeon to-accentPurple flex items-center justify-center neon-glow">
+                    <i class="fa-solid fa-bolt text-darkBg text-xl font-bold"></i>
+                </div>
+                <span class="text-2xl font-800 tracking-wider bg-gradient-to-r from-white via-slate-200 to-accentNeon bg-clip-text text-transparent">VORTEX<span class="text-accentNeon">LIVE</span></span>
+            </div>
+            <nav class="hidden md:flex items-center space-x-8 font-medium">
+                <button onclick="router.navigate('home')" class="hover:text-accentNeon transition text-slate-300">Home</button>
+                <button onclick="router.navigate('categories')" class="hover:text-accentNeon transition text-slate-300">Categories</button>
+                <button onclick="router.navigate('about')" class="hover:text-accentNeon transition text-slate-300">About Us</button>
+            </nav>
+            <div class="flex items-center space-x-4">
+                <div class="flex items-center space-x-2 bg-slate-900/80 px-3 py-1.5 rounded-full border border-slate-800">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Live System</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN DYNAMIC CONTENT CONTAINER -->
+    <main id="app" class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Dynamic Content Injected via JavaScript -->
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="glass-effect border-t border-slate-800 mt-16 py-8 text-center text-sm text-slate-400">
+        <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <p>&copy; 2026 VORTEX LIVE. All rights reserved.</p>
+            <div class="flex space-x-6">
+                <a href="#" class="hover:text-accentNeon transition"><i class="fa-brands fa-telegram text-lg"></i></a>
+                <a href="#" class="hover:text-accentNeon transition"><i class="fa-brands fa-discord text-lg"></i></a>
+                <a href="#" class="hover:text-accentNeon transition"><i class="fa-brands fa-twitter text-lg"></i></a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script src="script.js"></script>
+</body>
+</html>
