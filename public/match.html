@@ -87,13 +87,13 @@
         </div>
     </div>
 
-    <!-- Socket.io client script -->
+        <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const matchId = urlParams.get('id') || 'default-match';
         const matchTitle = urlParams.get('title') || 'Live Match';
-        const directLink = urlParams.get('link') || ''; // e.g. https://example.com/stream/index.m3u8
+        const directLink = urlParams.get('link') || '';
 
         document.getElementById('matchTitle').innerText = matchTitle;
 
@@ -108,7 +108,6 @@
                 video.play().catch(e => console.log("Auto-play blocked:", e));
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            // For Safari native support
             video.src = directLink;
             video.addEventListener('loadedmetadata', function() {
                 video.play().catch(e => console.log("Auto-play blocked:", e));
@@ -125,6 +124,7 @@
         const playerContainer = document.getElementById('playerContainer');
         const progressBar = document.getElementById('progressBar');
         const progressContainer = document.getElementById('progressContainer');
+        const controlsOverlay = document.getElementById('controlsOverlay');
 
         // Play / Pause
         playPauseBtn.addEventListener('click', () => {
@@ -199,6 +199,32 @@
             }
         });
 
+        // --- Auto-Hide Controls Logic (תත්පර 3 කින් Controls අතුරුදහන් වීම) ---
+        let hideTimeout;
+
+        function showControls() {
+            controlsOverlay.classList.remove('hidden');
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                if (!video.paused) {
+                    controlsOverlay.classList.add('hidden');
+                }
+            }, 3000); // තත්පර 3 කින් අතුරුදහන් වේ
+        }
+
+        playerContainer.addEventListener('mousemove', showControls);
+        playerContainer.addEventListener('touchstart', showControls);
+        video.addEventListener('click', () => {
+            if (video.paused) {
+                video.play();
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            } else {
+                video.pause();
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                showControls(); // Pause කළ විට controls දිගටම පෙන්වයි
+            }
+        });
+
 
         // Username & Chat Authentication Logic
         let username = localStorage.getItem('chat_username');
@@ -256,5 +282,7 @@
             });
         }
     </script>
+
+    
 </body>
 </html>
