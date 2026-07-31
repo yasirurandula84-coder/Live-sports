@@ -160,6 +160,7 @@
         loadStream('server1');
 
         // Server එකෙන් Link එක ආපු ගමන් Hls හරහා Play කිරීම සහ Quality List එක පිරවීම
+                // Server එකෙන් Link එක ආපු ගමන් Hls හරහා Play කිරීම
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
@@ -180,13 +181,15 @@
                     video.play().catch(e => console.log("Auto-play blocked:", e));
                     
                     const qualitySelect = document.getElementById('qualitySelect');
-                    qualitySelect.innerHTML = '<option value="-1">Auto</option>';
-
-                    // Stream එකේ ඇති resolutions (Levels) අනුව options එකතු කිරීම
-                    data.levels.forEach((level, index) => {
-                        const height = level.height ? `${level.height}p` : `Quality ${index + 1}`;
-                        qualitySelect.innerHTML += `<option value="${index}">${height}</option>`;
-                    });
+                    
+                    // අපිට අවශ්‍ය Custom Quality Options ටික මෙතැනින් දාගන්න පුළුවන්
+                    qualitySelect.innerHTML = `
+                        <option value="-1">Auto (HD)</option>
+                        <option value="1080">1080p (Full HD)</option>
+                        <option value="720">720p (HD)</option>
+                        <option value="480">480p (SD)</option>
+                        <option value="360">360p</option>
+                    `;
                 });
 
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -194,10 +197,35 @@
                 video.addEventListener('loadedmetadata', function() {
                     video.play().catch(e => console.log("Auto-play blocked:", e));
                 });
-                // Safari වලට native Hls support එක නිසා quality dropdown එක hide කිරීම
-                document.getElementById('qualitySelect').style.display = 'none';
             }
         });
+
+        // යුසර් Quality එක වෙනස් කළ විට ක්‍රියාත්මක වන function එක
+        function changeQuality(qualityValue) {
+            if (currentHls) {
+                const q = parseInt(qualityValue);
+                if (q === -1) {
+                    // Auto mode
+                    currentHls.currentLevel = -1;
+                } else {
+                    // Hls.js වල තියෙන levels වලින් අදාළ height එකට ගැළපෙන එක තෝරා ගැනීම
+                    let levelIndex = -1;
+                    currentHls.levels.forEach((level, index) => {
+                        if (level.height === q) {
+                            levelIndex = index;
+                        }
+                    });
+
+                    if (levelIndex !== -1) {
+                        currentHls.currentLevel = levelIndex;
+                    } else {
+                        // ස්ට්‍රීම් එකේ ඒ resolution එක නැත්නම්, Hls වලටම ಬಿඩිම (Auto)
+                        console.log("Requested quality level not found in stream, using auto.");
+                    }
+                }
+            }
+        }
+
 
         // Server මාරු කිරීමට
         function switchServer(serverType) {
