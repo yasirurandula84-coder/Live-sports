@@ -386,22 +386,24 @@ body {
     cursor: pointer;
 }
 
-/* Custom Modern Video Player Styles */
+/* Custom Modern Video Player Styles - Responsive Fixed */
 .custom-video-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 16/9;
+    max-width: 100%;
+    aspect-ratio: 16 / 9;
     background: #000;
-    border-radius: 20px;
+    border-radius: 16px;
     overflow: hidden;
     border: 1px solid var(--border-color);
     box-shadow: 0 15px 35px rgba(0,0,0,0.6);
 }
 
-#youtubePlayer {
+.custom-video-container video {
     width: 100%;
     height: 100%;
-    pointer-events: none; /* Allows overlay controls to work seamlessly */
+    object-fit: contain; /* Prevents video distortion and oversized stretching */
+    display: block;
 }
 
 .video-controls-overlay {
@@ -410,22 +412,18 @@ body {
     left: 0;
     width: 100%;
     background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
-    padding: 20px 20px 15px 20px;
+    padding: 15px 15px 10px 15px;
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    opacity: 0.9;
+    gap: 10px;
+    opacity: 0.95;
     transition: opacity 0.3s ease;
-}
-
-.custom-video-container:hover .video-controls-overlay {
-    opacity: 1;
 }
 
 /* Timeline Progress Bar */
 .progress-bar-container {
     width: 100%;
-    height: 6px;
+    height: 5px;
     background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
     cursor: pointer;
@@ -438,7 +436,6 @@ body {
     width: 0%;
     background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
     border-radius: 4px;
-    transition: width 0.1s linear;
 }
 
 /* Controls Layout */
@@ -451,50 +448,60 @@ body {
 .left-controls, .right-controls {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 8px;
 }
 
 .control-btn {
     background: rgba(255, 255, 255, 0.1);
     border: 1px solid rgba(255, 255, 255, 0.15);
     color: white;
-    padding: 8px 12px;
-    border-radius: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     transition: all 0.2s ease;
 }
 
 .control-btn:hover {
     background: var(--primary-color);
     border-color: var(--primary-color);
-    box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
 }
 
 /* Volume Slider Box */
 .volume-box {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .volume-box input[type="range"] {
-    width: 80px;
+    width: 60px;
     accent-color: var(--primary-color);
     cursor: pointer;
 }
 
-@media (max-width: 600px) {
-    .volume-box input[type="range"] {
-        width: 50px;
+/* Mobile Screen Adjustments */
+@media (max-width: 768px) {
+    .custom-video-container {
+        border-radius: 12px;
     }
+    
     .control-btn {
-        padding: 6px 8px;
-        font-size: 12px;
+        padding: 5px 8px;
+        font-size: 11px;
+    }
+
+    .volume-box input[type="range"] {
+        width: 40px;
+    }
+
+    .video-controls-overlay {
+        padding: 10px 10px 8px 10px;
+        gap: 8px;
     }
 }
 
