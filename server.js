@@ -11,7 +11,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const matchViewers = {};
 
-// GitHub Private Repo එකෙන් matches.json එක fetch කරගැනීම
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
@@ -67,10 +66,7 @@ io.on('connection', (socket) => {
         socket.emit('secureStreamLink', directLink);
     });
 
-    // (අනෙකුත් chat සහ viewer count කෝඩ් ටික මෙතනටම පහළින් දිගටම තියාගන්න)
-});
-
-
+    // 3. Match Join සහ Chat සඳහා අවශ්‍ය Events
     socket.on('joinMatch', ({ matchId, username }) => {
         socket.join(matchId);
         socket.username = username;
@@ -92,6 +88,7 @@ io.on('connection', (socket) => {
         });
     });
 
+    // 4. User Disconnect වීම
     socket.on('disconnect', () => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
