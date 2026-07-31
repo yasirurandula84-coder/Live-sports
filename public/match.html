@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Watch Live Match - StreamX</title>
     <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -30,12 +32,38 @@
         
         <div class="watch-container">
             <div>
-                <div class="video-wrapper">
-                    <!-- Direct Video / Embed Link iframe -->
-                    <iframe id="livePlayer" src="" allowfullscreen></iframe>
+                <!-- Custom Modern Video Player Wrapper -->
+                <div class="custom-video-container" id="playerContainer">
+                    <div id="youtubePlayer"></div>
+                    
+                    <!-- Custom Controls Overlay -->
+                    <div class="video-controls-overlay">
+                        <!-- Progress / Timeline Bar -->
+                        <div class="progress-bar-container" id="progressContainer">
+                            <div class="progress-bar" id="progressBar"></div>
+                        </div>
+
+                        <div class="controls-row">
+                            <div class="left-controls">
+                                <button class="control-btn" id="playPauseBtn"><i class="fa-solid fa-pause"></i></button>
+                                <button class="control-btn" id="skipBackwardBtn"><i class="fa-solid fa-rotate-left"></i> 10s</button>
+                                <button class="control-btn" id="skipForwardBtn"><i class="fa-solid fa-rotate-right"></i> 10s</button>
+                                
+                                <div class="volume-box">
+                                    <button class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-high"></i></button>
+                                    <input type="range" id="volumeSlider" min="0" max="100" value="100">
+                                </div>
+                            </div>
+
+                            <div class="right-controls">
+                                <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="match-info-bar">
-                    <span id="nowPlayingText" style="font-weight: 600;">Streaming in HD Quality</span>
+                    <span id="nowPlayingText" style="font-weight: 600; color: var(--accent-color);">● HD Live Stream</span>
                     <div class="viewers-count">
                         <span>👀</span> <span id="viewersCount">0</span> Watching Now
                     </div>
@@ -56,19 +84,146 @@
         </div>
     </div>
 
+    <!-- YouTube IFrame API -->
+    <script src="https://www.youtube.com/iframe_api"></script>
     <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const matchId = urlParams.get('id') || 'default-match';
         const matchTitle = urlParams.get('title') || 'Live Match';
-        const directLink = urlParams.get('link') || '';
+        const directLink = urlParams.get('link') || ''; // e.g. https://www.youtube.com/embed/VIDEO_ID
 
         document.getElementById('matchTitle').innerText = matchTitle;
-        document.getElementById('livePlayer').src = directLink;
 
+        // Extract YouTube Video ID from the link string
+        function extractYouTubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : 'dQw4w9WgXcQ'; // Fallback ID if empty
+        }
+
+        const videoId = extractYouTubeId(directLink);
+
+        // YouTube Player Initialization
+        let player;
+        function onYouTubeIframeAPIReady() {
+            player = new YouTube.Player('youtubePlayer', {
+                height: '100%',
+                width: '100%',
+                videoId: videoId,
+                playerVars: {
+                    'autoplay': 1,
+                    'controls': 0, // Disable default youtube controls
+                    'rel': 0,
+                    'showinfo': 0,
+                    'modestbranding': 1
+                },
+                events: {
+                    'onReady': onPlayerReady
+                }
+            });
+        }
+
+        function onPlayerReady(event) {
+            event.target.playVideo();
+            setupCustomControls();
+        }
+
+        // Custom Player Controls Logic
+        function setupCustomControls() {
+            const playPauseBtn = document.getElementById('playPauseBtn');
+            const skipBackBtn = document.getElementById('skipBackwardBtn');
+            const skipFwdBtn = document.getElementById('skipForwardBtn');
+            const muteBtn = document.getElementById('muteBtn');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const fullscreenBtn = document.getElementById('fullscreenBtn');
+            const playerContainer = document.getElementById('playerContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressContainer = document.getElementById('progressContainer');
+
+            // Play / Pause
+            playPauseBtn.addEventListener('click', () => {
+                const state = player.getPlayerState();
+                if (state === YT.PlayerState.PLAYING) {
+                    player.pauseVideo();
+                    playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                } else {
+                    player.playVideo();
+                    playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+                }
+            });
+
+            // 10s Skip Backward
+            skipBackBtn.addEventListener('click', () => {
+                const currentTime = player.getCurrentTime();
+                player.seekTo(currentTime - 10, true);
+            });
+
+            // 10s Skip Forward
+            skipFwdBtn.addEventListener('click', () => {
+                const currentTime = player.getCurrentTime();
+                player.seekTo(currentTime + 10, true);
+            });
+
+            // Volume Slider
+            volumeSlider.addEventListener('input', (e) => {
+                const vol = e.target.value;
+                player.setVolume(vol);
+                if (vol == 0) {
+                    muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                } else {
+                    muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                }
+            });
+
+            // Mute / Unmute
+            muteBtn.addEventListener('click', () => {
+                if (player.isMuted()) {
+                    player.unMute();
+                    muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                    volumeSlider.value = player.getVolume();
+                } else {
+                    player.mute();
+                    muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                    volumeSlider.value = 0;
+                }
+            });
+
+            // Fullscreen
+            fullscreenBtn.addEventListener('click', () => {
+                if (!document.fullscreenElement) {
+                    playerContainer.requestFullscreen().catch(err => {
+                        alert(`Error attempting to enable fullscreen: ${err.message}`);
+                    });
+                } else {
+                    document.exitFullscreen();
+                }
+            });
+
+            // Update Progress Bar continuously
+            setInterval(() => {
+                if (player && player.getDuration) {
+                    const current = player.getCurrentTime();
+                    const duration = player.getDuration();
+                    if(duration > 0) {
+                        const percent = (current / duration) * 100;
+                        progressBar.style.width = `${percent}%`;
+                    }
+                }
+            }, 500);
+
+            // Seek on Progress Bar click
+            progressContainer.addEventListener('click', (e) => {
+                const rect = progressContainer.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                const duration = player.getDuration();
+                player.seekTo(duration * pos, true);
+            });
+        }
+
+        // Username & Chat Authentication Logic
         let username = localStorage.getItem('chat_username');
-
         const modal = document.getElementById('usernameModal');
         const usernameInput = document.getElementById('usernameInput');
         const joinBtn = document.getElementById('joinChatBtn');
@@ -93,15 +248,12 @@
         function initSocket(user) {
             const socket = io();
 
-            // Join match room
             socket.emit('joinMatch', { matchId, username: user });
 
-            // Viewer count update
             socket.on('viewerCount', (count) => {
                 document.getElementById('viewersCount').innerText = count;
             });
 
-            // Chat messages handler
             const chatForm = document.getElementById('chatForm');
             const msgInput = document.getElementById('msgInput');
             const chatMessages = document.getElementById('chatMessages');
