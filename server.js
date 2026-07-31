@@ -51,20 +51,26 @@ io.on('connection', (socket) => {
     });
 
     // 2. Match.html එකෙන් නිශ්චිත මැච් එකක link එක ඉල්ලුවම රහසිගතව දීම
-    socket.on('requestStreamLink', async (matchId) => {
+        // Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම
+    socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
         
-        // අදාළ match id එක හොයාගෙන link එක ගැනීම
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
-                directLink = found.link;
+                // serverType එක අනුව link1 හෝ link2 ලබා දීම
+                if (serverType === 'server2') {
+                    directLink = found.link2 || found.link1; // link2 නැත්නම් link1 දෙන්න
+                } else {
+                    directLink = found.link1;
+                }
                 break;
             }
         }
         socket.emit('secureStreamLink', directLink);
     });
+
 
     // 3. Match Join සහ Chat සඳහා අවශ්‍ය Events
     socket.on('joinMatch', ({ matchId, username }) => {
