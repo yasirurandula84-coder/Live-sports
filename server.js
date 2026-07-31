@@ -34,9 +34,8 @@ io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
     // 1. Category.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම (Link එක හැංගිලා යයි, අනෙක් විස්තර පේනවා)
-    socket.on('requestAllMatches', async () => {
+        socket.on('requestAllMatches', async () => {
         const allData = await getMatchesDataFromGitHub();
-        // පරිශීලකයින්ට සල්ලි ගෙවපු .m3u8 link එක පේන්නේ නැති වෙන්න, links ටික අයින් කරලා යවනවා
         const publicData = {};
         for (let cat in allData) {
             publicData[cat] = allData[cat].map(match => ({
@@ -44,7 +43,8 @@ io.on('connection', (socket) => {
                 title: match.title,
                 team1: match.team1,
                 team2: match.team2,
-                status: match.status
+                status: match.status,
+                thumbnail: match.thumbnail // මෙන්න මේක අලුතින් එකතු කරන්න
             }));
         }
         socket.emit('allMatchesData', publicData);
