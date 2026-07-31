@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matches - StreamX</title>
     <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Thumbnail එක සහ Card එක ලස්සනට Set කරගන්න CSS Styles */
         .match-card {
@@ -79,12 +81,25 @@
             } else {
                 grid.innerHTML = ''; // Clear loading/old items
                 list.forEach(match => {
+                    // මැච් එක LIVE නම් LIVE Badge එකත්, Upcoming නම් Time එකත් පෙන්වීම
+                    let statusBadge = '';
+                    if (match.status === 'LIVE') {
+                        statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
+                    } else {
+                        statusBadge = `
+                            <div style="position:absolute; top:10px; right:10px; display:flex; gap:6px; align-items:center;">
+                                ${match.time ? `<span style="background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:600; border-radius:4px; border:1px solid rgba(255,255,255,0.2);"><i class="fa-regular fa-clock" style="color:var(--accent-color);"></i> ${match.time}</span>` : ''}
+                                <span style="background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>
+                            </div>
+                        `;
+                    }
+
                     grid.innerHTML += `
                         <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
-                            <!-- උඩින් Thumbnail එක සහ Live/Upcoming Badge එක -->
+                            <!-- උඩින් Thumbnail එක සහ Status/Time Badge එක -->
                             <div class="match-thumb-container">
                                 <img src="${match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX'}" alt="Match Thumbnail">
-                                ${match.status === 'LIVE' ? '<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>' : '<span style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.7); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>'}
+                                ${statusBadge}
                             </div>
                             <!-- යටින් මැච් එකේ Details ටික -->
                             <div class="match-details">
