@@ -87,32 +87,56 @@
         </div>
     </div>
 
-        <!-- Socket.io client script -->
+    <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Right-click සහ F12 Block කිරීම (Security)
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function(e) {
+            if (e.keyCode == 123 || 
+                (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+                (e.ctrlKey && e.keyCode == 85)) {
+                return false;
+            }
+        };
+
         const urlParams = new URLSearchParams(window.location.search);
         const matchId = urlParams.get('id') || 'default-match';
         const matchTitle = urlParams.get('title') || 'Live Match';
-        const directLink = urlParams.get('link') || '';
 
         document.getElementById('matchTitle').innerText = matchTitle;
 
         const video = document.getElementById('hlsPlayer');
+        const socket = io();
 
-        // Initialize HLS.js for .m3u8 links
-        if (Hls.isSupported()) {
-            const hls = new Hls();
-            hls.loadSource(directLink);
-            hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play().catch(e => console.log("Auto-play blocked:", e));
-            });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = directLink;
-            video.addEventListener('loadedmetadata', function() {
-                video.play().catch(e => console.log("Auto-play blocked:", e));
-            });
-        }
+        // === [මෙන්න වැදගත්ම තැන: Server එකෙන් Secure Link එක ඉල්ලීම] ===
+        socket.emit('requestStreamLink', matchId);
+
+        // Server එකෙන් Link එක ආපු ගමන් Player එකට දාල Play කිරීම
+        socket.on('secureStreamLink', (directLink) => {
+            if (!directLink) {
+                alert('Stream link not found, offline, or unauthorized!');
+                return;
+            }
+
+            // Initialize HLS.js with the secure link
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(directLink);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => console.log("Auto-play blocked:", e));
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = directLink;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(e => console.log("Auto-play blocked:", e));
+                });
+            }
+        });
+
+        // (අනෙකුත් Player controls, Chat සහ Viewers count කෝඩ් ටික වෙනස් කරන්න ඕන නැහැ, ඒවා එහෙම්මම තියෙන්න දෙන්න)
+
 
         // Custom Player Controls Logic
         const playPauseBtn = document.getElementById('playPauseBtn');
