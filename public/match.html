@@ -35,12 +35,11 @@
         <div class="watch-container">
             <div>
                 <!-- Custom Modern Video Player Wrapper -->
-                <div class="custom-video-container" id="playerContainer">
-                    <!-- Standard HTML5 Video Tag for m3u8 -->
+                               <div class="custom-video-container" id="playerContainer">
                     <video id="hlsPlayer" playsinline autoplay></video>
                     
-                    <!-- Custom Controls Overlay -->
-                    <div class="video-controls-overlay">
+                    <!-- Custom Controls Overlay with ID -->
+                    <div class="video-controls-overlay" id="controlsOverlay">
                         <!-- Progress / Timeline Bar -->
                         <div class="progress-bar-container" id="progressContainer">
                             <div class="progress-bar" id="progressBar"></div>
@@ -64,6 +63,7 @@
                         </div>
                     </div>
                 </div>
+
 
                 <div class="match-info-bar">
                     <span id="nowPlayingText" style="font-weight: 600; color: var(--accent-color);">● HD Live Stream (.m3u8)</span>
