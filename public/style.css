@@ -504,4 +504,27 @@ body {
         gap: 8px;
     }
 }
+/* Smooth Fade Animation for Auto-hide Controls */
+.video-controls-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: linear-gradient(to top, rgba(0,0,0,0.9), transparent);
+    padding: 15px 15px 10px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.4s ease, visibility 0.4s ease;
+}
+
+/* When hidden class is added */
+.video-controls-overlay.hidden {
+    opacity: 0;
+    visibility: hidden;
+    cursor: none;
+}
+
 
