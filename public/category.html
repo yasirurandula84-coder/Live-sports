@@ -26,7 +26,7 @@
         .match-thumb-container {
             position: relative;
             width: 100%;
-            height: 160px; /* Thumbnail එකේ උස */
+            height: 200px; /* Thumbnail එකේ උස */
             background: #000;
         }
         .match-thumb-container img {
@@ -74,7 +74,7 @@
 
         // Server එකෙන් ඩේටා ආපු ගමන් screen එකට load කිරීම
         socket.on('allMatchesData', (matchesData) => {
-            console.log("Received Matches Data:", matchesData); // F12 -> Console එකේ ඩේටා බලන්න
+            console.log("Received Matches Data:", matchesData);
             const list = matchesData[cat] || [];
 
             if(list.length === 0) {
@@ -83,31 +83,34 @@
                 grid.innerHTML = ''; // Clear loading/old items
                 list.forEach(match => {
                     let statusBadge = '';
+                    let timeDetailsHtml = '';
                     
                     // මැච් එක LIVE දැයි පරීක්ෂා කිරීම
                     if (match.status && match.status.toUpperCase() === 'LIVE') {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
-                        // time එක ලබා ගැනීම (match.time හෝ වෙනත් නමක් වුවත් වැඩ කිරීමට)
-                        let matchTime = match.time || match.timing || '';
-                        let timeHtml = matchTime ? `<span style="background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:600; border-radius:4px; border:1px solid rgba(255,255,255,0.2);"><i class="fa-regular fa-clock" style="color:var(--accent-color);"></i> ${matchTime}</span>` : '';
+                        statusBadge = `<span style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>`;
                         
-                        statusBadge = `
-                            <div style="position:absolute; top:10px; right:10px; display:flex; gap:6px; align-items:center;">
-                                ${timeHtml}
-                                <span style="background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>
-                            </div>
-                        `;
+                        // Details කොටසින් යටට Time එක සහ Icon එක පෙන්වීම
+                        let matchTime = match.time || match.timing || '';
+                        if (matchTime) {
+                            timeDetailsHtml = `
+                                <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                                    <i class="fa-regular fa-clock" style="color: var(--accent-color);"></i>
+                                    <span>Starts at: <strong style="color: #fff;">${matchTime}</strong></span>
+                                </div>
+                            `;
+                        }
                     }
 
                     grid.innerHTML += `
                         <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
-                            <!-- උඩින් Thumbnail එක සහ Status/Time Badge එක -->
+                            <!-- උඩින් Thumbnail එක සහ LIVE/UPCOMING Badge එක -->
                             <div class="match-thumb-container">
                                 <img src="${match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX'}" alt="Match Thumbnail">
                                 ${statusBadge}
                             </div>
-                            <!-- යටින් මැච් එකේ Details ටික -->
+                            <!-- යටින් මැච් එකේ Details (ടීම්ස්, නම සහ වෙලාව) -->
                             <div class="match-details">
                                 <div class="match-teams" style="font-weight:bold; font-size:16px; color:#fff;">
                                     <span>${match.team1}</span>
@@ -115,6 +118,7 @@
                                     <span>${match.team2}</span>
                                 </div>
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 0;">${match.title}</p>
+                                ${timeDetailsHtml}
                             </div>
                         </div>
                     `;
