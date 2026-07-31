@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Watch Live Match - StreamX</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Username Modal -->
+    <div class="modal-overlay" id="usernameModal">
+        <div class="modal-content">
+            <h2>Enter Chat Username</h2>
+            <p>Choose a unique name to chat and join the community stream.</p>
+            <input type="text" id="usernameInput" placeholder="Your Username..." autocomplete="off">
+            <button id="joinChatBtn">Enter Live Room</button>
+        </div>
+    </div>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">STREAMX</a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h2 id="matchTitle" class="section-title" style="margin-bottom: 15px;">Loading Match...</h2>
+        
+        <div class="watch-container">
+            <div>
+                <div class="video-wrapper">
+                    <!-- Direct Video / Embed Link iframe -->
+                    <iframe id="livePlayer" src="" allowfullscreen></iframe>
+                </div>
+                <div class="match-info-bar">
+                    <span id="nowPlayingText" style="font-weight: 600;">Streaming in HD Quality</span>
+                    <div class="viewers-count">
+                        <span>👀</span> <span id="viewersCount">0</span> Watching Now
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Chat Box -->
+            <div class="chat-box">
+                <div class="chat-header">Live Fan Chat</div>
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Messages appear here -->
+                </div>
+                <form class="chat-input-area" id="chatForm">
+                    <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off" required>
+                    <button type="submit">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Socket.io client script -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('id') || 'default-match';
+        const matchTitle = urlParams.get('title') || 'Live Match';
+        const directLink = urlParams.get('link') || '';
+
+        document.getElementById('matchTitle').innerText = matchTitle;
+        document.getElementById('livePlayer').src = directLink;
+
+        let username = localStorage.getItem('chat_username');
+
+        const modal = document.getElementById('usernameModal');
+        const usernameInput = document.getElementById('usernameInput');
+        const joinBtn = document.getElementById('joinChatBtn');
+
+        if (username) {
+            modal.style.display = 'none';
+            initSocket(username);
+        }
+
+        joinBtn.addEventListener('click', () => {
+            const val = usernameInput.value.trim();
+            if (val.length < 2) {
+                alert('Please enter a valid username (at least 2 characters)');
+                return;
+            }
+            username = val;
+            localStorage.setItem('chat_username', username);
+            modal.style.display = 'none';
+            initSocket(username);
+        });
+
+        function initSocket(user) {
+            const socket = io();
+
+            // Join match room
+            socket.emit('joinMatch', { matchId, username: user });
+
+            // Viewer count update
+            socket.on('viewerCount', (count) => {
+                document.getElementById('viewersCount').innerText = count;
+            });
+
+            // Chat messages handler
+            const chatForm = document.getElementById('chatForm');
+            const msgInput = document.getElementById('msgInput');
+            const chatMessages = document.getElementById('chatMessages');
+
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const msg = msgInput.value.trim();
+                if(msg) {
+                    socket.emit('chatMessage', msg);
+                    msgInput.value = '';
+                }
+            });
+
+            socket.on('chatMessage', (data) => {
+                chatMessages.innerHTML += `
+                    <div class="message">
+                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:var(--text-muted); float:right;">${data.time}</span></div>
+                        <div>${data.message}</div>
+                    </div>
+                `;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+    </script>
+</body>
+</html>
