@@ -23,56 +23,43 @@
         </div>
     </div>
 
+        <!-- Socket.io client script -->
+    <script src="/socket.io/socket.io.js"></script>
     <script>
-        // 1. URL එකෙන් Category එක අල්ලා ගැනීම (ဥදා: cricket, football)
+        const socket = io();
         const urlParams = new URLSearchParams(window.location.search);
         const cat = urlParams.get('cat') || 'cricket';
         
         document.getElementById('categoryTitle').innerText = `${cat.toUpperCase()} Matches`;
-
-        // 2. ඔයාගේ ක්‍රීඩා කාණ්ඩ අනුව Match List එක (මෙතන link කිසිවක් දාන්නේ නැහැ, ID එක විතරයි)
-        const matchesData = {
-            cricket: [
-                { 
-                    id: 'lpl-2026-1', // GitHub එකේ matches.json එකේ තියෙන ID එකම මෙතනට දෙන්න
-                    title: 'LPL 2026 - Final Match', 
-                    team1: 'Jaffna Kings', 
-                    team2: 'Colombo Strikers', 
-                    status: 'LIVE' 
-                }
-            ],
-            football: [
-                { 
-                    id: 'ucl-final', // GitHub එකේ matches.json එකේ තියෙන ID එකම මෙතනට දෙන්න
-                    title: 'UEFA Champions League Final', 
-                    team1: 'Real Madrid', 
-                    team2: 'Dortmund', 
-                    status: 'UPCOMING' 
-                }
-            ]
-        };
-
         const grid = document.getElementById('matchesGrid');
-        const list = matchesData[cat] || [];
 
-        // 3. Match Cards HTML එකට Render කිරීම (URL එකේ link යැවීම සම්පූර්ණයෙන්ම ඉවත් කර ඇත)
-        if(list.length === 0) {
-            grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
-        } else {
-            list.forEach(match => {
-                grid.innerHTML += `
-                    <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
-                        ${match.status === 'LIVE' ? '<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>' : '<span style="color:var(--text-muted); font-size:12px; font-weight:700;">UPCOMING</span>'}
-                        <div class="match-teams">
-                            <span>${match.team1}</span>
-                            <span class="vs">VS</span>
-                            <span>${match.team2}</span>
+        // Server එකෙන් මැච් ලැයිස්තුව ඉල්ලීම
+        socket.emit('requestAllMatches');
+
+        // Server එකෙන් ඩේටා ආපු ගමන් screen එකට load කිරීම
+        socket.on('allMatchesData', (matchesData) => {
+            const list = matchesData[cat] || [];
+
+            if(list.length === 0) {
+                grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
+            } else {
+                grid.innerHTML = ''; // Clear loading/old items
+                list.forEach(match => {
+                    grid.innerHTML += `
+                        <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
+                            ${match.status === 'LIVE' ? '<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>' : '<span style="color:var(--text-muted); font-size:12px; font-weight:700;">UPCOMING</span>'}
+                            <div class="match-teams">
+                                <span>${match.team1}</span>
+                                <span class="vs">VS</span>
+                                <span>${match.team2}</span>
+                            </div>
+                            <p style="color: var(--text-muted); font-size: 14px;">${match.title}</p>
                         </div>
-                        <p style="color: var(--text-muted); font-size: 14px;">${match.title}</p>
-                    </div>
-                `;
-            });
-        }
+                    `;
+                });
+            }
+        });
     </script>
+
 </body>
 </html>
