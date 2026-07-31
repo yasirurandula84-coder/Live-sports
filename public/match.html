@@ -9,6 +9,29 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        /* Player Controls ඇතුළේ Quality Selector එකට අදාළ Styling */
+        .player-quality-select {
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: bold;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        .player-quality-select:hover {
+            border-color: #e50914;
+            background: rgba(0, 0, 0, 0.8);
+        }
+        .player-quality-select option {
+            background: #111;
+            color: #fff;
+        }
+    </style>
 </head>
 <body>
 
@@ -57,7 +80,12 @@
                                 </div>
                             </div>
 
-                            <div class="right-controls">
+                            <!-- Right Controls: Quality Selector + Fullscreen Button -->
+                            <div class="right-controls" style="display: flex; align-items: center; gap: 10px;">
+                                <!-- Quality Dropdown placed right before Fullscreen Button -->
+                                <select id="qualitySelect" class="player-quality-select" onchange="changeQuality(this.value)">
+                                    <option value="-1">Auto</option>
+                                </select>
                                 <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
                             </div>
                         </div>
@@ -115,9 +143,8 @@
         const socket = io();
         let currentHls = null;
 
-        // === [Server එකෙන් Secure Link එක ඉල්ලන ප්‍රධාන Function එක] ===
+        // Server එකෙන් Secure Link එක ඉල්ලන function එක
         function loadStream(serverType) {
-            // බටන් වල active look එක මාරු කිරීම (Primary color එක පෙන්වීම)
             if(serverType === 'server1') {
                 document.getElementById('btnServer1').style.background = '#e50914';
                 document.getElementById('btnServer2').style.background = '#333';
@@ -126,45 +153,62 @@
                 document.getElementById('btnServer1').style.background = '#333';
             }
 
-            // Server එකට matchId එක සහ serverType එක යැවීම
             socket.emit('requestStreamLink', { matchId, serverType });
         }
 
-        // මුල් පූරණයට (Page Load වෙද්දී) Server 1 ලින්ක් එක ඉල්ලීම
+        // මුල් පූරණයට Server 1 ඉල්ලීම
         loadStream('server1');
 
-        // Server එකෙන් Link එක ආපු ගමන් Play කිරීම
+        // Server එකෙන් Link එක ආපු ගමන් Hls හරහා Play කිරීම සහ Quality List එක පිරවීම
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
                 return;
             }
 
-            // පරණ hls instance එක destroy කිරීම (Server මාරු කරන විට වැදගත් වේ)
             if (currentHls) {
                 currentHls.destroy();
             }
 
-            // Initialize HLS.js with the secure link
             if (Hls.isSupported()) {
                 const hls = new Hls();
                 currentHls = hls;
                 hls.loadSource(directLink);
                 hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
                     video.play().catch(e => console.log("Auto-play blocked:", e));
+                    
+                    const qualitySelect = document.getElementById('qualitySelect');
+                    qualitySelect.innerHTML = '<option value="-1">Auto</option>';
+
+                    // Stream එකේ ඇති resolutions (Levels) අනුව options එකතු කිරීම
+                    data.levels.forEach((level, index) => {
+                        const height = level.height ? `${level.height}p` : `Quality ${index + 1}`;
+                        qualitySelect.innerHTML += `<option value="${index}">${height}</option>`;
+                    });
                 });
+
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', function() {
                     video.play().catch(e => console.log("Auto-play blocked:", e));
                 });
+                // Safari වලට native Hls support එක නිසා quality dropdown එක hide කිරීම
+                document.getElementById('qualitySelect').style.display = 'none';
             }
         });
 
-        // Server එක මාරු කිරීමට (Button click කළාම) ක්‍රියාත්මක වන function එක
+        // Server මාරු කිරීමට
         function switchServer(serverType) {
             loadStream(serverType);
+        }
+
+        // යුසර් Quality එක වෙනස් කළ විට ක්‍රියාත්මක වන function එක
+        function changeQuality(newLevelIndex) {
+            if (currentHls) {
+                currentHls.currentLevel = parseInt(newLevelIndex); // -1 = Auto, 0, 1, 2... = Specific Quality Levels
+            }
         }
 
         // Custom Player Controls Logic
