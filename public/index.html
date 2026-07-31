@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LiveStream Arena - Watch Live Matches</title>
+    <title>StreamX - Ultimate Live Sports Experience</title>
     <link rel="stylesheet" href="style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 
@@ -12,26 +14,71 @@
         <a href="index.html" class="logo">STREAMX</a>
         <ul class="nav-links">
             <li><a href="index.html" class="active">Home</a></li>
+            <li><a href="#liveMatches">Live Matches</a></li>
             <li><a href="#categories">Categories</a></li>
-            <li><a href="#about">About</a></li>
         </ul>
     </nav>
 
     <div class="container">
+        <!-- Hero Section -->
         <section class="hero">
             <h1>Ultimate Live Sports Experience</h1>
             <p>Stream your favorite cricket, football and sports matches in high definition with live interactive chats and real-time community engagement.</p>
+            <div style="margin-top: 25px;">
+                <a href="#liveMatches" style="background: linear-gradient(45deg, var(--primary-color), var(--accent-color)); color: white; padding: 12px 25px; border-radius: 12px; text-decoration: none; font-weight: 700; box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);">
+                    <i class="fa-solid fa-play"></i> Watch Live Now
+                </a>
+            </div>
         </section>
 
-        <h2 class="section-title" id="categories">Select Category</h2>
+        <!-- Featured / Live Matches Section -->
+        <h2 class="section-title" id="liveMatches"><i class="fa-solid fa-tower-broadcast" style="color: var(--danger);"></i> Ongoing Live Matches</h2>
+        <div class="matches-grid" style="margin-bottom: 40px;">
+            <!-- Match Card 1 -->
+            <div class="match-card" onclick="location.href='match.html?id=match1&title=India vs Australia - 1st T20'">
+                <div class="live-badge">
+                    <div class="live-dot"></div> LIVE
+                </div>
+                <div class="match-teams">
+                    <span>India</span>
+                    <span class="vs">VS</span>
+                    <span>Australia</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 13px;">
+                    <span>🏏 Cricket Series</span>
+                    <span style="color: var(--primary-color); font-weight: 600;">Watch HD <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </div>
+
+            <!-- Match Card 2 -->
+            <div class="match-card" onclick="location.href='match.html?id=match2&title=Real Madrid vs Barcelona - El Clasico'">
+                <div class="live-badge">
+                    <div class="live-dot"></div> LIVE
+                </div>
+                <div class="match-teams">
+                    <span>Real Madrid</span>
+                    <span class="vs">VS</span>
+                    <span>Barcelona</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); font-size: 13px;">
+                    <span>⚽ Football League</span>
+                    <span style="color: var(--primary-color); font-weight: 600;">Watch HD <i class="fa-solid fa-arrow-right"></i></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories Section -->
+        <h2 class="section-title" id="categories"><i class="fa-solid fa-layer-group"></i> Select Category</h2>
         <div class="categories-grid">
             <a href="category.html?cat=cricket" class="category-card">
                 <span style="font-size: 40px;">🏏</span>
                 <h3>Cricket</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">T20, ODI & Test Matches</p>
             </a>
             <a href="category.html?cat=football" class="category-card">
                 <span style="font-size: 40px;">⚽</span>
                 <h3>Football</h3>
+                <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;">Premier League, UCL & More</p>
             </a>
         </div>
     </div>
