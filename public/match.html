@@ -9,29 +9,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        /* Player Controls ඇතුළේ Quality Selector එකට අදාළ Styling */
-        .player-quality-select {
-            background: rgba(0, 0, 0, 0.6);
-            color: #fff;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            padding: 5px 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 13px;
-            font-weight: bold;
-            outline: none;
-            transition: all 0.2s ease;
-        }
-        .player-quality-select:hover {
-            border-color: #e50914;
-            background: rgba(0, 0, 0, 0.8);
-        }
-        .player-quality-select option {
-            background: #111;
-            color: #fff;
-        }
-    </style>
 </head>
 <body>
 
@@ -80,12 +57,7 @@
                                 </div>
                             </div>
 
-                            <!-- Right Controls: Quality Selector + Fullscreen Button -->
-                            <div class="right-controls" style="display: flex; align-items: center; gap: 10px;">
-                                <!-- Quality Dropdown placed right before Fullscreen Button -->
-                                <select id="qualitySelect" class="player-quality-select" onchange="changeQuality(this.value)">
-                                    <option value="-1">Auto</option>
-                                </select>
+                            <div class="right-controls">
                                 <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
                             </div>
                         </div>
@@ -99,7 +71,7 @@
                 </div>
 
                 <div class="match-info-bar">
-                    <span id="nowPlayingText" style="font-weight: 600; color: var(--accent-color);">● HD Live Stream (.m3u8)</span>
+                    <span id="nowPlayingText" style="font-weight: 600; color: var(--accent-color);">● Data Saver Live Stream</span>
                     <div class="viewers-count">
                         <span>👀</span> <span id="viewersCount">0</span> Watching Now
                     </div>
@@ -143,7 +115,7 @@
         const socket = io();
         let currentHls = null;
 
-        // Server එකෙන් Secure Link එක ඉල්ලන function එක
+        // Server එකෙන් Secure Link එක ඉල්ලන ප්‍රධාන Function එක
         function loadStream(serverType) {
             if(serverType === 'server1') {
                 document.getElementById('btnServer1').style.background = '#e50914';
@@ -159,8 +131,7 @@
         // මුල් පූරණයට Server 1 ඉල්ලීම
         loadStream('server1');
 
-        // Server එකෙන් Link එක ආපු ගමන් Hls හරහා Play කිරීම සහ Quality List එක පිරවීම
-                // Server එකෙන් Link එක ආපු ගමන් Hls හරහා Play කිරීම
+        // Server එකෙන් Link එක ආපු ගමන් Play කිරීම (Data Saver Buffering Settings සමඟ)
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
@@ -172,26 +143,21 @@
             }
 
             if (Hls.isSupported()) {
-                const hls = new Hls();
+                // ඩේටා অপටිමයිස් කරපු HLS configurations (අවශ්‍ය ප්‍රමාණයට පමණක් බෆර් කිරීමට)
+                const hlsConfig = {
+                    maxBufferLength: 15,          // තත්පර 15කට වඩා වැඩි ඩේටා එකවර ලෝඩ් වීම සීමා කරයි (Data Saver)
+                    maxMaxBufferLength: 30,
+                    liveSyncDurationCount: 3,     // ලයිව් ස්ට්‍රීම් එකේදී ළඟින්ම රඳවා තබා ගනී
+                    highBufferWatchdogPeriod: 1,
+                };
+
+                const hls = new Hls(hlsConfig);
                 currentHls = hls;
                 hls.loadSource(directLink);
                 hls.attachMedia(video);
-
-                hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
                     video.play().catch(e => console.log("Auto-play blocked:", e));
-                    
-                    const qualitySelect = document.getElementById('qualitySelect');
-                    
-                    // අපිට අවශ්‍ය Custom Quality Options ටික මෙතැනින් දාගන්න පුළුවන්
-                    qualitySelect.innerHTML = `
-                        <option value="-1">Auto (HD)</option>
-                        <option value="1080">1080p (Full HD)</option>
-                        <option value="720">720p (HD)</option>
-                        <option value="480">480p (SD)</option>
-                        <option value="360">360p</option>
-                    `;
                 });
-
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', function() {
@@ -200,43 +166,9 @@
             }
         });
 
-        // යුසර් Quality එක වෙනස් කළ විට ක්‍රියාත්මක වන function එක
-        function changeQuality(qualityValue) {
-            if (currentHls) {
-                const q = parseInt(qualityValue);
-                if (q === -1) {
-                    // Auto mode
-                    currentHls.currentLevel = -1;
-                } else {
-                    // Hls.js වල තියෙන levels වලින් අදාළ height එකට ගැළපෙන එක තෝරා ගැනීම
-                    let levelIndex = -1;
-                    currentHls.levels.forEach((level, index) => {
-                        if (level.height === q) {
-                            levelIndex = index;
-                        }
-                    });
-
-                    if (levelIndex !== -1) {
-                        currentHls.currentLevel = levelIndex;
-                    } else {
-                        // ස්ට්‍රීම් එකේ ඒ resolution එක නැත්නම්, Hls වලටම ಬಿඩිම (Auto)
-                        console.log("Requested quality level not found in stream, using auto.");
-                    }
-                }
-            }
-        }
-
-
-        // Server මාරු කිරීමට
+        // Server එක මාරු කිරීමට
         function switchServer(serverType) {
             loadStream(serverType);
-        }
-
-        // යුසර් Quality එක වෙනස් කළ විට ක්‍රියාත්මක වන function එක
-        function changeQuality(newLevelIndex) {
-            if (currentHls) {
-                currentHls.currentLevel = parseInt(newLevelIndex); // -1 = Auto, 0, 1, 2... = Specific Quality Levels
-            }
         }
 
         // Custom Player Controls Logic
