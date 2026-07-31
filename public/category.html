@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matches - StreamX</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <a href="index.html" class="logo">STREAMX</a>
+        <ul class="nav-links">
+            <li><a href="index.html">Home</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <h2 class="section-title" id="categoryTitle">Live & Upcoming Matches</h2>
+        
+        <div class="matches-grid" id="matchesGrid">
+            <!-- Dynamic Match Cards will load here -->
+        </div>
+    </div>
+
+    <script>
+        // Sample Match Database (ඔයාට මේකට කැමති direct links දාන්න පුළුවන්)
+        const matchesData = {
+            cricket: [
+                { id: 'lpl-2026-1', title: 'LPL 2026 - Final Match', team1: 'Jaffna Kings', team2: 'Colombo Strikers', status: 'LIVE', link: 'https://tvsen6.aynaott.com/zv68oqPDu7MZZwmHhRxt/tracks-v1a1/mono.ts.m3u8?e=1784102512&token=968935df4fd0678de5d7fe392c0610d9&u=ee5437a7-c16b-4700-b317-a41b77d5cba9' },
+                { id: 'ind-pak-2026', title: 'T20 World Cup - Blockbuster', team1: 'India', team2: 'Pakistan', status: 'UPCOMING', link: '' }
+            ],
+            football: [
+                { id: 'ucl-final', title: 'UEFA Champions League', team1: 'Real Madrid', team2: 'Manchester City', status: 'LIVE', link: 'https://www.youtube.com/embed/live_stream?channel=YOUR_CHANNEL_ID' }
+            ]
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const cat = urlParams.get('cat') || 'cricket';
+        
+        document.getElementById('categoryTitle').innerText = `${cat.toUpperCase()} Matches`;
+        
+        const grid = document.getElementById('matchesGrid');
+        const list = matchesData[cat] || [];
+
+        if(list.length === 0) {
+            grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
+        } else {
+            list.forEach(match => {
+                grid.innerHTML += `
+                    <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}&link=${encodeURIComponent(match.link)}'">
+                        ${match.status === 'LIVE' ? '<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>' : '<span style="color:var(--text-muted); font-size:12px; font-weight:700;">UPCOMING</span>'}
+                        <div class="match-teams">
+                            <span>${match.team1}</span>
+                            <span class="vs">VS</span>
+                            <span>${match.team2}</span>
+                        </div>
+                        <p style="color: var(--text-muted); font-size: 14px;">${match.title}</p>
+                    </div>
+                `;
+            });
+        }
+    </script>
+</body>
+</html>
