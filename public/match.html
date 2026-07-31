@@ -35,7 +35,7 @@
         <div class="watch-container">
             <div>
                 <!-- Custom Modern Video Player Wrapper -->
-                               <div class="custom-video-container" id="playerContainer">
+                <div class="custom-video-container" id="playerContainer">
                     <video id="hlsPlayer" playsinline autoplay></video>
                     
                     <!-- Custom Controls Overlay with ID -->
@@ -65,12 +65,10 @@
                 </div>
 
                 <!-- Server Switch Buttons -->
-<div class="server-selector" style="margin: 15px 0; display: flex; gap: 10px;">
-    <button id="btnServer1" onclick="switchServer('server1')" style="background: #e50914; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Server 1 (HD)</button>
-    <button id="btnServer2" onclick="switchServer('server2')" style="background: #333; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Server 2 (Backup)</button>
-</div>
-
-
+                <div class="server-selector" style="margin: 15px 0; display: flex; gap: 10px;">
+                    <button id="btnServer1" onclick="switchServer('server1')" style="background: #e50914; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Server 1 (HD)</button>
+                    <button id="btnServer2" onclick="switchServer('server2')" style="background: #333; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Server 2 (Backup)</button>
+                </div>
 
                 <div class="match-info-bar">
                     <span id="nowPlayingText" style="font-weight: 600; color: var(--accent-color);">● HD Live Stream (.m3u8)</span>
@@ -115,20 +113,42 @@
 
         const video = document.getElementById('hlsPlayer');
         const socket = io();
+        let currentHls = null;
 
-        // === [මෙන්න වැදගත්ම තැන: Server එකෙන් Secure Link එක ඉල්ලීම] ===
-        socket.emit('requestStreamLink', matchId);
+        // === [Server එකෙන් Secure Link එක ඉල්ලන ප්‍රධාන Function එක] ===
+        function loadStream(serverType) {
+            // බටන් වල active look එක මාරු කිරීම (Primary color එක පෙන්වීම)
+            if(serverType === 'server1') {
+                document.getElementById('btnServer1').style.background = '#e50914';
+                document.getElementById('btnServer2').style.background = '#333';
+            } else {
+                document.getElementById('btnServer2').style.background = '#e50914';
+                document.getElementById('btnServer1').style.background = '#333';
+            }
 
-        // Server එකෙන් Link එක ආපු ගමන් Player එකට දාල Play කිරීම
+            // Server එකට matchId එක සහ serverType එක යැවීම
+            socket.emit('requestStreamLink', { matchId, serverType });
+        }
+
+        // මුල් පූරණයට (Page Load වෙද්දී) Server 1 ලින්ක් එක ඉල්ලීම
+        loadStream('server1');
+
+        // Server එකෙන් Link එක ආපු ගමන් Play කිරීම
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
-                alert('Stream link not found, offline, or unauthorized!');
+                alert('Stream link not found, offline, or unauthorized for this server!');
                 return;
+            }
+
+            // පරණ hls instance එක destroy කිරීම (Server මාරු කරන විට වැදගත් වේ)
+            if (currentHls) {
+                currentHls.destroy();
             }
 
             // Initialize HLS.js with the secure link
             if (Hls.isSupported()) {
                 const hls = new Hls();
+                currentHls = hls;
                 hls.loadSource(directLink);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
@@ -142,8 +162,10 @@
             }
         });
 
-        // (අනෙකුත් Player controls, Chat සහ Viewers count කෝඩ් ටික වෙනස් කරන්න ඕන නැහැ, ඒවා එහෙම්මම තියෙන්න දෙන්න)
-
+        // Server එක මාරු කිරීමට (Button click කළාම) ක්‍රියාත්මක වන function එක
+        function switchServer(serverType) {
+            loadStream(serverType);
+        }
 
         // Custom Player Controls Logic
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -230,7 +252,7 @@
             }
         });
 
-        // --- Auto-Hide Controls Logic (תත්පර 3 කින් Controls අතුරුදහන් වීම) ---
+        // --- Auto-Hide Controls Logic ---
         let hideTimeout;
 
         function showControls() {
@@ -240,7 +262,7 @@
                 if (!video.paused) {
                     controlsOverlay.classList.add('hidden');
                 }
-            }, 3000); // තත්පර 3 කින් අතුරුදහන් වේ
+            }, 3000);
         }
 
         playerContainer.addEventListener('mousemove', showControls);
@@ -252,7 +274,7 @@
             } else {
                 video.pause();
                 playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                showControls(); // Pause කළ විට controls දිගටම පෙන්වයි
+                showControls();
             }
         });
 
@@ -281,11 +303,11 @@
         });
 
         function initSocket(user) {
-            const socket = io();
+            const chatSocket = io();
 
-            socket.emit('joinMatch', { matchId, username: user });
+            chatSocket.emit('joinMatch', { matchId, username: user });
 
-            socket.on('viewerCount', (count) => {
+            chatSocket.on('viewerCount', (count) => {
                 document.getElementById('viewersCount').innerText = count;
             });
 
@@ -297,12 +319,12 @@
                 e.preventDefault();
                 const msg = msgInput.value.trim();
                 if(msg) {
-                    socket.emit('chatMessage', msg);
+                    chatSocket.emit('chatMessage', msg);
                     msgInput.value = '';
                 }
             });
 
-            socket.on('chatMessage', (data) => {
+            chatSocket.on('chatMessage', (data) => {
                 chatMessages.innerHTML += `
                     <div class="message">
                         <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:var(--text-muted); float:right;">${data.time}</span></div>
@@ -313,7 +335,5 @@
             });
         }
     </script>
-
-    
 </body>
 </html>
