@@ -82,16 +82,19 @@
             overflow: hidden;
         }
 
+        /* පින්තූරය සම්පූර්ණයෙන්ම පෙන්වීමට සහ කාඩ් එකට හරියටම ෆිට් කිරීමට */
         .match-thumb-container img {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain; /* මෙතැන cover වෙනුවට contain දීමෙන් මුළු පින්තූරයම සම්පූර්ණයෙන් පෙනේ */
+            background-color: #0b0b0e; /* පින්තූරයේ දෙපැත්තේ ඉඩක් ඉතිරි වුවහොත් පෙනෙන පසුබිම් පාට */
             transition: transform 0.5s ease;
         }
 
         .match-card:hover .match-thumb-container img {
-            transform: scale(1.08);
+            transform: scale(1.05);
         }
+
 
         .match-details {
             padding: 18px;
