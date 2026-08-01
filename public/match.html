@@ -25,7 +25,7 @@
     <nav class="navbar">
         <a href="index.html" class="logo">STREAMX</a>
         <ul class="nav-links">
-            <li><a href="index.html">Home</a></li>
+            <li><a href="index.html"><i class="fa-solid fa-house"></i> Home</a></li>
         </ul>
     </nav>
 
@@ -115,6 +115,80 @@
         const socket = io();
         let currentHls = null;
 
+        // Server එකෙන් මැච් විස්තර ලබාගෙන Countdown එක සහ Stream එක පාලනය කිරීම
+        socket.emit('requestAllMatches');
+
+        socket.on('allMatchesData', (matchesData) => {
+            let foundMatch = null;
+            for (let cat in matchesData) {
+                const match = matchesData[cat].find(m => m.id === matchId);
+                if (match) {
+                    foundMatch = match;
+                    break;
+                }
+            }
+
+            if (foundMatch) {
+                // මැච් එක UPCOMING නම් සහ JSON එකේ time එක දී ඇත්නම් Countdown එක පෙන්වීම
+                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
+                    let timerDiv = document.getElementById('matchCountdownTimer');
+                    if (!timerDiv) {
+                        timerDiv = document.createElement('div');
+                        timerDiv.id = 'matchCountdownTimer';
+                        timerDiv.style.cssText = "background: rgba(22, 22, 22, 0.9); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 8px 20px rgba(0,0,0,0.4);";
+                        
+                        const targetArea = document.getElementById('playerContainer');
+                        targetArea.parentNode.insertBefore(timerDiv, targetArea);
+                    }
+                    startCountdown(foundMatch.time, timerDiv);
+                }
+            }
+        });
+
+        // JSON එකේ time එක (උදා: "03:00 PM") පාදක කරගනිමින් තත්පරයෙන් තත්පරය අඩුවන Function එක
+        function startCountdown(timeString, displayElement) {
+            const today = new Date();
+            let [time, modifier] = timeString.split(' ');
+            let [hours, minutes] = time.split(':');
+            
+            if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') {
+                hours = parseInt(hours, 10) + 12;
+            }
+            if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') {
+                hours = 0;
+            }
+
+            today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+            let targetTime = today.getTime();
+
+            const interval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = targetTime - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    displayElement.innerHTML = `<span style="color: #ff4757; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
+                    return;
+                }
+
+                const hoursLeft = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
+
+                displayElement.innerHTML = `
+                    <div style="color: var(--text-muted, #aaa); font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-regular fa-clock" style="color: var(--accent-color, #ff4757);"></i> 
+                        <span>Match Starts In: <strong style="color: #fff;">${timeString}</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 12px; font-weight: 700; color: #fff; font-size: 18px;">
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${hoursLeft}h</span> : 
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${minutesLeft}m</span> : 
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${secondsLeft}s</span>
+                    </div>
+                `;
+            }, 1000);
+        }
+
         // Server එකෙන් Secure Link එක ඉල්ලන ප්‍රධාන Function එක
         function loadStream(serverType) {
             if(serverType === 'server1') {
@@ -131,7 +205,7 @@
         // මුල් පූරණයට Server 1 ඉල්ලීම
         loadStream('server1');
 
-        // Server එකෙන් Link එක ආපු ගමන් Play කිරීම (Data Saver Buffering Settings සමඟ)
+        // Server එකෙන් Link එක ආපු ගමන් Play කිරීම
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
@@ -143,11 +217,10 @@
             }
 
             if (Hls.isSupported()) {
-                // ඩේටා অপටිමයිස් කරපු HLS configurations (අවශ්‍ය ප්‍රමාණයට පමණක් බෆර් කිරීමට)
                 const hlsConfig = {
-                    maxBufferLength: 15,          // තත්පර 15කට වඩා වැඩි ඩේටා එකවර ලෝඩ් වීම සීමා කරයි (Data Saver)
+                    maxBufferLength: 15,
                     maxMaxBufferLength: 30,
-                    liveSyncDurationCount: 3,     // ලයිව් ස්ට්‍රීම් එකේදී ළඟින්ම රඳවා තබා ගනී
+                    liveSyncDurationCount: 3,
                     highBufferWatchdogPeriod: 1,
                 };
 
@@ -183,7 +256,6 @@
         const progressContainer = document.getElementById('progressContainer');
         const controlsOverlay = document.getElementById('controlsOverlay');
 
-        // Play / Pause
         playPauseBtn.addEventListener('click', () => {
             if (video.paused) {
                 video.play();
@@ -194,17 +266,14 @@
             }
         });
 
-        // 10s Skip Backward
         skipBackBtn.addEventListener('click', () => {
             video.currentTime = Math.max(0, video.currentTime - 10);
         });
 
-        // 10s Skip Forward
         skipFwdBtn.addEventListener('click', () => {
             video.currentTime = Math.min(video.duration, video.currentTime + 10);
         });
 
-        // Volume Slider
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
             video.muted = false;
@@ -215,7 +284,6 @@
             }
         });
 
-        // Mute / Unmute
         muteBtn.addEventListener('click', () => {
             if (video.muted) {
                 video.muted = false;
@@ -228,7 +296,6 @@
             }
         });
 
-        // Fullscreen
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 playerContainer.requestFullscreen().catch(err => {
@@ -239,7 +306,6 @@
             }
         });
 
-        // Update Progress Bar continuously
         video.addEventListener('timeupdate', () => {
             if (video.duration > 0) {
                 const percent = (video.currentTime / video.duration) * 100;
@@ -247,7 +313,6 @@
             }
         });
 
-        // Seek on Progress Bar click
         progressContainer.addEventListener('click', (e) => {
             const rect = progressContainer.getBoundingClientRect();
             const pos = (e.clientX - rect.left) / rect.width;
@@ -256,9 +321,7 @@
             }
         });
 
-        // --- Auto-Hide Controls Logic ---
         let hideTimeout;
-
         function showControls() {
             controlsOverlay.classList.remove('hidden');
             clearTimeout(hideTimeout);
@@ -281,7 +344,6 @@
                 showControls();
             }
         });
-
 
         // Username & Chat Authentication Logic
         let username = localStorage.getItem('chat_username');
