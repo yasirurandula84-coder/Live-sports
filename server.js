@@ -10,6 +10,7 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const matchViewers = {};
+const matchChatHistories = {}; // මැච් අනුව චැට් හිස්ට්‍රි ගබඩා කරගැනීමට
 
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
@@ -81,19 +82,42 @@ io.on('connection', (socket) => {
         socket.username = username;
         socket.currentMatch = matchId;
 
+        // Viewer Count එක වැඩි කිරීම
         if (!matchViewers[matchId]) {
             matchViewers[matchId] = 0;
         }
         matchViewers[matchId]++;
-        
         io.to(matchId).emit('viewerCount', matchViewers[matchId]);
 
-        socket.on('chatMessage', (msg) => {
-            io.to(matchId).emit('chatMessage', {
-                username: socket.username,
-                message: msg
-            });
-        });
+        // අලුතින් එන කෙනෙක්ට හෝ රිෆ්‍රෙෂ් කරන කෙනෙක්ට කලින් ගිය චැට් හිස්ට්‍රි එක යැවීම
+        if (matchChatHistories[matchId] && matchChatHistories[matchId].length > 0) {
+            socket.emit('chatHistory', matchChatHistories[matchId]);
+        }
+    });
+
+    // චැට් මැසේජ් එකක් ලැබුණු විට
+    socket.on('chatMessage', (msg) => {
+        const matchId = socket.currentMatch;
+        if (!matchId) return;
+
+        const messageData = {
+            username: socket.username,
+            message: msg,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+
+        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක సేව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
+        if (!matchChatHistories[matchId]) {
+            matchChatHistories[matchId] = [];
+        }
+        matchChatHistories[matchId].push(messageData);
+        
+        if (matchChatHistories[matchId].length > 150) {
+            matchChatHistories[matchId].shift();
+        }
+
+        // එම මැච් රූම් එකේ ඉන්න හැමෝටම මැසේජ් එක යැවීම
+        io.to(matchId).emit('chatMessage', messageData);
     });
 
     // 4. User Disconnect වීම
