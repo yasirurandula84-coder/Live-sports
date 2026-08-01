@@ -162,6 +162,7 @@
             padding: 10px 14px;
             border-radius: 12px;
             font-size: 13px;
+            position: relative;
             animation: fadeIn 0.3s ease;
         }
         .msg-user {
@@ -371,7 +372,7 @@
         const playerThumbnail = document.getElementById('playerThumbnail');
         const socket = io();
         let currentHls = null;
-        let isMatchLive = false; // මැච් එක ලයිව් වී ඇද්දැයි පරීක්ෂා කිරීමට විචල්‍යයක්
+        let isMatchLive = false;
 
         // සර්වර් එකෙන් මැච් අප්ඩේට් එකක් ලැබුණු වහාම පිටුව රිෆ්‍රෙෂ් නොකර දත්ත නැවත ලබා ගැනීම
         socket.on('refreshMatchesData', () => {
@@ -379,7 +380,6 @@
             socket.emit('requestAllMatches');
         });
         
-        // Server එකෙන් මැච් විස්තර ලබා ගැනීම
         socket.emit('requestAllMatches');
 
         socket.on('allMatchesData', (matchesData) => {
@@ -397,9 +397,8 @@
                     playerThumbnail.src = foundMatch.thumbnail;
                 }
 
-                // මැච් එක UPCOMING නම් සහ වෙලාව ඉතිරිව ඇත්නම්
                 if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
-                    isMatchLive = false; // තවම ලයිව් නැත
+                    isMatchLive = false;
                     
                     document.getElementById('btnServer1').style.opacity = '0.5';
                     document.getElementById('btnServer2').style.opacity = '0.5';
@@ -472,10 +471,7 @@
         }
 
         function loadStream(serverType) {
-            if (!isMatchLive) {
-                console.log("Match is still upcoming. Stream is locked.");
-                return;
-            }
+            if (!isMatchLive) return;
 
             if(serverType === 'server1') {
                 document.getElementById('btnServer1').style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
@@ -493,12 +489,7 @@
         }
 
         socket.on('secureStreamLink', (directLink) => {
-            if (!isMatchLive) return;
-
-            if (!directLink) {
-                alert('Stream link not found, offline, or unauthorized for this server!');
-                return;
-            }
+            if (!isMatchLive || !directLink) return;
 
             if (currentHls) {
                 currentHls.destroy();
@@ -517,25 +508,19 @@
                 hls.loadSource(directLink);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play().catch(e => {
-                        console.log("Auto-play prevented by browser:", e);
-                    });
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', function() {
-                    video.play().catch(e => {
-                        console.log("Auto-play prevented by browser:", e);
-                    });
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
                 });
             }
         });
 
         video.addEventListener('playing', () => {
             playerThumbnail.classList.add('hidden');
-            setTimeout(() => { 
-                playerThumbnail.style.display = 'none'; 
-            }, 400);
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
         });
 
         function switchServer(serverType) {
@@ -570,13 +555,8 @@
             }
         });
 
-        skipBackBtn.addEventListener('click', () => {
-            video.currentTime = Math.max(0, video.currentTime - 10);
-        });
-
-        skipFwdBtn.addEventListener('click', () => {
-            video.currentTime = Math.min(video.duration, video.currentTime + 10);
-        });
+        skipBackBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
+        skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration, video.currentTime + 10); });
 
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
@@ -598,20 +578,15 @@
 
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                playerContainer.requestFullscreen().catch(err => {
-                    alert(`Error attempting to enable fullscreen: ${err.message}`);
-                });
+                playerContainer.requestFullscreen().catch(err => alert(err.message));
             } else {
                 document.exitFullscreen();
             }
         });
 
-        // --- Picture-in-Picture Logic ---
         const pipBtn = document.getElementById('pipBtn');
-
         if ('pictureInPictureEnabled' in document) {
             pipBtn.style.display = 'inline-block';
-            
             pipBtn.addEventListener('click', async () => {
                 try {
                     if (document.pictureInPictureElement) {
@@ -619,9 +594,7 @@
                     } else {
                         await video.requestPictureInPicture();
                     }
-                } catch (error) {
-                    console.error("PiP Error: ", error);
-                }
+                } catch (error) { console.error(error); }
             });
         } else {
             pipBtn.style.display = 'none';
@@ -629,17 +602,13 @@
 
         video.addEventListener('timeupdate', () => {
             if (video.duration > 0) {
-                const percent = (video.currentTime / video.duration) * 100;
-                progressBar.style.width = `${percent}%`;
+                progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
             }
         });
 
         progressContainer.addEventListener('click', (e) => {
             const rect = progressContainer.getBoundingClientRect();
-            const pos = (e.clientX - rect.left) / rect.width;
-            if(video.duration) {
-                video.currentTime = video.duration * pos;
-            }
+            if(video.duration) video.currentTime = video.duration * ((e.clientX - rect.left) / rect.width);
         });
 
         let hideTimeout;
@@ -647,30 +616,19 @@
             controlsOverlay.classList.remove('hidden');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
-                if (!video.paused) {
-                    controlsOverlay.classList.add('hidden');
-                }
+                if (!video.paused) controlsOverlay.classList.add('hidden');
             }, 3000);
         }
 
         playerContainer.addEventListener('mousemove', showControls);
         playerContainer.addEventListener('touchstart', showControls);
-        video.addEventListener('click', () => {
-            if (video.paused) {
-                video.play();
-                playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-            } else {
-                video.pause();
-                playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                showControls();
-            }
-        });
 
         // Username & Chat Authentication Logic
         let username = localStorage.getItem('chat_username');
         const modal = document.getElementById('usernameModal');
         const usernameInput = document.getElementById('usernameInput');
         const joinBtn = document.getElementById('joinChatBtn');
+        let replyingTo = null; // කුමන මැසේජ් එකටද රෙප්ලයි කරන්නේ යන්න තබා ගැනීමට
 
         if (username) {
             modal.style.display = 'none';
@@ -702,40 +660,121 @@
             const msgInput = document.getElementById('msgInput');
             const chatMessages = document.getElementById('chatMessages');
 
-            // සයිට් එකට අලුතින් එන විට හෝ රිෆ්‍රෙෂ් කළ විට කලින් ගිය සියලුම චැට් එකවර ලෝඩ් වීම
-            chatSocket.on('chatHistory', (history) => {
-                chatMessages.innerHTML = ''; 
-                history.forEach(data => {
-                    chatMessages.innerHTML += `
-                        <div class="message">
-                            <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span></div>
-                            <div style="color: #e2e8f0;">${data.message}</div>
+            // මැසේජ් පෙන්වන පොදු කාර්ය ෆන්ෂන් එක
+            function renderMessage(data) {
+                let replyHtml = '';
+                if (data.replyTo) {
+                    replyHtml = `
+                        <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
+                            <strong style="color: #818cf8;">${data.replyTo.username}</strong>
+                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
                         </div>
                     `;
-                });
+                }
+
+                // ආරක්ෂිතව සෝස් මැනේජ් කර string එක අයින් කර ගැනීමට
+                const safeMsgId = data.id || ('msg_' + Math.random());
+                const safeText = (data.message || '').replace(/'/g, "\\'");
+                const safeUser = (data.username || '').replace(/'/g, "\\'");
+
+                chatMessages.innerHTML += `
+                    <div class="message" data-msg-id="${safeMsgId}">
+                        ${replyHtml}
+                        <div class="msg-user">
+                            ${data.username} 
+                            <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
+                        </div>
+                        <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${data.message}</div>
+                        
+                        <!-- Dot 3 බටන් එක (Options Menu) -->
+                        <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${safeMsgId}')">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </div>
+                        
+                        <!-- Reply Option Popover -->
+                        <div id="menu-${safeMsgId}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
+                            <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${safeMsgId}', '${safeUser}', '${safeText}')">
+                                <i class="fa-solid fa-reply"></i> Reply
+                            </div>
+                        </div>
+                    </div>
+                `;
                 chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            // චැට් හිස්ට්‍රි එක ලෝඩ් වීම
+            chatSocket.on('chatHistory', (history) => {
+                chatMessages.innerHTML = ''; 
+                history.forEach(data => renderMessage(data));
             });
 
+            // යූසර් මැසේජ් එකක් සබ්මිට් කිරීම
             chatForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const msg = msgInput.value.trim();
                 if(msg) {
-                    chatSocket.emit('chatMessage', msg);
+                    chatSocket.emit('chatMessage', {
+                        message: msg,
+                        replyTo: replyingTo
+                    });
                     msgInput.value = '';
+                    cancelReply();
                 }
             });
 
-            // අලුතින් එන ලයිව් මැසේජ්
+            // අලුතින් ලැබෙන ලයිව් මැසේජ්
             chatSocket.on('chatMessage', (data) => {
-                chatMessages.innerHTML += `
-                    <div class="message">
-                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span></div>
-                        <div style="color: #e2e8f0;">${data.message}</div>
-                    </div>
-                `;
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+                renderMessage(data);
             });
         }
+
+        // Dot 3 ක්ලික් කළ විට මෙනුව පෙන්වීම/සැඟවීම
+        function toggleMsgMenu(msgId) {
+            const menu = document.getElementById(`menu-${msgId}`);
+            document.querySelectorAll('[id^="menu-"]').forEach(m => { 
+                if(m.id !== `menu-${msgId}`) m.style.display = 'none'; 
+            });
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+
+        // Reply එකක් තෝරාගත් විට ඉන්පුට් එකට උඩින් ප්‍රදර්ශනය කිරීම
+        function setReply(msgId, username, messageText) {
+            replyingTo = { id: msgId, username: username, message: messageText };
+            document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
+
+            let previewBar = document.getElementById('replyPreviewBar');
+            if (!previewBar) {
+                previewBar = document.createElement('div');
+                previewBar.id = 'replyPreviewBar';
+                previewBar.style.cssText = "background: rgba(20, 20, 25, 0.95); padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1;";
+                
+                const chatInputArea = document.getElementById('chatForm');
+                chatInputArea.parentNode.insertBefore(previewBar, chatInputArea);
+            }
+
+            previewBar.innerHTML = `
+                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
+                    <i class="fa-solid fa-reply" style="color: #6366f1;"></i> Replying to <strong style="color: #818cf8;">${username}</strong>: <span style="color: #9ca3af;">${messageText}</span>
+                </div>
+                <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 14px; padding: 4px;" onclick="cancelReply()"></i>
+            `;
+            
+            document.getElementById('msgInput').focus();
+        }
+
+        // Reply කිරීම අවලංගු කිරීම
+        function cancelReply() {
+            replyingTo = null;
+            const previewBar = document.getElementById('replyPreviewBar');
+            if (previewBar) previewBar.remove();
+        }
+
+        // වෙනත් තැනක ක්ලික් කළ විට මෙනු වැසී යාම
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('.fa-ellipsis-vertical') && !e.target.closest('[id^="menu-"]')) {
+                document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
+            }
+        });
     </script>
 </body>
 </html>
