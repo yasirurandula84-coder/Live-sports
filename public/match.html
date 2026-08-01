@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-            <style>
+    <style>
         .custom-video-container {
             position: relative;
             width: 100%;
@@ -29,7 +29,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            z-index: 2; /* වීඩියෝ එක උඩින්ම තැබීමට */
+            z-index: 2;
         }
         .player-thumb-overlay {
             position: absolute;
@@ -39,7 +39,7 @@
             height: 100%;
             object-fit: contain;
             background: #000;
-            z-index: 5; /* ත්‍රෙඩ් එක පේනකන් Thumbnail එක උඩින් තිබේ */
+            z-index: 5;
             transition: opacity 0.4s ease;
         }
         .player-thumb-overlay.hidden {
@@ -48,9 +48,6 @@
             pointer-events: none;
         }
     </style>
-
-
-    
 </head>
 <body>
 
@@ -81,7 +78,7 @@
                     <!-- මැච් එකේ thumbnail එක ප්ලේයර් එක උඩින් පෙන්වීම සඳහා -->
                     <img id="playerThumbnail" class="player-thumb-overlay" src="" alt="Match Thumbnail">
                     
-                    <video id="hlsPlayer" playsinline autoplay></video>
+                    <video id="hlsPlayer" playsinline autoplay muted></video>
                     
                     <!-- Custom Controls Overlay with ID -->
                     <div class="video-controls-overlay" id="controlsOverlay" style="z-index: 10;">
@@ -97,8 +94,8 @@
                                 <button class="control-btn" id="skipForwardBtn"><i class="fa-solid fa-rotate-right"></i> 10s</button>
                                 
                                 <div class="volume-box">
-                                    <button class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-high"></i></button>
-                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
+                                    <button class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-xmark"></i></button>
+                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0">
                                 </div>
                             </div>
 
@@ -175,12 +172,10 @@
             }
 
             if (foundMatch) {
-                // මැච් එකේ thumbnail එක ප්ලේයර් එකට දාන්න
                 if (foundMatch.thumbnail) {
                     playerThumbnail.src = foundMatch.thumbnail;
                 }
 
-                // මැච් එක UPCOMING නම් සහ JSON එකේ time එක දී ඇත්නම් Countdown එක පෙන්වීම
                 if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
                     let timerDiv = document.getElementById('matchCountdownTimer');
                     if (!timerDiv) {
@@ -196,7 +191,6 @@
             }
         });
 
-        // JSON එකේ time එක පාදක කරගනිමින් තත්පරයෙන් තත්පරය අඩුවන Function එක
         function startCountdown(timeString, displayElement) {
             const today = new Date();
             let [time, modifier] = timeString.split(' ');
@@ -240,7 +234,6 @@
             }, 1000);
         }
 
-        // Server එකෙන් Secure Link එක ඉල්ලන ප්‍රධාන Function එක
         function loadStream(serverType) {
             if(serverType === 'server1') {
                 document.getElementById('btnServer1').style.background = '#e50914';
@@ -253,11 +246,8 @@
             socket.emit('requestStreamLink', { matchId, serverType });
         }
 
-        // මුල් පූරණයට Server 1 ඉල්ලීම
         loadStream('server1');
 
-        // Server එකෙන් Link එක ආපු ගමන් Play කිරීම සහ Thumbnail එක ඉවත් කිරීම
-                // Server එකෙන් Link එක ආපු ගමන් Play කිරීම සහ Thumbnail එක ඉවත් කිරීම
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
@@ -281,29 +271,33 @@
                 hls.loadSource(directLink);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                    video.play().then(() => {
-                        playerThumbnail.classList.add('hidden');
-                        setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
-                    }).catch(e => console.log("Auto-play blocked:", e));
+                    video.play().catch(e => {
+                        console.log("Auto-play prevented by browser, waiting for user interaction:", e);
+                    });
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', function() {
-                    video.play().then(() => {
-                        playerThumbnail.classList.add('hidden');
-                        setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
-                    }).catch(e => console.log("Auto-play blocked:", e));
+                    video.play().catch(e => {
+                        console.log("Auto-play prevented by browser, waiting for user interaction:", e);
+                    });
                 });
             }
         });
 
-        // Server එක මාරු කිරීමට
+        // වීඩියෝ එක ඇත්තටම ප්ලේ වෙන්න පටන්ගත් පසු (playing event) පමණක් Thumbnail එක ඉවත් කිරීම
+        video.addEventListener('playing', () => {
+            playerThumbnail.classList.add('hidden');
+            setTimeout(() => { 
+                playerThumbnail.style.display = 'none'; 
+            }, 400);
+        });
+
         function switchServer(serverType) {
             playerThumbnail.style.display = 'block';
             playerThumbnail.classList.remove('hidden'); 
             loadStream(serverType);
         }
-
 
         // Custom Player Controls Logic
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -321,7 +315,6 @@
             if (video.paused) {
                 video.play();
                 playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-                playerThumbnail.classList.add('hidden');
             } else {
                 video.pause();
                 playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
@@ -400,7 +393,6 @@
             if (video.paused) {
                 video.play();
                 playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-                playerThumbnail.classList.add('hidden');
             } else {
                 video.pause();
                 playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
