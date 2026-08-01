@@ -444,16 +444,20 @@
                     msgInput.value = '';
                 }
             });
-
             chatSocket.on('chatMessage', (data) => {
+                // පරිශීලකයාගේ උපාංගයේ (Device එකේ) නිවැරදි වෙලාව ලබා ගැනීම
+                const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
                 chatMessages.innerHTML += `
                     <div class="message">
-                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:var(--text-muted); float:right;">${data.time}</span></div>
+                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:var(--text-muted); float:right;">${currentTime}</span></div>
                         <div>${data.message}</div>
                     </div>
                 `;
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             });
+
+            
         }
     </script>
 </body>
