@@ -50,6 +50,11 @@ io.on('connection', (socket) => {
     }
     socket.emit('allMatchesData', publicData);
 });
+    // මැච් එකක ස්ටේටස් එක වෙනස් වූ විට හෝ අලුත් විස්තර යැවීමට අවශ්‍ය තැනදී මෙය ක්‍රියාත්මක කරන්න:
+const allData = await getMatchesDataFromGitHub();
+// අවශ්‍ය ප්‍රොසෙස් එකෙන් පසු සියලුම කනෙක්ට් වී සිටින අයට අලුත් ඩේටා යැවීම:
+io.emit('refreshMatchesData');
+    
 
 
     // 2. Match.html එකෙන් නිශ්චිත මැච් එකක link එක ඉල්ලුවම රහසිගතව දීම
