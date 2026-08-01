@@ -90,10 +90,9 @@ io.on('connection', (socket) => {
         socket.on('chatMessage', (msg) => {
             io.to(matchId).emit('chatMessage', {
                 username: socket.username,
-                message: msg,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            });
+                message: msg
         });
+            });
     });
 
     // 4. User Disconnect වීම
