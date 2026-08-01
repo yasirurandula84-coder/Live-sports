@@ -58,8 +58,7 @@
             <!-- Dynamic Match Cards will load here -->
         </div>
     </div>
-
-        <!-- Socket.io client script -->
+    <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const socket = io();
@@ -74,32 +73,28 @@
 
         // Server එකෙන් ඩේටා ආපු ගමන් screen එකට load කිරීම
         socket.on('allMatchesData', (matchesData) => {
-            console.log("Received Matches Data:", matchesData);
             const list = matchesData[cat] || [];
 
             if(list.length === 0) {
                 grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
             } else {
-                grid.innerHTML = ''; // Clear loading/old items
+                grid.innerHTML = ''; 
                 list.forEach(match => {
                     let statusBadge = '';
                     let timeDetailsHtml = '';
                     
-                    // මැච් එක LIVE දැයි පරීක්ෂා කිරීම (අකුරු කුඩා හෝ විශාල වීම ගැටළුවක් නොවන ලෙස)
-                    const matchStatus = match.status ? match.status.toUpperCase().trim() : '';
-
-                    if (matchStatus === 'LIVE') {
+                    // තත්ත්වය පරීක්ෂා කිරීම
+                    if (match.status && match.status.toUpperCase() === 'LIVE') {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
-                        // UPCOMING මැච් සඳහා පමණක් Badge සහ Time එක සකස් කිරීම
                         statusBadge = `<span style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>`;
                         
-                        let matchTime = match.time || match.timing || '';
-                        if (matchTime) {
+                        // වෙලාව සරලව ලබා ගැනීම
+                        if (match.time) {
                             timeDetailsHtml = `
                                 <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; margin-top: 4px;">
                                     <i class="fa-regular fa-clock" style="color: var(--accent-color);"></i>
-                                    <span>Starts at: <strong style="color: #fff;">${matchTime}</strong></span>
+                                    <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
                                 </div>
                             `;
                         }
@@ -107,12 +102,10 @@
 
                     grid.innerHTML += `
                         <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
-                            <!-- උඩින් Thumbnail එක සහ LIVE/UPCOMING Badge එක -->
                             <div class="match-thumb-container">
                                 <img src="${match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX'}" alt="Match Thumbnail">
                                 ${statusBadge}
                             </div>
-                            <!-- යටින් මැච් එකේ Details (ടීම්ස්, නම සහ වෙලාව) -->
                             <div class="match-details">
                                 <div class="match-teams" style="font-weight:bold; font-size:16px; color:#fff;">
                                     <span>${match.team1}</span>
@@ -129,5 +122,6 @@
         });
     </script>
 
+        
 </body>
 </html>
