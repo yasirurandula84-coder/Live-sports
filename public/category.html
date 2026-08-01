@@ -8,73 +8,37 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Modern Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #111;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #e50914; /* Accent color fallback */
-        }
-
-        /* Enhanced Card Styles with Smooth Hover & Shadows */
+        /* Thumbnail එක සහ Card එක ලස්සනට Set කරගන්න CSS Styles */
         .match-card {
-            background: #161616;
-            border-radius: 12px;
+            background: #1a1a1a;
+            border-radius: 10px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            position: relative;
+            transition: transform 0.2s;
+            border: 1px solid #333;
         }
         .match-card:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
-            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-5px);
+            border-color: #555;
         }
-
         .match-thumb-container {
             position: relative;
             width: 100%;
-            height: 200px;
+            height: 200px; /* Thumbnail එකේ උස */
             background: #000;
-            overflow: hidden;
         }
         .match-thumb-container img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.4s ease;
         }
-        .match-card:hover .match-thumb-container img {
-            transform: scale(1.05); /* Hover එකේදී Thumbnail එක පොඩ්ඩක් Zoom වීම */
-        }
-
         .match-details {
-            padding: 18px;
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
-        }
-
-        /* Skeleton Loading Animation Styles */
-        .skeleton {
-            background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
-            background-size: 200% 100%;
-            animation: shimmer 1.5s infinite;
-            border-radius: 6px;
-        }
-        @keyframes shimmer {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            gap: 8px;
         }
     </style>
 </head>
@@ -83,18 +47,15 @@
     <nav class="navbar">
         <a href="index.html" class="logo">STREAMX</a>
         <ul class="nav-links">
-            <li><a href="index.html"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li><a href="index.html">Home</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <h2 class="section-title" id="categoryTitle" style="letter-spacing: 0.5px; font-weight: 700; margin-bottom: 25px;">Live & Upcoming Matches</h2>
+        <h2 class="section-title" id="categoryTitle">Live & Upcoming Matches</h2>
         
         <div class="matches-grid" id="matchesGrid">
-            <!-- Loading Skeletons දර්ශනය වීම සඳහා මුලින් පෙන්වන කොටස -->
-            <div class="match-card skeleton" style="height: 320px;"></div>
-            <div class="match-card skeleton" style="height: 320px;"></div>
-            <div class="match-card skeleton" style="height: 320px;"></div>
+            <!-- Dynamic Match Cards will load here -->
         </div>
     </div>
 
@@ -116,21 +77,23 @@
             const list = matchesData[cat] || [];
 
             if(list.length === 0) {
-                grid.innerHTML = `<p style="color:var(--text-muted); grid-column: 1/-1; text-align: center; padding: 40px;">No matches available right now.</p>`;
+                grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
             } else {
-                grid.innerHTML = ''; // Clear skeleton items
+                grid.innerHTML = ''; 
                 list.forEach(match => {
                     let statusBadge = '';
                     
+                    // තත්ත්වය පරීක්ෂා කිරීම (LIVE නම් LIVE බේජ් එක, නැත්නම් UPCOMING)
                     if (match.status && match.status.toUpperCase() === 'LIVE') {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
-                        statusBadge = `<span style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.85); backdrop-filter: blur(4px); color:#fff; padding:4px 10px; font-size:11px; font-weight:700; border-radius:6px; border: 1px solid rgba(255,255,255,0.1);">UPCOMING</span>`;
+                        statusBadge = `<span style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>`;
                     }
 
+                    // අනිත් ටීම් ඩේටා වගේම 'match.time' එක කෙලින්ම ගෙනැවිත් මෙතැනට ඇතුළත් කිරීම
                     let matchTime = match.time ? `
-                        <div style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; margin-top: 4px;">
-                            <i class="fa-regular fa-clock" style="color: var(--accent-color, #ff4757);"></i>
+                        <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; margin-top: 2px;">
+                            <i class="fa-regular fa-clock" style="color: var(--accent-color);"></i>
                             <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
                         </div>
                     ` : '';
@@ -142,12 +105,12 @@
                                 ${statusBadge}
                             </div>
                             <div class="match-details">
-                                <div class="match-teams" style="font-weight:700; font-size:16px; color:#fff; display: flex; align-items: center; gap: 8px;">
+                                <div class="match-teams" style="font-weight:bold; font-size:16px; color:#fff;">
                                     <span>${match.team1}</span>
-                                    <span class="vs" style="color:#777; font-size: 13px; font-weight: 500;">VS</span>
+                                    <span class="vs" style="color:#888; margin:0 5px;">VS</span>
                                     <span>${match.team2}</span>
                                 </div>
-                                <p style="color: var(--text-muted); font-size: 13px; margin: 0; line-height: 1.4;">${match.title}</p>
+                                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">${match.title}</p>
                                 ${matchTime}
                             </div>
                         </div>
