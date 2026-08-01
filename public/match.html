@@ -9,12 +9,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-        <style>
-        /* Player Container එක ෆෝන් එකේ සයිස් එකට හරියටම ගැළපෙන පරිදි */
+            <style>
         .custom-video-container {
             position: relative;
             width: 100%;
-            aspect-ratio: 16 / 9; /* දුරකථන තිරයකට හරියටම ගැලපෙන ප්‍රමාණය */
+            aspect-ratio: 16 / 9;
             max-height: 450px;
             background: #000;
             display: flex;
@@ -27,6 +26,10 @@
             width: 100%;
             height: 100%;
             object-fit: contain;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 2; /* වීඩියෝ එක උඩින්ම තැබීමට */
         }
         .player-thumb-overlay {
             position: absolute;
@@ -34,16 +37,18 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain; /* ෆොටෝ එක කැපී යාම වළක්වා මුළු රූපයම පෙන්වයි */
+            object-fit: contain;
             background: #000;
-            z-index: 5;
-            transition: opacity 0.5s ease;
+            z-index: 5; /* ත්‍රෙඩ් එක පේනකන් Thumbnail එක උඩින් තිබේ */
+            transition: opacity 0.4s ease;
         }
         .player-thumb-overlay.hidden {
             opacity: 0;
+            visibility: hidden;
             pointer-events: none;
         }
     </style>
+
 
     
 </head>
@@ -252,6 +257,7 @@
         loadStream('server1');
 
         // Server එකෙන් Link එක ආපු ගමන් Play කිරීම සහ Thumbnail එක ඉවත් කිරීම
+                // Server එකෙන් Link එක ආපු ගමන් Play කිරීම සහ Thumbnail එක ඉවත් කිරීම
         socket.on('secureStreamLink', (directLink) => {
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
@@ -276,8 +282,8 @@
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
                     video.play().then(() => {
-                        // වීඩියෝ එක ප්ලේ වුණු ගමන් thumbnail එක සඟවන්න
                         playerThumbnail.classList.add('hidden');
+                        setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
                     }).catch(e => console.log("Auto-play blocked:", e));
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -285,6 +291,7 @@
                 video.addEventListener('loadedmetadata', function() {
                     video.play().then(() => {
                         playerThumbnail.classList.add('hidden');
+                        setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
                     }).catch(e => console.log("Auto-play blocked:", e));
                 });
             }
@@ -292,9 +299,11 @@
 
         // Server එක මාරු කිරීමට
         function switchServer(serverType) {
-            playerThumbnail.classList.remove('hidden'); // සර්වර් මාරු කරන විට නැවත thumbnail එක පෙන්වීම
+            playerThumbnail.style.display = 'block';
+            playerThumbnail.classList.remove('hidden'); 
             loadStream(serverType);
         }
+
 
         // Custom Player Controls Logic
         const playPauseBtn = document.getElementById('playPauseBtn');
