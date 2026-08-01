@@ -95,18 +95,20 @@ io.on('connection', (socket) => {
         }
     });
 
-    // චැට් මැසේජ් එකක් ලැබුණු විට
-    socket.on('chatMessage', (msg) => {
+    // චැට් මැසේජ් එකක් ලැබුණු විට (Reply දත්ත සමග හැසිරවීම)
+    socket.on('chatMessage', (data) => {
         const matchId = socket.currentMatch;
         if (!matchId) return;
 
         const messageData = {
+            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
             username: socket.username,
-            message: msg,
+            message: data.message,
+            replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක సేව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
+        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
         if (!matchChatHistories[matchId]) {
             matchChatHistories[matchId] = [];
         }
