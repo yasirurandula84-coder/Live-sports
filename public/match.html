@@ -311,8 +311,11 @@
                             </div>
 
                             <div class="right-controls">
-                                <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
-                            </div>
+    <!-- Picture-in-Picture Button -->
+    <button class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
+    <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
+</div>
+
                         </div>
                     </div>
                 </div>
@@ -602,6 +605,27 @@
                 document.exitFullscreen();
             }
         });
+
+    // --- Picture-in-Picture Logic ---
+const pipBtn = document.getElementById('pipBtn');
+
+if ('pictureInPictureEnabled' in document) {
+    pipBtn.style.display = 'inline-block';
+    
+    pipBtn.addEventListener('click', async () => {
+        try {
+            if (document.pictureInPictureElement) {
+                await document.exitPictureInPicture();
+            } else {
+                await video.requestPictureInPicture();
+            }
+        } catch (error) {
+            console.error("PiP Error: ", error);
+        }
+    });
+} else {
+    pipBtn.style.display = 'none'; // බ්‍රව්සර් එක සපෝර්ට් නැත්නම් බටන් එක අතුරුදහන් වේ
+}
 
         video.addEventListener('timeupdate', () => {
             if (video.duration > 0) {
