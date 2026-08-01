@@ -13,112 +13,168 @@
             width: 8px;
         }
         ::-webkit-scrollbar-track {
-            background: #111;
+            background: #0b0b0e;
         }
         ::-webkit-scrollbar-thumb {
-            background: #333;
+            background: #23232b;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
             background: var(--primary-color, #6366f1);
         }
 
-        /* Enhanced Category Cards Hover & Glow Effects */
+        body {
+            background-color: #0b0b0e;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding-bottom: 50px;
+        }
+
+        /* Glassmorphism Navbar */
+        .navbar {
+            background: rgba(11, 11, 14, 0.85) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        /* Notice Bar with Glassmorphism */
+        .notice-bar {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(255, 71, 87, 0.05));
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            padding: 16px 20px;
+            border-radius: 16px;
+            margin-bottom: 35px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 14px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Enhanced Category Cards Grid */
         .categories-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 24px;
             margin-top: 20px;
         }
 
         .category-card {
-            background: #161616;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 16px;
-            padding: 30px 20px;
+            background: linear-gradient(145deg, #141419, #101014);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 20px;
+            padding: 35px 20px;
             text-align: center;
             text-decoration: none;
             color: #fff;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
         }
 
         .category-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), transparent);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), transparent 70%);
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s ease;
         }
 
         .category-card:hover {
-            transform: translateY(-8px);
-            border-color: var(--primary-color, #6366f1);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(99, 102, 241, 0.2);
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(99, 102, 241, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(99, 102, 241, 0.25);
         }
 
         .category-card:hover::before {
             opacity: 1;
         }
 
-        .category-card span {
+        .category-card span.emoji-icon {
             display: inline-block;
-            transition: transform 0.3s ease;
+            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3));
         }
 
-        .category-card:hover span {
-            transform: scale(1.15) rotate(5deg);
+        .category-card:hover span.emoji-icon {
+            transform: scale(1.2) rotate(8deg);
         }
 
-        /* Hero Button Glow */
+        /* Modern Glowing Hero Button */
         .explore-btn {
-            background: linear-gradient(45deg, var(--primary-color, #6366f1), var(--accent-color, #ff4757));
+            background: linear-gradient(135deg, var(--primary-color, #6366f1), var(--accent-color, #ff4757));
             color: white;
-            padding: 14px 28px;
+            padding: 15px 32px;
             border-radius: 14px;
             text-decoration: none;
             font-weight: 700;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
-            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4);
+            gap: 12px;
+            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
             transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .explore-btn::after {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%; width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: 0.5s;
+        }
+
+        .explore-btn:hover::after {
+            left: 100%;
         }
 
         .explore-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 15px 30px rgba(99, 102, 241, 0.6);
+            box-shadow: 0 15px 35px rgba(99, 102, 241, 0.65);
             filter: brightness(1.1);
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px var(--accent-color, #ff4757); }
+            100% { transform: scale(0.95); opacity: 0.8; }
         }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <a href="index.html" class="logo">STREAMX</a>
+        <a href="index.html" class="logo" style="letter-spacing: 1px; font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">STREAMX</a>
         <ul class="nav-links">
             <li><a href="index.html" class="active"><i class="fa-solid fa-house"></i> Home</a></li>
             <li><a href="#categories"><i class="fa-solid fa-layer-group"></i> Categories</a></li>
         </ul>
     </nav>
 
-    <div class="container">
+    <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
         <!-- Notice / Announcement Bar -->
-        <div style="background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.3); padding: 16px 20px; border-radius: 16px; margin-bottom: 35px; display: flex; align-items: center; gap: 15px; font-size: 14px; backdrop-filter: blur(10px); box-shadow: 0 8px 32px rgba(0,0,0,0.2);">
+        <div class="notice-bar">
             <i class="fa-solid fa-bullhorn" style="color: var(--primary-color, #6366f1); font-size: 20px;"></i>
             <span><strong>Notice:</strong> Join our community chat during matches to share your thoughts with other fans! Server 2 is available as backup.</span>
         </div>
 
         <!-- Hero Section -->
         <section class="hero" style="padding: 40px 0; text-align: left;">
-            <span style="background: rgba(255, 71, 87, 0.15); color: var(--accent-color, #ff4757); padding: 6px 12px; font-size: 12px; font-weight: 700; border-radius: 20px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 6px; margin-bottom: 15px;">
+            <span style="background: rgba(255, 71, 87, 0.12); color: var(--accent-color, #ff4757); padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 20px; border: 1px solid rgba(255, 71, 87, 0.25); display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; backdrop-filter: blur(6px);">
                 <span style="width: 8px; height: 8px; background: var(--accent-color, #ff4757); border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite;"></span> LIVE STREAMING PLATFORM
             </span>
-            <h1 style="font-size: 38px; font-weight: 800; line-height: 1.2; margin-bottom: 15px; background: linear-gradient(to right, #fff, #aaa); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Ultimate Live Sports Experience</h1>
-            <p style="color: var(--text-muted, #888); font-size: 16px; max-width: 600px; line-height: 1.5;">Stream your favorite cricket, football and sports matches in high definition with live interactive chats and real-time community engagement.</p>
-            <div style="margin-top: 30px;">
+            <h1 style="font-size: 42px; font-weight: 800; line-height: 1.15; margin-bottom: 18px; background: linear-gradient(to right, #ffffff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Ultimate Live Sports Experience</h1>
+            <p style="color: #9ca3af; font-size: 16px; max-width: 620px; line-height: 1.6;">Stream your favorite cricket, football and sports matches in high definition with live interactive chats and real-time community engagement.</p>
+            <div style="margin-top: 35px;">
                 <a href="#categories" class="explore-btn">
                     <i class="fa-solid fa-compass"></i> Explore Categories
                 </a>
@@ -126,29 +182,22 @@
         </section>
 
         <!-- Categories Section -->
-        <h2 class="section-title" id="categories" style="font-size: 22px; font-weight: 700; margin: 40px 0 20px 0; display: flex; align-items: center; gap: 10px;">
+        <h2 class="section-title" id="categories" style="font-size: 22px; font-weight: 700; margin: 50px 0 25px 0; display: flex; align-items: center; gap: 12px; color: #fff;">
             <i class="fa-solid fa-layer-group" style="color: var(--primary-color, #6366f1);"></i> Select Category
         </h2>
         <div class="categories-grid">
             <a href="category.html?cat=cricket" class="category-card">
-                <span style="font-size: 45px; margin-bottom: 15px;">🏏</span>
-                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 5px;">Cricket</h3>
-                <p style="color: var(--text-muted, #888); font-size: 13px; margin: 0;">T20, ODI & Test Matches</p>
+                <span class="emoji-icon" style="font-size: 50px; margin-bottom: 15px;">🏏</span>
+                <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 6px; color: #fff;">Cricket</h3>
+                <p style="color: #9ca3af; font-size: 13px; margin: 0;">T20, ODI & Test Matches</p>
             </a>
             <a href="category.html?cat=football" class="category-card">
-                <span style="font-size: 45px; margin-bottom: 15px;">⚽</span>
-                <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 5px;">Football</h3>
-                <p style="color: var(--text-muted, #888); font-size: 13px; margin: 0;">Premier League, UCL & More</p>
+                <span class="emoji-icon" style="font-size: 50px; margin-bottom: 15px;">⚽</span>
+                <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 6px; color: #fff;">Football</h3>
+                <p style="color: #9ca3af; font-size: 13px; margin: 0;">Premier League, UCL & More</p>
             </a>
         </div>
     </div>
 
-    <style>
-        @keyframes pulse {
-            0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 10px var(--accent-color, #ff4757); }
-            100% { transform: scale(0.95); opacity: 0.8; }
-        }
-    </style>
 </body>
 </html>
