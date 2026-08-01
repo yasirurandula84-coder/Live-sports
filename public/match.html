@@ -311,10 +311,10 @@
                             </div>
 
                             <div class="right-controls">
-    <!-- Picture-in-Picture Button -->
-    <button class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
-    <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
-</div>
+                                <!-- Picture-in-Picture Button -->
+                                <button class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
+                                <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
+                            </div>
 
                         </div>
                     </div>
@@ -606,26 +606,26 @@
             }
         });
 
-    // --- Picture-in-Picture Logic ---
-const pipBtn = document.getElementById('pipBtn');
+        // --- Picture-in-Picture Logic ---
+        const pipBtn = document.getElementById('pipBtn');
 
-if ('pictureInPictureEnabled' in document) {
-    pipBtn.style.display = 'inline-block';
-    
-    pipBtn.addEventListener('click', async () => {
-        try {
-            if (document.pictureInPictureElement) {
-                await document.exitPictureInPicture();
-            } else {
-                await video.requestPictureInPicture();
-            }
-        } catch (error) {
-            console.error("PiP Error: ", error);
+        if ('pictureInPictureEnabled' in document) {
+            pipBtn.style.display = 'inline-block';
+            
+            pipBtn.addEventListener('click', async () => {
+                try {
+                    if (document.pictureInPictureElement) {
+                        await document.exitPictureInPicture();
+                    } else {
+                        await video.requestPictureInPicture();
+                    }
+                } catch (error) {
+                    console.error("PiP Error: ", error);
+                }
+            });
+        } else {
+            pipBtn.style.display = 'none';
         }
-    });
-} else {
-    pipBtn.style.display = 'none'; // බ්‍රව්සර් එක සපෝර්ට් නැත්නම් බටන් එක අතුරුදහන් වේ
-}
 
         video.addEventListener('timeupdate', () => {
             if (video.duration > 0) {
@@ -702,6 +702,20 @@ if ('pictureInPictureEnabled' in document) {
             const msgInput = document.getElementById('msgInput');
             const chatMessages = document.getElementById('chatMessages');
 
+            // සයිට් එකට අලුතින් එන විට හෝ රිෆ්‍රෙෂ් කළ විට කලින් ගිය සියලුම චැට් එකවර ලෝඩ් වීම
+            chatSocket.on('chatHistory', (history) => {
+                chatMessages.innerHTML = ''; 
+                history.forEach(data => {
+                    chatMessages.innerHTML += `
+                        <div class="message">
+                            <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span></div>
+                            <div style="color: #e2e8f0;">${data.message}</div>
+                        </div>
+                    `;
+                });
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+
             chatForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 const msg = msgInput.value.trim();
@@ -710,12 +724,12 @@ if ('pictureInPictureEnabled' in document) {
                     msgInput.value = '';
                 }
             });
-            chatSocket.on('chatMessage', (data) => {
-                const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+            // අලුතින් එන ලයිව් මැසේජ්
+            chatSocket.on('chatMessage', (data) => {
                 chatMessages.innerHTML += `
                     <div class="message">
-                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${currentTime}</span></div>
+                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span></div>
                         <div style="color: #e2e8f0;">${data.message}</div>
                     </div>
                 `;
