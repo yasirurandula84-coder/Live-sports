@@ -9,12 +9,13 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        /* Player Container එක ඇතුළේ Thumbnail එක පෙන්වීම සඳහා Styles */
+        <style>
+        /* Player Container එක ෆෝන් එකේ සයිස් එකට හරියටම ගැළපෙන පරිදි */
         .custom-video-container {
             position: relative;
             width: 100%;
-            height: 400px;
+            aspect-ratio: 16 / 9; /* දුරකථන තිරයකට හරියටම ගැලපෙන ප්‍රමාණය */
+            max-height: 450px;
             background: #000;
             display: flex;
             align-items: center;
@@ -43,6 +44,8 @@
             pointer-events: none;
         }
     </style>
+
+    
 </head>
 <body>
 
