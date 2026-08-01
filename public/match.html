@@ -134,7 +134,7 @@
         </div>
     </div>
 
-    <!-- Socket.io client script -->
+    <    <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // Right-click සහ F12 Block කිරීම (Security)
@@ -157,15 +157,15 @@
         const playerThumbnail = document.getElementById('playerThumbnail');
         const socket = io();
         let currentHls = null;
+        let isMatchLive = false; // මැච් එක ලයිව් වී ඇද්දැයි පරීක්ෂා කිරීමට විචල්‍යයක්
 
         // සර්වර් එකෙන් මැච් අප්ඩේට් එකක් ලැබුණු වහාම පිටුව රිෆ්‍රෙෂ් නොකර දත්ත නැවත ලබා ගැනීම
         socket.on('refreshMatchesData', () => {
             console.log('Matches updated from server, fetching latest...');
-            socket.emit('requestAllMatches'); // මුලින් මැච් ඩිජිට් එක ඉල්ලපු ෆන්ක්ෂන් එකම නැවත ක්‍රියාත්මක කරයි
+            socket.emit('requestAllMatches');
         });
         
-        
-        // Server එකෙන් මැච් විස්තර ලබාගෙන Thumbnail එක සහ Countdown එක පාලනය කිරීම
+        // Server එකෙන් මැච් විස්තර ලබා ගැනීම
         socket.emit('requestAllMatches');
 
         socket.on('allMatchesData', (matchesData) => {
@@ -183,7 +183,14 @@
                     playerThumbnail.src = foundMatch.thumbnail;
                 }
 
+                // මැච් එක UPCOMING නම් සහ වෙලාව ඉතිරිව ඇත්නම්
                 if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
+                    isMatchLive = false; // තවම ලයිව් නැත
+                    
+                    // සර්වර් බටන්ස් සහ ප්ලේයර් එක පාලනය කිරීමට Server select කොටස අක්‍රීය කර තැබිය හැක
+                    document.getElementById('btnServer1').style.opacity = '0.5';
+                    document.getElementById('btnServer2').style.opacity = '0.5';
+
                     let timerDiv = document.getElementById('matchCountdownTimer');
                     if (!timerDiv) {
                         timerDiv = document.createElement('div');
@@ -194,6 +201,10 @@
                         targetArea.parentNode.insertBefore(timerDiv, targetArea);
                     }
                     startCountdown(foundMatch.time, timerDiv);
+                } else {
+                    // මැච් එක LIVE වී නම් හෝ Time එක පසු වී නම් ස්ට්‍රීම් එක ලෝඩ් කිරීමට ඉඩ දීම
+                    isMatchLive = true;
+                    loadStream('server1');
                 }
             }
         });
@@ -220,6 +231,12 @@
                 if (distance < 0) {
                     clearInterval(interval);
                     displayElement.innerHTML = `<span style="color: #ff4757; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
+                    
+                    // ටයිම් එක අවසන් වූ පසු ස්වයංක්‍රීයව ලයිව් ස්ට්‍රීම් එක ප්ලේ වීම ඇරඹීම
+                    isMatchLive = true;
+                    document.getElementById('btnServer1').style.opacity = '1';
+                    document.getElementById('btnServer2').style.opacity = '1';
+                    loadStream('server1');
                     return;
                 }
 
@@ -242,6 +259,12 @@
         }
 
         function loadStream(serverType) {
+            // මැච් එක තවමත් ලයිව් කර නැත්නම් (Upcoming නම්) ලින්ක් ඉල්ලීම වැළැක්වීම
+            if (!isMatchLive) {
+                console.log("Match is still upcoming. Stream is locked.");
+                return;
+            }
+
             if(serverType === 'server1') {
                 document.getElementById('btnServer1').style.background = '#e50914';
                 document.getElementById('btnServer2').style.background = '#333';
@@ -253,9 +276,9 @@
             socket.emit('requestStreamLink', { matchId, serverType });
         }
 
-        loadStream('server1');
-
         socket.on('secureStreamLink', (directLink) => {
+            if (!isMatchLive) return; // ආරක්ෂාව සඳහා නැවත පරීක්ෂා කිරීම
+
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
                 return;
@@ -292,7 +315,7 @@
             }
         });
 
-        // වීඩියෝ එක ඇත්තටම ප්ලේ වෙන්න පටන්ගත් පසු (playing event) පමණක් Thumbnail එක ඉවත් කිරීම
+        // වීඩියෝ එක ඇත්තටම ප්ලේ වෙන්න පටන්ගත් පසු Thumbnail එක ඉවත් කිරීම
         video.addEventListener('playing', () => {
             playerThumbnail.classList.add('hidden');
             setTimeout(() => { 
@@ -301,10 +324,19 @@
         });
 
         function switchServer(serverType) {
+            if (!isMatchLive) {
+                alert('Match has not started yet!');
+                return;
+            }
             playerThumbnail.style.display = 'block';
             playerThumbnail.classList.remove('hidden'); 
             loadStream(serverType);
         }
+
+        // අනෙකුත් Player Controls සහ Chat Logic මෙහි යටින් දිගටම පවතී...
+
+    
+                                        
 
         // Custom Player Controls Logic
         const playPauseBtn = document.getElementById('playPauseBtn');
