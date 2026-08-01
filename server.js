@@ -33,22 +33,24 @@ async function getMatchesDataFromGitHub() {
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
-    // 1. Category.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම (Link එක හැංගිලා යයි, අනෙක් විස්තර පේනවා)
-        socket.on('requestAllMatches', async () => {
-        const allData = await getMatchesDataFromGitHub();
-        const publicData = {};
-        for (let cat in allData) {
-            publicData[cat] = allData[cat].map(match => ({
-                id: match.id,
-                title: match.title,
-                team1: match.team1,
-                team2: match.team2,
-                status: match.status,
-                thumbnail: match.thumbnail // මෙන්න මේක අලුතින් එකතු කරන්න
-            }));
-        }
-        socket.emit('allMatchesData', publicData);
-    });
+    // 1. Category.html හෝ Match.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම (Secure Links හැංගිලා යයි, අනෙක් විස්තර පේනවා)
+    socket.on('requestAllMatches', async () => {
+    const allData = await getMatchesDataFromGitHub();
+    const publicData = {};
+    for (let cat in allData) {
+        publicData[cat] = allData[cat].map(match => ({
+            id: match.id,
+            title: match.title,
+            team1: match.team1,
+            team2: match.team2,
+            status: match.status,
+            time: match.time,       // <--- මෙන්න මේක අනිවාර්යයෙන් දාන්න ඕනේ (Countdown එකට අවශ්‍යයි)
+            thumbnail: match.thumbnail
+        }));
+    }
+    socket.emit('allMatchesData', publicData);
+});
+
 
     // 2. Match.html එකෙන් නිශ්චිත මැච් එකක link එක ඉල්ලුවම රහසිගතව දීම
         // Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම
