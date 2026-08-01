@@ -95,17 +95,25 @@ io.on('connection', (socket) => {
         }
     });
 
-    // චැට් මැසේජ් එකක් ලැබුණු විට (Reply දත්ත සමග හැසිරවීම)
+    // චැට් මැසේජ් එකක් ලැබුණු විට (ශ්‍රී ලංකා වේලාවට නිවැරදිව සකස් කර ඇත)
     socket.on('chatMessage', (data) => {
         const matchId = socket.currentMatch;
         if (!matchId) return;
+
+        // ශ්‍රී ලංකා වේලා කලාපයට (Asia/Colombo) අදාළව නිවැරදි වෙලාව ලබා ගැනීම
+        const sriLankaTime = new Date().toLocaleTimeString('en-US', {
+            timeZone: 'Asia/Colombo',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
 
         const messageData = {
             id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
             username: socket.username,
             message: data.message,
             replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            time: sriLankaTime
         };
 
         // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
