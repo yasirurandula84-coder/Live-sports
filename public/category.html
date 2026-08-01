@@ -190,6 +190,29 @@
                 });
             }
         });
+        // 'time' string එක (උදා: "07:30 PM") අද දිනට අදාළ Date object එකකට හරවන ශ්‍රිතය
+        function parseTimeStringToDate(timeString) {
+            try {
+                const today = new Date();
+                let [time, modifier] = timeString.split(' ');
+                let [hours, minutes] = time.split(':');
+
+                if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') {
+                    hours = parseInt(hours, 10) + 12;
+                }
+                if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') {
+                    hours = 0;
+                }
+
+                today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+                return today;
+            } catch (e) {
+                console.error("Error parsing time:", e);
+                return null;
+            }
+        }
+            
+            
     </script>
 </body>
 </html>
