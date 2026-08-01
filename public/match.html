@@ -10,17 +10,45 @@
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
+        body {
+            background-color: #0b0b0e;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding-bottom: 50px;
+        }
+
+        /* Glassmorphism Navbar */
+        .navbar {
+            background: rgba(11, 11, 14, 0.85) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Modern Video Container */
         .custom-video-container {
             position: relative;
             width: 100%;
             aspect-ratio: 16 / 9;
-            max-height: 450px;
+            max-height: 480px;
             background: #000;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            border-radius: 12px;
+            border-radius: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
         }
         .custom-video-container video {
             width: 100%;
@@ -37,7 +65,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain;
+            object-fit: cover;
             background: #000;
             z-index: 5;
             transition: opacity 0.4s ease;
@@ -46,6 +74,189 @@
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
+        }
+
+        /* Server Select Buttons */
+        .server-selector button {
+            background: #141419;
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        .server-selector button:hover {
+            border-color: rgba(99, 102, 241, 0.5);
+            transform: translateY(-2px);
+        }
+
+        /* Match Info Bar */
+        .match-info-bar {
+            background: linear-gradient(145deg, #141419, #101014);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 14px 20px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+        .viewers-count {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        /* Modern Glassmorphic Chat Box */
+        .watch-container {
+            display: grid;
+            grid-template-columns: 1fr 360px;
+            gap: 24px;
+        }
+        @media (max-width: 900px) {
+            .watch-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .chat-box {
+            background: linear-gradient(145deg, #141419, #101014);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 18px;
+            display: flex;
+            flex-direction: column;
+            height: 530px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+        }
+        .chat-header {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 16px;
+            font-weight: 700;
+            font-size: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .chat-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .message {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 10px 14px;
+            border-radius: 12px;
+            font-size: 13px;
+            animation: fadeIn 0.3s ease;
+        }
+        .msg-user {
+            font-weight: 700;
+            color: #818cf8;
+            margin-bottom: 4px;
+        }
+        .chat-input-area {
+            display: flex;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+            gap: 10px;
+        }
+        .chat-input-area input {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            padding: 10px 14px;
+            border-radius: 10px;
+            color: #fff;
+            outline: none;
+            font-size: 13px;
+            transition: border-color 0.3s;
+        }
+        .chat-input-area input:focus {
+            border-color: #6366f1;
+        }
+        .chat-input-area button {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: filter 0.3s;
+        }
+        .chat-input-area button:hover {
+            filter: brightness(1.1);
+        }
+
+        /* Modern Username Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .modal-content {
+            background: linear-gradient(145deg, #181820, #121217);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 35px;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+        }
+        .modal-content h2 { margin-top: 0; color: #fff; font-size: 22px; }
+        .modal-content p { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
+        .modal-content input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 12px 16px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        .modal-content button {
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1, #ff4757);
+            color: #fff;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 15px;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+            transition: transform 0.2s;
+        }
+        .modal-content button:hover { transform: translateY(-2px); }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -62,14 +273,14 @@
     </div>
 
     <nav class="navbar">
-        <a href="index.html" class="logo">STREAMX</a>
-        <ul class="nav-links">
-            <li><a href="index.html"><i class="fa-solid fa-house"></i> Home</a></li>
+        <a href="index.html" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px; padding-left: 15px;">STREAMX</a>
+        <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding-right: 15px;">
+            <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <h2 id="matchTitle" class="section-title" style="margin-bottom: 15px;">Loading Match...</h2>
+        <h2 id="matchTitle" class="section-title" style="margin-bottom: 15px; font-size: 22px; font-weight: 800; color: #fff;">Loading Match...</h2>
         
         <div class="watch-container">
             <div>
@@ -108,12 +319,12 @@
 
                 <!-- Server Switch Buttons -->
                 <div class="server-selector" style="margin: 15px 0; display: flex; gap: 10px;">
-                    <button id="btnServer1" onclick="switchServer('server1')" style="background: #e50914; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Server 1 (HD)</button>
-                    <button id="btnServer2" onclick="switchServer('server2')" style="background: #333; color: #fff; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold;">Server 2 (Backup)</button>
+                    <button id="btnServer1" onclick="switchServer('server1')"><i class="fa-solid fa-server"></i> Server 1 (HD)</button>
+                    <button id="btnServer2" onclick="switchServer('server2')"><i class="fa-solid fa-shield-halved"></i> Server 2 (Backup)</button>
                 </div>
 
                 <div class="match-info-bar">
-                    <span id="nowPlayingText" style="font-weight: 600; color: var(--accent-color);">● Data Saver Live Stream</span>
+                    <span id="nowPlayingText" style="font-weight: 600; color: #9ca3af; display: flex; align-items: center; gap: 6px;">● Data Saver Live Stream</span>
                     <div class="viewers-count">
                         <span>👀</span> <span id="viewersCount">0</span> Watching Now
                     </div>
@@ -122,19 +333,19 @@
 
             <!-- Live Chat Box -->
             <div class="chat-box">
-                <div class="chat-header">Live Fan Chat</div>
+                <div class="chat-header"><i class="fa-solid fa-comments" style="color: #6366f1;"></i> Live Fan Chat</div>
                 <div class="chat-messages" id="chatMessages">
                     <!-- Messages appear here -->
                 </div>
                 <form class="chat-input-area" id="chatForm">
                     <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off" required>
-                    <button type="submit">Send</button>
+                    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
                 </form>
             </div>
         </div>
     </div>
 
-    <    <!-- Socket.io client script -->
+    <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // Right-click සහ F12 Block කිරීම (Security)
@@ -187,7 +398,6 @@
                 if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
                     isMatchLive = false; // තවම ලයිව් නැත
                     
-                    // සර්වර් බටන්ස් සහ ප්ලේයර් එක පාලනය කිරීමට Server select කොටස අක්‍රීය කර තැබිය හැක
                     document.getElementById('btnServer1').style.opacity = '0.5';
                     document.getElementById('btnServer2').style.opacity = '0.5';
 
@@ -195,19 +405,19 @@
                     if (!timerDiv) {
                         timerDiv = document.createElement('div');
                         timerDiv.id = 'matchCountdownTimer';
-                        timerDiv.style.cssText = "background: rgba(22, 22, 22, 0.9); border: 1px solid rgba(255,255,255,0.1); padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 8px 20px rgba(0,0,0,0.4);";
+                        timerDiv.style.cssText = "background: linear-gradient(145deg, #141419, #101014); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 16px; text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);";
                         
                         const targetArea = document.getElementById('playerContainer');
                         targetArea.parentNode.insertBefore(timerDiv, targetArea);
                     }
                     startCountdown(foundMatch.time, timerDiv);
                 } else {
-                    // මැච් එක LIVE වී නම් හෝ Time එක පසු වී නම් ස්ට්‍රීම් එක ලෝඩ් කිරීමට ඉඩ දීම
                     isMatchLive = true;
                     loadStream('server1');
                 }
             }
         });
+
         function startCountdown(timeString, displayElement) {
             const today = new Date();
             let [time, modifier] = timeString.split(' ');
@@ -227,31 +437,26 @@
                 const now = new Date().getTime();
                 const distance = targetTime - now;
 
-                // --- මෙන්න මෙතැනටයි මෙම කෝඩ් එක දමන්න ඕනේ ---
                 if (distance < 0) {
                     clearInterval(interval);
                     
-                    // ප්ලේයර් එක යට පෙන්වන ටෙක්ස්ට් එක LIVE ලෙස වෙනස් කිරීමට
-                    document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ff4757; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
-                    // කවුන්ට්ඩවුන් එක වෙනුවට පෙන්වන පණිවිඩය
-                    displayElement.innerHTML = `<span style="color: #ff4757; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
+                    document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
+                    displayElement.innerHTML = `<span style="color: #ef4444; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
                     
-                    // ටයිම් එක අවසන් වූ පසු ස්වයංක්‍රීයව ලයිව් ස්ට්‍රීම් එක ප්ලේ වීම ඇරඹීම
                     isMatchLive = true;
                     document.getElementById('btnServer1').style.opacity = '1';
                     document.getElementById('btnServer2').style.opacity = '1';
                     loadStream('server1');
                     return;
                 }
-                // ----------------------------------------------------
 
                 const hoursLeft = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
 
                 displayElement.innerHTML = `
-                    <div style="color: var(--text-muted, #aaa); font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                        <i class="fa-regular fa-clock" style="color: var(--accent-color, #ff4757);"></i> 
+                    <div style="color: #9ca3af; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-regular fa-clock" style="color: #6366f1;"></i> 
                         <span>Match Starts In: <strong style="color: #fff;">${timeString}</strong></span>
                     </div>
                     <div style="display: flex; justify-content: center; gap: 12px; font-weight: 700; color: #fff; font-size: 18px;">
@@ -261,30 +466,31 @@
                     </div>
                 `;
             }, 1000);
-                            }
-        
-        
+        }
 
         function loadStream(serverType) {
-            // මැච් එක තවමත් ලයිව් කර නැත්නම් (Upcoming නම්) ලින්ක් ඉල්ලීම වැළැක්වීම
             if (!isMatchLive) {
                 console.log("Match is still upcoming. Stream is locked.");
                 return;
             }
 
             if(serverType === 'server1') {
-                document.getElementById('btnServer1').style.background = '#e50914';
-                document.getElementById('btnServer2').style.background = '#333';
+                document.getElementById('btnServer1').style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
+                document.getElementById('btnServer1').style.borderColor = '#6366f1';
+                document.getElementById('btnServer2').style.background = '#141419';
+                document.getElementById('btnServer2').style.borderColor = 'rgba(255,255,255,0.08)';
             } else {
-                document.getElementById('btnServer2').style.background = '#e50914';
-                document.getElementById('btnServer1').style.background = '#333';
+                document.getElementById('btnServer2').style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
+                document.getElementById('btnServer2').style.borderColor = '#6366f1';
+                document.getElementById('btnServer1').style.background = '#141419';
+                document.getElementById('btnServer1').style.borderColor = 'rgba(255,255,255,0.08)';
             }
 
             socket.emit('requestStreamLink', { matchId, serverType });
         }
 
         socket.on('secureStreamLink', (directLink) => {
-            if (!isMatchLive) return; // ආරක්ෂාව සඳහා නැවත පරීක්ෂා කිරීම
+            if (!isMatchLive) return;
 
             if (!directLink) {
                 alert('Stream link not found, offline, or unauthorized for this server!');
@@ -309,20 +515,19 @@
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, function() {
                     video.play().catch(e => {
-                        console.log("Auto-play prevented by browser, waiting for user interaction:", e);
+                        console.log("Auto-play prevented by browser:", e);
                     });
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', function() {
                     video.play().catch(e => {
-                        console.log("Auto-play prevented by browser, waiting for user interaction:", e);
+                        console.log("Auto-play prevented by browser:", e);
                     });
                 });
             }
         });
 
-        // වීඩියෝ එක ඇත්තටම ප්ලේ වෙන්න පටන්ගත් පසු Thumbnail එක ඉවත් කිරීම
         video.addEventListener('playing', () => {
             playerThumbnail.classList.add('hidden');
             setTimeout(() => { 
@@ -339,11 +544,6 @@
             playerThumbnail.classList.remove('hidden'); 
             loadStream(serverType);
         }
-
-        // අනෙකුත් Player Controls සහ Chat Logic මෙහි යටින් දිගටම පවතී...
-
-    
-                                        
 
         // Custom Player Controls Logic
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -378,11 +578,7 @@
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
             video.muted = false;
-            if (video.volume == 0) {
-                muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-            } else {
-                muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-            }
+            muteBtn.innerHTML = (video.volume == 0) ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
         });
 
         muteBtn.addEventListener('click', () => {
@@ -491,19 +687,16 @@
                 }
             });
             chatSocket.on('chatMessage', (data) => {
-                // පරිශීලකයාගේ උපාංගයේ (Device එකේ) නිවැරදි වෙලාව ලබා ගැනීම
                 const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
                 chatMessages.innerHTML += `
                     <div class="message">
-                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:var(--text-muted); float:right;">${currentTime}</span></div>
-                        <div>${data.message}</div>
+                        <div class="msg-user">${data.username} <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${currentTime}</span></div>
+                        <div style="color: #e2e8f0;">${data.message}</div>
                     </div>
                 `;
                 chatMessages.scrollTop = chatMessages.scrollHeight;
             });
-
-            
         }
     </script>
 </body>
