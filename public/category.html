@@ -58,6 +58,7 @@
             <!-- Dynamic Match Cards will load here -->
         </div>
     </div>
+
     <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -81,24 +82,21 @@
                 grid.innerHTML = ''; 
                 list.forEach(match => {
                     let statusBadge = '';
-                    let timeDetailsHtml = '';
                     
-                    // තත්ත්වය පරීක්ෂා කිරීම
+                    // තත්ත්වය පරීක්ෂා කිරීම (LIVE නම් LIVE බේජ් එක, නැත්නම් UPCOMING)
                     if (match.status && match.status.toUpperCase() === 'LIVE') {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
                         statusBadge = `<span style="position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); color:#fff; padding:3px 8px; font-size:11px; font-weight:700; border-radius:4px;">UPCOMING</span>`;
-                        
-                        // වෙලාව සරලව ලබා ගැනීම
-                        if (match.time) {
-                            timeDetailsHtml = `
-                                <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; margin-top: 4px;">
-                                    <i class="fa-regular fa-clock" style="color: var(--accent-color);"></i>
-                                    <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
-                                </div>
-                            `;
-                        }
                     }
+
+                    // අනිත් ටීම් ඩේටා වගේම 'match.time' එක කෙලින්ම ගෙනැවිත් මෙතැනට ඇතුළත් කිරීම
+                    let matchTime = match.time ? `
+                        <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; margin-top: 2px;">
+                            <i class="fa-regular fa-clock" style="color: var(--accent-color);"></i>
+                            <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
+                        </div>
+                    ` : '';
 
                     grid.innerHTML += `
                         <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
@@ -113,7 +111,7 @@
                                     <span>${match.team2}</span>
                                 </div>
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 0;">${match.title}</p>
-                                ${timeDetailsHtml}
+                                ${matchTime}
                             </div>
                         </div>
                     `;
@@ -121,7 +119,5 @@
             }
         });
     </script>
-
-        
 </body>
 </html>
