@@ -121,6 +121,13 @@
         // Server එකෙන් මැච් ලැයිස්තුව ඉල්ලීම
         socket.emit('requestAllMatches');
 
+                // සර්වර් එකෙන් මැච් ලැයිස්තුව වෙනස් වූ විට (Upcoming සිට Live මාරු වූ විට) ස්වයංක්‍රීයව අලුත් කිරීම
+        socket.on('refreshMatchesData', () => {
+            console.log('Category matches updated from server, fetching latest...');
+            socket.emit('requestAllMatches');
+        });
+        
+
         // Server එකෙන් ඩේටා ආපු ගමන් screen එකට load කිරීම
         socket.on('allMatchesData', (matchesData) => {
             const list = matchesData[cat] || [];
