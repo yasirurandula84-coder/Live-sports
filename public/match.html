@@ -158,6 +158,13 @@
         const socket = io();
         let currentHls = null;
 
+        // සර්වර් එකෙන් මැච් අප්ඩේට් එකක් ලැබුණු වහාම පිටුව රිෆ්‍රෙෂ් නොකර දත්ත නැවත ලබා ගැනීම
+        socket.on('refreshMatchesData', () => {
+            console.log('Matches updated from server, fetching latest...');
+            socket.emit('requestAllMatches'); // මුලින් මැච් ඩිජිට් එක ඉල්ලපු ෆන්ක්ෂන් එකම නැවත ක්‍රියාත්මක කරයි
+        });
+        
+        
         // Server එකෙන් මැච් විස්තර ලබාගෙන Thumbnail එක සහ Countdown එක පාලනය කිරීම
         socket.emit('requestAllMatches');
 
