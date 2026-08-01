@@ -8,50 +8,106 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* Thumbnail එක සහ Card එක ලස්සනට Set කරගන්න CSS Styles */
+        body {
+            background-color: #0b0b0e;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding-bottom: 60px;
+        }
+
+        /* Glassmorphism Navbar */
+        .navbar {
+            background: rgba(11, 11, 14, 0.85) !important;
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Section Title Style */
+        .section-title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #fff;
+            margin: 30px 0 20px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-transform: capitalize;
+        }
+
+        /* Matches Grid */
+        .matches-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        /* Enhanced Match Card */
         .match-card {
-            background: #1a1a1a;
-            border-radius: 10px;
+            background: linear-gradient(145deg, #141419, #101014);
+            border-radius: 18px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             cursor: pointer;
-            transition: transform 0.2s;
-            border: 1px solid #333;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
         }
+
         .match-card:hover {
-            transform: translateY(-5px);
-            border-color: #555;
+            transform: translateY(-8px) scale(1.02);
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 20px rgba(99, 102, 241, 0.2);
         }
+
         .match-thumb-container {
             position: relative;
             width: 100%;
-            height: 200px; /* Thumbnail එකේ උස */
-            background: #000; /* ෆොටෝ එකෙන් ඉතිරි වන පැති කළු පැහැයෙන් පෙන්වීමට */
+            height: 180px;
+            background: #000;
             display: flex;
             align-items: center;
             justify-content: center;
+            overflow: hidden;
         }
+
         .match-thumb-container img {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* ෆොටෝ එක කැපී යාම වළක්වා මුළු රූපයම පෙන්වයි */
-        }
-        .match-details {
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            object-fit: cover;
+            transition: transform 0.5s ease;
         }
 
-        /* LIVE NOW Badge Styles */
+        .match-card:hover .match-thumb-container img {
+            transform: scale(1.08);
+        }
+
+        .match-details {
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        /* LIVE NOW Badge with Glow Effect */
         .live-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #ef4444;
+            top: 12px;
+            right: 12px;
+            background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
-            padding: 5px 12px;
+            padding: 6px 14px;
             border-radius: 20px;
             font-size: 11px;
             font-weight: 700;
@@ -60,48 +116,55 @@
             gap: 6px;
             animation: pulse 1.5s infinite;
             z-index: 10;
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6);
+            backdrop-filter: blur(4px);
         }
+
         .live-dot {
             width: 8px;
             height: 8px;
             background: white;
             border-radius: 50%;
-        }
-        @keyframes pulse {
-            0% { opacity: 1; }
-            50% { opacity: 0.4; }
-            100% { opacity: 1; }
+            box-shadow: 0 0 8px white;
         }
 
-        /* UPCOMING Badge Styles */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.8; box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        /* UPCOMING Badge with Glassmorphism */
         .upcoming-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.8);
-            backdrop-filter: blur(6px);
-            color: #fff;
-            padding: 4px 10px;
+            top: 12px;
+            right: 12px;
+            background: rgba(15, 15, 20, 0.85);
+            backdrop-filter: blur(8px);
+            color: #e2e8f0;
+            padding: 6px 12px;
             font-size: 11px;
             font-weight: 700;
-            border-radius: 6px;
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.12);
             z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
     </style>
 </head>
 <body>
 
     <nav class="navbar">
-        <a href="index.html" class="logo">STREAMX</a>
-        <ul class="nav-links">
-            <li><a href="index.html">Home</a></li>
+        <a href="index.html" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px; padding-left: 15px;">STREAMX</a>
+        <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding-right: 15px;">
+            <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <h2 class="section-title" id="categoryTitle">Live & Upcoming Matches</h2>
+        <h2 class="section-title" id="categoryTitle">
+            <i class="fa-solid fa-trophy" style="color: var(--primary-color, #6366f1);"></i> Matches
+        </h2>
         
         <div class="matches-grid" id="matchesGrid">
             <!-- Dynamic Match Cards will load here -->
@@ -115,57 +178,50 @@
         const urlParams = new URLSearchParams(window.location.search);
         const cat = urlParams.get('cat') || 'cricket';
         
-        document.getElementById('categoryTitle').innerText = `${cat.toUpperCase()} Matches`;
+        document.getElementById('categoryTitle').innerHTML = `<i class="fa-solid fa-trophy" style="color: #6366f1;"></i> ${cat.toUpperCase()} Matches`;
         const grid = document.getElementById('matchesGrid');
 
         // Server එකෙන් මැච් ලැයිස්තුව ඉල්ලීම
         socket.emit('requestAllMatches');
 
-                // සර්වර් එකෙන් මැච් ලැයිස්තුව වෙනස් වූ විට (Upcoming සිට Live මාරු වූ විට) ස්වයංක්‍රීයව අලුත් කිරීම
+        // සර්වර් එකෙන් මැච් ලැයිස්තුව වෙනස් වූ විට (Upcoming සිට Live මාරු වූ විට) ස්වයංක්‍රීයව අලුත් කිරීම
         socket.on('refreshMatchesData', () => {
             console.log('Category matches updated from server, fetching latest...');
             socket.emit('requestAllMatches');
         });
-        
 
         // Server එකෙන් ඩේටා ආපු ගමන් screen එකට load කිරීම
         socket.on('allMatchesData', (matchesData) => {
             const list = matchesData[cat] || [];
 
             if(list.length === 0) {
-                grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
+                grid.innerHTML = `<p style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 40px; background: #141419; border-radius: 14px; border: 1px solid rgba(255,255,255,0.05);">No matches available right now.</p>`;
             } else {
                 grid.innerHTML = ''; 
-                                list.forEach(match => {
+                list.forEach(match => {
                     let statusBadge = '';
-                    let isActuallyLive = false; // තාවකාලික විචල්‍යයක්
+                    let isActuallyLive = false;
 
-                    // 1. කාලය පරීක්ෂා කිරීම (startsAt යනු JavaScript Date object එකක් විය යුතුය)
+                    // කාලය පරීක්ෂා කිරීම
                     if (match.time) {
                         const now = new Date();
-                        // මැච් එකේ time එක (උදා: "07:30 PM") අද දිනට අදාළව Date object එකකට හරවා ගැනීම
                         const startsAt = parseTimeStringToDate(match.time); 
 
-                        // කාලය දැනටමත් පසු වී ඇත්නම් හෝ සමාන නම් LIVE ලෙස සැලකේ
                         if (startsAt && now >= startsAt) {
                             isActuallyLive = true;
                         }
                     }
 
-                    // 2. JSON එකේ ස්ටේටස් එක හෝ ගණනය කළ ස්ටේටස් එක පරීක්ෂා කිරීම
+                    // ස්ටේටස් පරීක්ෂා කිරීම
                     if ((match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive) {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
-                        statusBadge = `<div class="upcoming-badge">UPCOMING</div>`;
+                        statusBadge = `<div class="upcoming-badge"><i class="fa-regular fa-clock"></i> UPCOMING</div>`;
                     }
-                    
-    
 
-
-                    // අනිත් ටීම් ඩේටා වගේම 'match.time' එක කෙලින්ම ගෙනැවිත් මෙතැනට ඇතුළත් කිරීම
                     let matchTime = match.time ? `
-                        <div style="display: flex; align-items: center; gap: 6px; color: var(--text-muted); font-size: 13px; margin-top: 2px;">
-                            <i class="fa-regular fa-clock" style="color: var(--accent-color);"></i>
+                        <div style="display: flex; align-items: center; gap: 6px; color: #9ca3af; font-size: 13px; margin-top: 4px;">
+                            <i class="fa-regular fa-clock" style="color: #6366f1;"></i>
                             <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
                         </div>
                     ` : '';
@@ -177,12 +233,12 @@
                                 ${statusBadge}
                             </div>
                             <div class="match-details">
-                                <div class="match-teams" style="font-weight:bold; font-size:16px; color:#fff;">
+                                <div class="match-teams" style="font-weight: 700; font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;">
                                     <span>${match.team1}</span>
-                                    <span class="vs" style="color:#888; margin:0 5px;">VS</span>
+                                    <span class="vs" style="color: #64748b; font-size: 13px; font-weight: 600;">VS</span>
                                     <span>${match.team2}</span>
-                                </div>
-                                <p style="color: var(--text-muted); font-size: 13px; margin: 0;">${match.title}</p>
+                               -</div>
+                                <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.4;">${match.title}</p>
                                 ${matchTime}
                             </div>
                         </div>
@@ -190,7 +246,8 @@
                 });
             }
         });
-        // 'time' string එක (උදා: "07:30 PM") අද දිනට අදාළ Date object එකකට හරවන ශ්‍රිතය
+
+        // 'time' string එක Date object එකකට හරවන ශ්‍රිතය
         function parseTimeStringToDate(timeString) {
             try {
                 const today = new Date();
@@ -211,8 +268,6 @@
                 return null;
             }
         }
-            
-            
     </script>
 </body>
 </html>
