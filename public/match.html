@@ -208,7 +208,6 @@
                 }
             }
         });
-
         function startCountdown(timeString, displayElement) {
             const today = new Date();
             let [time, modifier] = timeString.split(' ');
@@ -228,8 +227,13 @@
                 const now = new Date().getTime();
                 const distance = targetTime - now;
 
+                // --- මෙන්න මෙතැනටයි මෙම කෝඩ් එක දමන්න ඕනේ ---
                 if (distance < 0) {
                     clearInterval(interval);
+                    
+                    // ප්ලේයර් එක යට පෙන්වන ටෙක්ස්ට් එක LIVE ලෙස වෙනස් කිරීමට
+                    document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ff4757; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
+                    // කවුන්ට්ඩවුන් එක වෙනුවට පෙන්වන පණිවිඩය
                     displayElement.innerHTML = `<span style="color: #ff4757; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
                     
                     // ටයිම් එක අවසන් වූ පසු ස්වයංක්‍රීයව ලයිව් ස්ට්‍රීම් එක ප්ලේ වීම ඇරඹීම
@@ -239,6 +243,7 @@
                     loadStream('server1');
                     return;
                 }
+                // ----------------------------------------------------
 
                 const hoursLeft = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
                 const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
@@ -256,7 +261,9 @@
                     </div>
                 `;
             }, 1000);
-        }
+                            }
+        
+        
 
         function loadStream(serverType) {
             // මැච් එක තවමත් ලයිව් කර නැත්නම් (Upcoming නම්) ලින්ක් ඉල්ලීම වැළැක්වීම
