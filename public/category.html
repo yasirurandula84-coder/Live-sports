@@ -20,26 +20,25 @@
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: var(--accent-color, #ec4899);
+            background: #e50914; /* Accent color fallback */
         }
 
         /* Enhanced Card Styles with Smooth Hover & Shadows */
         .match-card {
-            background: var(--card-bg, #161616);
-            border-radius: 20px;
+            background: #161616;
+            border-radius: 12px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             cursor: pointer;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+            border: 1px solid rgba(255, 255, 255, 0.08);
             position: relative;
-            backdrop-filter: blur(10px);
         }
         .match-card:hover {
             transform: translateY(-6px);
             box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
-            border-color: var(--accent-color, #ec4899);
+            border-color: rgba(255, 255, 255, 0.2);
         }
 
         .match-thumb-container {
@@ -60,26 +59,10 @@
         }
 
         .match-details {
-            padding: 20px;
+            padding: 18px;
             display: flex;
             flex-direction: column;
             gap: 10px;
-        }
-
-        /* Upcoming Badge Styling */
-        .upcoming-badge {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            background: rgba(11, 15, 25, 0.85);
-            backdrop-filter: blur(6px);
-            color: #fff;
-            padding: 5px 12px;
-            font-size: 11px;
-            font-weight: 700;
-            border-radius: 8px;
-            border: 1px solid var(--border-color, rgba(255,255,255,0.15));
-            z-index: 2;
         }
 
         /* Skeleton Loading Animation Styles */
@@ -139,16 +122,15 @@
                 list.forEach(match => {
                     let statusBadge = '';
                     
-                    // සෙවීමේ පහසුව සඳහා status එක uppercase කර පරීක්ෂා කිරීම
                     if (match.status && match.status.toUpperCase() === 'LIVE') {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
-                        statusBadge = `<div class="upcoming-badge">UPCOMING</div>`;
+                        statusBadge = `<span style="position:absolute; top:12px; right:12px; background:rgba(0,0,0,0.85); backdrop-filter: blur(4px); color:#fff; padding:4px 10px; font-size:11px; font-weight:700; border-radius:6px; border: 1px solid rgba(255,255,255,0.1);">UPCOMING</span>`;
                     }
 
                     let matchTime = match.time ? `
                         <div style="display: flex; align-items: center; gap: 8px; color: var(--text-muted); font-size: 13px; margin-top: 4px;">
-                            <i class="fa-regular fa-clock" style="color: var(--accent-color, #ec4899);"></i>
+                            <i class="fa-regular fa-clock" style="color: var(--accent-color, #ff4757);"></i>
                             <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
                         </div>
                     ` : '';
@@ -160,9 +142,9 @@
                                 ${statusBadge}
                             </div>
                             <div class="match-details">
-                                <div class="match-teams" style="font-weight:700; font-size:16px; color:#fff; display: flex; align-items: center; justify-content: space-between; margin: 0 0 8px 0;">
+                                <div class="match-teams" style="font-weight:700; font-size:16px; color:#fff; display: flex; align-items: center; gap: 8px;">
                                     <span>${match.team1}</span>
-                                    <span class="vs" style="color:var(--text-muted); font-size: 13px; font-weight: 500;">VS</span>
+                                    <span class="vs" style="color:#777; font-size: 13px; font-weight: 500;">VS</span>
                                     <span>${match.team2}</span>
                                 </div>
                                 <p style="color: var(--text-muted); font-size: 13px; margin: 0; line-height: 1.4;">${match.title}</p>
