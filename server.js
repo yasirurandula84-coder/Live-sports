@@ -33,32 +33,30 @@ async function getMatchesDataFromGitHub() {
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
-    // 1. Category.html හෝ Match.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම (Secure Links හැංගිලා යයි, අනෙක් විස්තර පේනවා)
+    // 1. Category.html හෝ Match.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම
     socket.on('requestAllMatches', async () => {
-    const allData = await getMatchesDataFromGitHub();
-    const publicData = {};
-    for (let cat in allData) {
-        publicData[cat] = allData[cat].map(match => ({
-            id: match.id,
-            title: match.title,
-            team1: match.team1,
-            team2: match.team2,
-            status: match.status,
-            time: match.time,       // <--- මෙන්න මේක අනිවාර්යයෙන් දාන්න ඕනේ (Countdown එකට අවශ්‍යයි)
-            thumbnail: match.thumbnail
-        }));
-    }
-    socket.emit('allMatchesData', publicData);
-});
-    // මැච් එකක ස්ටේටස් එක වෙනස් වූ විට හෝ අලුත් විස්තර යැවීමට අවශ්‍ය තැනදී මෙය ක්‍රියාත්මක කරන්න:
-const allData = await getMatchesDataFromGitHub();
-// අවශ්‍ය ප්‍රොසෙස් එකෙන් පසු සියලුම කනෙක්ට් වී සිටින අයට අලුත් ඩේටා යැවීම:
-io.emit('refreshMatchesData');
-    
+        const allData = await getMatchesDataFromGitHub();
+        const publicData = {};
+        for (let cat in allData) {
+            publicData[cat] = allData[cat].map(match => ({
+                id: match.id,
+                title: match.title,
+                team1: match.team1,
+                team2: match.team2,
+                status: match.status,
+                time: match.time,
+                thumbnail: match.thumbnail
+            }));
+        }
+        socket.emit('allMatchesData', publicData);
+    });
 
+    // අලුත් මැච් අප්ඩේට් එකක් සයිට් එකේ හැමෝටම ඔටෝ පෙන්නීමට ට්‍රිගර් කළ හැකි Event එකක්
+    socket.on('triggerRefresh', async () => {
+        io.emit('refreshMatchesData');
+    });
 
-    // 2. Match.html එකෙන් නිශ්චිත මැච් එකක link එක ඉල්ලුවම රහසිගතව දීම
-        // Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම
+    // 2. Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
@@ -66,9 +64,8 @@ io.emit('refreshMatchesData');
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
-                // serverType එක අනුව link1 හෝ link2 ලබා දීම
                 if (serverType === 'server2') {
-                    directLink = found.link2 || found.link1; // link2 නැත්නම් link1 දෙන්න
+                    directLink = found.link2 || found.link1;
                 } else {
                     directLink = found.link1;
                 }
@@ -77,7 +74,6 @@ io.emit('refreshMatchesData');
         }
         socket.emit('secureStreamLink', directLink);
     });
-
 
     // 3. Match Join සහ Chat සඳහා අවශ්‍ය Events
     socket.on('joinMatch', ({ matchId, username }) => {
@@ -96,8 +92,8 @@ io.emit('refreshMatchesData');
             io.to(matchId).emit('chatMessage', {
                 username: socket.username,
                 message: msg
-        });
             });
+        });
     });
 
     // 4. User Disconnect වීම
