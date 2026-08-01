@@ -136,15 +136,31 @@
                 grid.innerHTML = `<p style="color:var(--text-muted)">No matches available right now.</p>`;
             } else {
                 grid.innerHTML = ''; 
-                list.forEach(match => {
+                                list.forEach(match => {
                     let statusBadge = '';
-                    
-                    // තත්ත්වය පරීක්ෂා කිරීම (LIVE නම් LIVE බේජ් එක, නැත්නම් UPCOMING)
-                    if (match.status && match.status.trim().toUpperCase() === 'LIVE') {
+                    let isActuallyLive = false; // තාවකාලික විචල්‍යයක්
+
+                    // 1. කාලය පරීක්ෂා කිරීම (startsAt යනු JavaScript Date object එකක් විය යුතුය)
+                    if (match.time) {
+                        const now = new Date();
+                        // මැච් එකේ time එක (උදා: "07:30 PM") අද දිනට අදාළව Date object එකකට හරවා ගැනීම
+                        const startsAt = parseTimeStringToDate(match.time); 
+
+                        // කාලය දැනටමත් පසු වී ඇත්නම් හෝ සමාන නම් LIVE ලෙස සැලකේ
+                        if (startsAt && now >= startsAt) {
+                            isActuallyLive = true;
+                        }
+                    }
+
+                    // 2. JSON එකේ ස්ටේටස් එක හෝ ගණනය කළ ස්ටේටස් එක පරීක්ෂා කිරීම
+                    if ((match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive) {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
                         statusBadge = `<div class="upcoming-badge">UPCOMING</div>`;
                     }
+                    
+    
+
 
                     // අනිත් ටීම් ඩේටා වගේම 'match.time' එක කෙලින්ම ගෙනැවිත් මෙතැනට ඇතුළත් කිරීම
                     let matchTime = match.time ? `
