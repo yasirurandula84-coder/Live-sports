@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const axios = require('axios'); // HLS ස්ට්‍රීම් ෆෙච් කිරීමට axios අවශ්‍ය වේ
 
 const app = express();
 const server = http.createServer(app);
@@ -30,6 +31,39 @@ async function getMatchesDataFromGitHub() {
         return {};
     }
 }
+
+// ==========================================
+// HLS STREAM PROXY (Geo-blocking මඟ හැරීමට)
+// ==========================================
+app.get('/proxy-stream', async (req, res) => {
+    const targetUrl = req.query.url;
+    if (!targetUrl) {
+        return res.status(400).send('Missing stream URL');
+    }
+
+    try {
+        const response = await axios.get(targetUrl, {
+            responseType: 'arraybuffer', // හෝ stream, .m3u8 සහ .ts ෆයිල්ස් නිවැරදිව ලබා ගැනීමට
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': 'https://www.willow.tv/'
+            }
+        });
+
+        // Content-Type එක නිවැරදිව සෙට් කිරීම (.m3u8 හෝ .ts සඳහා)
+        if (targetUrl.endsWith('.m3u8')) {
+            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+        } else if (targetUrl.endsWith('.ts')) {
+            res.setHeader('Content-Type', 'video/mp2t');
+        }
+
+        res.send(response.data);
+    } catch (error) {
+        console.error('Proxy Error:', error.message);
+        res.status(500).send('Failed to fetch stream segment.');
+    }
+});
+// ==========================================
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
@@ -73,6 +107,13 @@ io.on('connection', (socket) => {
                 break;
             }
         }
+
+        // ලින්ක් එක US geo-blocked එකක් නම් එය අපේ ප්‍රොක්සි ලින්ක් එක හරහා යැවීම
+        // (ඔබට අවශ්‍ය නම් ඕනෑම ලින්ක් එකක් ප්‍රොක්සි හරහා යැවීමට මෙලෙස රූට් කළ හැක)
+        if (directLink && directLink.includes('amagi.tv')) {
+            directLink = `/proxy-stream?url=${encodeURIComponent(directLink)}`;
+        }
+
         socket.emit('secureStreamLink', directLink);
     });
 
@@ -109,14 +150,13 @@ io.on('connection', (socket) => {
         });
 
         const messageData = {
-            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
+            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7),
             username: socket.username,
             message: data.message,
-            replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
+            replyTo: data.replyTo || null,
             time: sriLankaTime
         };
 
-        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
         if (!matchChatHistories[matchId]) {
             matchChatHistories[matchId] = [];
         }
@@ -126,7 +166,6 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId].shift();
         }
 
-        // එම මැච් රූම් එකේ ඉන්න හැමෝටම මැසේජ් එක යැවීම
         io.to(matchId).emit('chatMessage', messageData);
     });
 
