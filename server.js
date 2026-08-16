@@ -33,27 +33,44 @@ async function getMatchesDataFromGitHub() {
 }
 
 // ==========================================
-// HLS STREAM PROXY (Geo-blocking මඟ හැරීමට)
+// HLS STREAM PROXY (Geo-blocking සහ Headers මඟ හැරීමට)
 // ==========================================
 app.get('/proxy-stream', async (req, res) => {
-    const targetUrl = req.query.url;
+    let targetUrl = req.query.url;
     if (!targetUrl) {
         return res.status(400).send('Missing stream URL');
     }
 
+    let customUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+    let customReferer = 'https://www.willow.tv/';
+
+    // ලින්ක් එකේ '|' ලකුණ මඟින් User-Agent හෝ Headers අඩංගු නම් ඒවා වෙන් කර ගැනීම
+    if (targetUrl.includes('|')) {
+        const parts = targetUrl.split('|');
+        targetUrl = parts[0];
+        const params = parts[1].split('&');
+        params.forEach(param => {
+            if (param.startsWith('User-Agent=')) {
+                customUserAgent = param.replace('User-Agent=', '');
+            } else if (param.startsWith('Referer=')) {
+                customReferer = param.replace('Referer=', '');
+            }
+        });
+    }
+
     try {
         const response = await axios.get(targetUrl, {
-            responseType: 'arraybuffer', // හෝ stream, .m3u8 සහ .ts ෆයිල්ස් නිවැරදිව ලබා ගැනීමට
+            responseType: 'arraybuffer',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://www.willow.tv/'
+                'User-Agent': customUserAgent,
+                'Referer': customReferer
             }
         });
 
         // Content-Type එක නිවැරදිව සෙට් කිරීම (.m3u8 හෝ .ts සඳහා)
-        if (targetUrl.endsWith('.m3u8')) {
+        if (targetUrl.endsWith('.m3u8') || response.headers['content-type']?.includes('mpegurl')) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        } else if (targetUrl.endsWith('.ts')) {
+        } else if (targetUrl.endsWith('.ts') || response.headers['content-type']?.includes('mp2t')) {
             res.setHeader('Content-Type', 'video/mp2t');
         }
 
@@ -63,6 +80,7 @@ app.get('/proxy-stream', async (req, res) => {
         res.status(500).send('Failed to fetch stream segment.');
     }
 });
+
 // ==========================================
 
 io.on('connection', (socket) => {
