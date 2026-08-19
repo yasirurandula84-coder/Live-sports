@@ -2,7 +2,6 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const axios = require('axios'); // HLS ස්ට්‍රීම් ෆෙච් කිරීමට axios අවශ්‍ය වේ
 
 const app = express();
 const server = http.createServer(app);
@@ -31,57 +30,6 @@ async function getMatchesDataFromGitHub() {
         return {};
     }
 }
-
-// ==========================================
-// HLS STREAM PROXY (Geo-blocking සහ Headers මඟ හැරීමට)
-// ==========================================
-app.get('/proxy-stream', async (req, res) => {
-    let targetUrl = req.query.url;
-    if (!targetUrl) {
-        return res.status(400).send('Missing stream URL');
-    }
-
-    let customUserAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
-    let customReferer = 'https://www.willow.tv/';
-
-    // ලින්ක් එකේ '|' ලකුණ මඟින් User-Agent හෝ Headers අඩංගු නම් ඒවා වෙන් කර ගැනීම
-    if (targetUrl.includes('|')) {
-        const parts = targetUrl.split('|');
-        targetUrl = parts[0];
-        const params = parts[1].split('&');
-        params.forEach(param => {
-            if (param.startsWith('User-Agent=')) {
-                customUserAgent = param.replace('User-Agent=', '');
-            } else if (param.startsWith('Referer=')) {
-                customReferer = param.replace('Referer=', '');
-            }
-        });
-    }
-
-    try {
-        const response = await axios.get(targetUrl, {
-            responseType: 'arraybuffer',
-            headers: {
-                'User-Agent': customUserAgent,
-                'Referer': customReferer
-            }
-        });
-
-        // Content-Type එක නිවැරදිව සෙට් කිරීම (.m3u8 හෝ .ts සඳහා)
-        if (targetUrl.endsWith('.m3u8') || response.headers['content-type']?.includes('mpegurl')) {
-            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-        } else if (targetUrl.endsWith('.ts') || response.headers['content-type']?.includes('mp2t')) {
-            res.setHeader('Content-Type', 'video/mp2t');
-        }
-
-        res.send(response.data);
-    } catch (error) {
-        console.error('Proxy Error:', error.message);
-        res.status(500).send('Failed to fetch stream segment.');
-    }
-});
-
-// ==========================================
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
@@ -125,13 +73,6 @@ io.on('connection', (socket) => {
                 break;
             }
         }
-
-        // ලින්ක් එක US geo-blocked එකක් නම් එය අපේ ප්‍රොක්සි ලින්ක් එක හරහා යැවීම
-        // (ඔබට අවශ්‍ය නම් ඕනෑම ලින්ක් එකක් ප්‍රොක්සි හරහා යැවීමට මෙලෙස රූට් කළ හැක)
-        if (directLink && directLink.includes('amagi.tv')) {
-            directLink = `/proxy-stream?url=${encodeURIComponent(directLink)}`;
-        }
-
         socket.emit('secureStreamLink', directLink);
     });
 
@@ -168,13 +109,14 @@ io.on('connection', (socket) => {
         });
 
         const messageData = {
-            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7),
+            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
             username: socket.username,
             message: data.message,
-            replyTo: data.replyTo || null,
+            replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
             time: sriLankaTime
         };
 
+        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
         if (!matchChatHistories[matchId]) {
             matchChatHistories[matchId] = [];
         }
@@ -184,6 +126,7 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId].shift();
         }
 
+        // එම මැච් රූම් එකේ ඉන්න හැමෝටම මැසේජ් එක යැවීම
         io.to(matchId).emit('chatMessage', messageData);
     });
 
