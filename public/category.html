@@ -12,7 +12,7 @@
             --primary-color: #6366f1;
             --accent-color: #ff4757;
             --bg-dark: #0b0b0e;
-            --card-bg: linear-gradient(145deg, #141419, #101014);
+            --card-bg: linear-gradient(145deg, #16161d, #101014);
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
@@ -56,7 +56,7 @@
         }
 
         .container {
-            max-width: 1100px;
+            max-width: 1150px;
             margin: 0 auto;
             padding: 20px;
         }
@@ -76,35 +76,36 @@
         /* Matches Grid */
         .matches-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 24px;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 26px;
         }
 
         /* Enhanced Match Card */
         .match-card {
             background: var(--card-bg);
-            border-radius: 18px;
+            border-radius: 20px;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             cursor: pointer;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             border: 1px solid var(--border-color);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
             position: relative;
             animation: fadeIn 0.5s ease-in-out;
         }
 
         .match-card:hover {
-            transform: translateY(-8px) scale(1.02);
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(99, 102, 241, 0.25);
+            transform: translateY(-8px) scale(1.01);
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 22px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(99, 102, 241, 0.3);
         }
 
+        /* Thumbnail Container with Blur Background to prevent black spaces */
         .match-thumb-container {
             position: relative;
             width: 100%;
-            height: 180px;
+            height: 190px;
             background: #000;
             display: flex;
             align-items: center;
@@ -112,17 +113,30 @@
             overflow: hidden;
         }
 
-        /* පින්තූරය සම්පූර්ණයෙන්ම පෙන්වීමට සහ කාඩ් එකට හරියටම ෆිට් කිරීමට */
+        /* පිටුපසින් පේන ब्लर (Blur) පසුබිම - කළු ඉඩ මගහරවා ගැනීමට */
+        .match-thumb-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-size: cover;
+            background-position: center;
+            filter: blur(12px) brightness(0.4);
+            transform: scale(1.2);
+            z-index: 1;
+        }
+
+        /* ප්‍රධාන ලාංඡනය හෝ පින්තූරය හරියටම පෙන්වීම */
         .match-thumb-container img {
-            width: 100%;
-            height: 100%;
+            max-width: 100%;
+            max-height: 100%;
             object-fit: contain;
-            background-color: #0b0b0e;
+            position: relative;
+            z-index: 2;
             transition: transform 0.5s ease;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
         }
 
         .match-card:hover .match-thumb-container img {
-            transform: scale(1.06);
+            transform: scale(1.07);
         }
 
         .match-details {
@@ -130,13 +144,14 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
+            background: linear-gradient(180deg, rgba(20,20,25,0.6) 0%, rgba(16,16,20,0.95) 100%);
         }
 
         /* LIVE NOW Badge with Glow Effect */
         .live-badge {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 14px;
+            right: 14px;
             background: linear-gradient(135deg, #ef4444, #dc2626);
             color: white;
             padding: 6px 14px;
@@ -174,15 +189,15 @@
         /* UPCOMING Badge with Glassmorphism */
         .upcoming-badge {
             position: absolute;
-            top: 12px;
-            right: 12px;
+            top: 14px;
+            right: 14px;
             background: rgba(15, 15, 20, 0.85);
             backdrop-filter: blur(8px);
             color: #e2e8f0;
             padding: 6px 12px;
             font-size: 11px;
             font-weight: 700;
-            border-radius: 8px;
+            border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.12);
             z-index: 10;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
@@ -218,16 +233,13 @@
         document.getElementById('categoryTitle').innerHTML = `<i class="fa-solid fa-trophy" style="color: #6366f1;"></i> ${cat.toUpperCase()} Matches`;
         const grid = document.getElementById('matchesGrid');
 
-        // Server එකෙන් මැච් ලැයිස්තුව ඉල්ලීම
         socket.emit('requestAllMatches');
 
-        // සර්වර් එකෙන් මැච් ලැයිස්තුව වෙනස් වූ විට (Upcoming සිට Live මාරු වූ විට) ස්වයංක්‍රීයව අලුත් කිරීම
         socket.on('refreshMatchesData', () => {
             console.log('Category matches updated from server, fetching latest...');
             socket.emit('requestAllMatches');
         });
 
-        // Server එකෙන් ඩේටා ආපු ගමන් screen එකට load කිරීම
         socket.on('allMatchesData', (matchesData) => {
             const list = matchesData[cat] || [];
 
@@ -238,8 +250,8 @@
                 list.forEach(match => {
                     let statusBadge = '';
                     let isActuallyLive = false;
+                    const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
 
-                    // කාලය පරීක්ෂා කිරීම
                     if (match.time) {
                         const now = new Date();
                         const startsAt = parseTimeStringToDate(match.time); 
@@ -249,7 +261,6 @@
                         }
                     }
 
-                    // ස්ටේටස් පරීක්ෂා කිරීම
                     if ((match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive) {
                         statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
                     } else {
@@ -266,7 +277,9 @@
                     grid.innerHTML += `
                         <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
                             <div class="match-thumb-container">
-                                <img src="${match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX'}" alt="Match Thumbnail">
+                                <!-- පිටුපසින් කළු ඉඩ වැසීමට Blur background එකක් එකතු කර ඇත -->
+                                <div class="match-thumb-bg" style="background-image: url('${thumbUrl}')"></div>
+                                <img src="${thumbUrl}" alt="Match Thumbnail">
                                 ${statusBadge}
                             </div>
                             <div class="match-details">
@@ -275,7 +288,7 @@
                                     <span class="vs" style="color: #64748b; font-size: 13px; font-weight: 600;">VS</span>
                                     <span>${match.team2}</span>
                                 </div>
-                                <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.4;">${match.title}</p>
+                                <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${match.title}</p>
                                 ${matchTime}
                             </div>
                         </div>
@@ -284,7 +297,6 @@
             }
         });
 
-        // 'time' string එක Date object එකකට හරවන ශ්‍රිතය
         function parseTimeStringToDate(timeString) {
             try {
                 const today = new Date();
