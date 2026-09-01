@@ -760,6 +760,407 @@
         function setReply(msgId, username, messageText) {
             replyingTo = { id: msgId, username: username, message: messageText };
             document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
+    <!-- Socket.io client script -->
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        // Right-click සහ F12 Block කිරීම (Security)
+        document.addEventListener('contextmenu', event => event.preventDefault());
+        document.onkeydown = function(e) {
+            if (e.keyCode == 123 || 
+                (e.ctrlKey && e.shiftKey && e.keyCode == 73) || 
+                (e.ctrlKey && e.keyCode == 85)) {
+                return false;
+            }
+        };
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const matchId = urlParams.get('id') || 'default-match';
+        const matchTitle = urlParams.get('title') || 'Live Match';
+
+        document.getElementById('matchTitle').innerText = matchTitle;
+
+        const video = document.getElementById('hlsPlayer');
+        const playerThumbnail = document.getElementById('playerThumbnail');
+        
+        // එකම Socket instance එකක් පමණක් භාවිත කිරීම
+        const socket = io();
+        let currentHls = null;
+        let isMatchLive = false;
+        let username = localStorage.getItem('chat_username');
+        let replyingTo = null;
+
+        // සර්වර් එකෙන් මැච් අප්ඩේට් එකක් ලැබුණු වහාම පිටුව රිෆ්‍රෙෂ් නොකර දත්ත නැවත ලබා ගැනීම
+        socket.on('refreshMatchesData', () => {
+            console.log('Matches updated from server, fetching latest...');
+            socket.emit('requestAllMatches');
+        });
+        
+        socket.emit('requestAllMatches');
+
+        socket.on('allMatchesData', (matchesData) => {
+            let foundMatch = null;
+            for (let cat in matchesData) {
+                const match = matchesData[cat].find(m => m.id === matchId);
+                if (match) {
+                    foundMatch = match;
+                    break;
+                }
+            }
+
+            if (foundMatch) {
+                if (foundMatch.thumbnail) {
+                    playerThumbnail.src = foundMatch.thumbnail;
+                }
+
+                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
+                    isMatchLive = false;
+                    
+                    document.getElementById('btnServer1').style.opacity = '0.5';
+                    document.getElementById('btnServer2').style.opacity = '0.5';
+
+                    let timerDiv = document.getElementById('matchCountdownTimer');
+                    if (!timerDiv) {
+                        timerDiv = document.createElement('div');
+                        timerDiv.id = 'matchCountdownTimer';
+                        timerDiv.style.cssText = "background: linear-gradient(145deg, #141419, #101014); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 16px; text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);";
+                        
+                        const targetArea = document.getElementById('playerContainer');
+                        targetArea.parentNode.insertBefore(timerDiv, targetArea);
+                    }
+                    startCountdown(foundMatch.time, timerDiv);
+                } else {
+                    isMatchLive = true;
+                    loadStream('server1');
+                }
+            }
+        });
+
+        function startCountdown(timeString, displayElement) {
+            const today = new Date();
+            let [time, modifier] = timeString.split(' ');
+            let [hours, minutes] = time.split(':');
+            
+            if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') {
+                hours = parseInt(hours, 10) + 12;
+            }
+            if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') {
+                hours = 0;
+            }
+
+            today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+            let targetTime = today.getTime();
+
+            const interval = setInterval(() => {
+                const now = new Date().getTime();
+                const distance = targetTime - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    
+                    document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
+                    displayElement.innerHTML = `<span style="color: #ef4444; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
+                    
+                    isMatchLive = true;
+                    document.getElementById('btnServer1').style.opacity = '1';
+                    document.getElementById('btnServer2').style.opacity = '1';
+                    loadStream('server1');
+                    return;
+                }
+
+                const hoursLeft = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
+
+                displayElement.innerHTML = `
+                    <div style="color: #9ca3af; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-regular fa-clock" style="color: #6366f1;"></i> 
+                        <span>Match Starts In: <strong style="color: #fff;">${timeString}</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 12px; font-weight: 700; color: #fff; font-size: 18px;">
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${hoursLeft}h</span> : 
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${minutesLeft}m</span> : 
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${secondsLeft}s</span>
+                    </div>
+                `;
+            }, 1000);
+        }
+
+        function loadStream(serverType) {
+            if (!isMatchLive) return;
+
+            if(serverType === 'server1') {
+                document.getElementById('btnServer1').style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
+                document.getElementById('btnServer1').style.borderColor = '#6366f1';
+                document.getElementById('btnServer2').style.background = '#141419';
+                document.getElementById('btnServer2').style.borderColor = 'rgba(255,255,255,0.08)';
+            } else {
+                document.getElementById('btnServer2').style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
+                document.getElementById('btnServer2').style.borderColor = '#6366f1';
+                document.getElementById('btnServer1').style.background = '#141419';
+                document.getElementById('btnServer1').style.borderColor = 'rgba(255,255,255,0.08)';
+            }
+
+            socket.emit('requestStreamLink', { matchId, serverType });
+        }
+
+        socket.on('secureStreamLink', (directLink) => {
+            if (!isMatchLive || !directLink) return;
+
+            if (currentHls) {
+                currentHls.destroy();
+            }
+
+            if (Hls.isSupported()) {
+                const hlsConfig = {
+                    maxBufferLength: 15,
+                    maxMaxBufferLength: 30,
+                    liveSyncDurationCount: 3,
+                    highBufferWatchdogPeriod: 1,
+                };
+
+                const hls = new Hls(hlsConfig);
+                currentHls = hls;
+                hls.loadSource(directLink);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
+                });
+                hls.on(Hls.Events.ERROR, function(event, data) {
+                    console.error('HLS Error:', data);
+                    if (data.fatal) {
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("Fatal network error encountered, trying to recover...");
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("Fatal media error encountered, trying to recover...");
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = directLink;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
+                });
+            }
+        });
+
+        video.addEventListener('playing', () => {
+            playerThumbnail.classList.add('hidden');
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+        });
+
+        function switchServer(serverType) {
+            if (!isMatchLive) {
+                alert('Match has not started yet!');
+                return;
+            }
+            playerThumbnail.style.display = 'block';
+            playerThumbnail.classList.remove('hidden'); 
+            loadStream(serverType);
+        }
+
+        // Custom Player Controls Logic
+        const playPauseBtn = document.getElementById('playPauseBtn');
+        const skipBackBtn = document.getElementById('skipBackwardBtn');
+        const skipFwdBtn = document.getElementById('skipForwardBtn');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const playerContainer = document.getElementById('playerContainer');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const controlsOverlay = document.getElementById('controlsOverlay');
+
+        playPauseBtn.addEventListener('click', () => {
+            if (video.paused) {
+                video.play();
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            } else {
+                video.pause();
+                playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+            }
+        });
+
+        skipBackBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
+        skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration, video.currentTime + 10); });
+
+        volumeSlider.addEventListener('input', (e) => {
+            video.volume = e.target.value;
+            video.muted = false;
+            muteBtn.innerHTML = (video.volume == 0) ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+        });
+
+        muteBtn.addEventListener('click', () => {
+            if (video.muted) {
+                video.muted = false;
+                muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                volumeSlider.value = video.volume;
+            } else {
+                video.muted = true;
+                muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                volumeSlider.value = 0;
+            }
+        });
+
+        fullscreenBtn.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                playerContainer.requestFullscreen().catch(err => alert(err.message));
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        const pipBtn = document.getElementById('pipBtn');
+        if ('pictureInPictureEnabled' in document) {
+            pipBtn.style.display = 'inline-block';
+            pipBtn.addEventListener('click', async () => {
+                try {
+                    if (document.pictureInPictureElement) {
+                        await document.exitPictureInPicture();
+                    } else {
+                        await video.requestPictureInPicture();
+                    }
+                } catch (error) { console.error(error); }
+            });
+        } else {
+            pipBtn.style.display = 'none';
+        }
+
+        video.addEventListener('timeupdate', () => {
+            if (video.duration > 0) {
+                progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+            }
+        });
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            if(video.duration) video.currentTime = video.duration * ((e.clientX - rect.left) / rect.width);
+        });
+
+        let hideTimeout;
+        function showControls() {
+            controlsOverlay.classList.remove('hidden');
+            clearTimeout(hideTimeout);
+            hideTimeout = setTimeout(() => {
+                if (!video.paused) controlsOverlay.classList.add('hidden');
+            }, 3000);
+        }
+
+        playerContainer.addEventListener('mousemove', showControls);
+        playerContainer.addEventListener('touchstart', showControls);
+
+        // Username & Chat Authentication Logic
+        const modal = document.getElementById('usernameModal');
+        const usernameInput = document.getElementById('usernameInput');
+        const joinBtn = document.getElementById('joinChatBtn');
+
+        if (username) {
+            modal.style.display = 'none';
+            setupChat(username);
+        }
+
+        joinBtn.addEventListener('click', () => {
+            const val = usernameInput.value.trim();
+            if (val.length < 2) {
+                alert('Please enter a valid username (at least 2 characters)');
+                return;
+            }
+            username = val;
+            localStorage.setItem('chat_username', username);
+            modal.style.display = 'none';
+            setupChat(username);
+        });
+
+        function setupChat(user) {
+            socket.emit('joinMatch', { matchId, username: user });
+
+            socket.on('viewerCount', (count) => {
+                document.getElementById('viewersCount').innerText = count;
+            });
+
+            const chatForm = document.getElementById('chatForm');
+            const msgInput = document.getElementById('msgInput');
+            const chatMessages = document.getElementById('chatMessages');
+
+            function renderMessage(data) {
+                let replyHtml = '';
+                if (data.replyTo) {
+                    replyHtml = `
+                        <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
+                            <strong style="color: #818cf8;">${data.replyTo.username}</strong>
+                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
+                        </div>
+                    `;
+                }
+
+                const safeMsgId = data.id || ('msg_' + Math.random());
+                const safeText = (data.message || '').replace(/'/g, "\\'");
+                const safeUser = (data.username || '').replace(/'/g, "\\'");
+
+                chatMessages.innerHTML += `
+                    <div class="message" data-msg-id="${safeMsgId}">
+                        ${replyHtml}
+                        <div class="msg-user">
+                            ${data.username} 
+                            <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
+                        </div>
+                        <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${data.message}</div>
+                        
+                        <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${safeMsgId}')">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </div>
+                        
+                        <div id="menu-${safeMsgId}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
+                            <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${safeMsgId}', '${safeUser}', '${safeText}')">
+                                <i class="fa-solid fa-reply"></i> Reply
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+
+            socket.on('chatHistory', (history) => {
+                chatMessages.innerHTML = ''; 
+                history.forEach(data => renderMessage(data));
+            });
+
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const msg = msgInput.value.trim();
+                if(msg) {
+                    socket.emit('chatMessage', {
+                        message: msg,
+                        replyTo: replyingTo
+                    });
+                    msgInput.value = '';
+                    cancelReply();
+                }
+            });
+
+            socket.on('chatMessage', (data) => {
+                renderMessage(data);
+            });
+        }
+
+        function toggleMsgMenu(msgId) {
+            const menu = document.getElementById(`menu-${msgId}`);
+            document.querySelectorAll('[id^="menu-"]').forEach(m => { 
+                if(m.id !== `menu-${msgId}`) m.style.display = 'none'; 
+            });
+            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+        }
+
+        function setReply(msgId, username, messageText) {
+            replyingTo = { id: msgId, username: username, message: messageText };
+            document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
 
             let previewBar = document.getElementById('replyPreviewBar');
             if (!previewBar) {
@@ -793,5 +1194,6 @@
             }
         });
     </script>
+
 </body>
 </html>
