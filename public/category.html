@@ -87,12 +87,11 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            cursor: pointer;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             border: 1px solid var(--border-color);
             box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
             position: relative;
             animation: fadeIn 0.5s ease-in-out;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .match-card:hover {
@@ -101,7 +100,7 @@
             box-shadow: 0 22px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(99, 102, 241, 0.3);
         }
 
-        /* Thumbnail Container with Blur Background to prevent black spaces */
+        /* Thumbnail Container */
         .match-thumb-container {
             position: relative;
             width: 100%;
@@ -111,9 +110,9 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            cursor: pointer;
         }
 
-        /* පිටුපසින් පේන ब्लर (Blur) පසුබිම - කළු ඉඩ මගහරවා ගැනීමට */
         .match-thumb-bg {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -124,7 +123,6 @@
             z-index: 1;
         }
 
-        /* ප්‍රධාන ලාංඡනය හෝ පින්තූරය හරියටම පෙන්වීම */
         .match-thumb-container img {
             max-width: 100%;
             max-height: 100%;
@@ -145,6 +143,41 @@
             flex-direction: column;
             gap: 10px;
             background: linear-gradient(180deg, rgba(20,20,25,0.6) 0%, rgba(16,16,20,0.95) 100%);
+        }
+
+        /* Notification Bell Button inside card */
+        .notif-bell {
+            position: absolute;
+            bottom: 16px;
+            right: 16px;
+            background: rgba(20, 20, 28, 0.85);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #9ca3af;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 15;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .notif-bell:hover {
+            background: rgba(99, 102, 241, 0.2);
+            color: #fff;
+            border-color: var(--primary-color);
+            transform: scale(1.1);
+        }
+
+        .notif-bell.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
         }
 
         /* LIVE NOW Badge with Glow Effect */
@@ -236,7 +269,6 @@
         socket.emit('requestAllMatches');
 
         socket.on('refreshMatchesData', () => {
-            console.log('Category matches updated from server, fetching latest...');
             socket.emit('requestAllMatches');
         });
 
@@ -274,15 +306,20 @@
                         </div>
                     ` : '';
 
+                    // LocalStorage එකෙන් මෙම මැච් එකට නොටිෆිකේෂන් ඔන් කරලා තියෙනවද බලන්න
+                    const notifKey = `streamx_notif_${match.id}`;
+                    const isNotifOn = localStorage.getItem(notifKey) === 'true';
+                    const bellClass = isNotifOn ? 'notif-bell active' : 'notif-bell';
+                    const bellIconStyle = isNotifOn ? 'fa-solid fa-bell' : 'fa-regular fa-bell';
+
                     grid.innerHTML += `
-                        <div class="match-card" onclick="location.href='match.html?id=${match.id}&title=${encodeURIComponent(match.title)}'">
-                            <div class="match-thumb-container">
-                                <!-- පිටුපසින් කළු ඉඩ වැසීමට Blur background එකක් එකතු කර ඇත -->
+                        <div class="match-card">
+                            <div class="match-thumb-container" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
                                 <div class="match-thumb-bg" style="background-image: url('${thumbUrl}')"></div>
                                 <img src="${thumbUrl}" alt="Match Thumbnail">
                                 ${statusBadge}
                             </div>
-                            <div class="match-details">
+                            <div class="match-details" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
                                 <div class="match-teams" style="font-weight: 700; font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;">
                                     <span>${match.team1}</span>
                                     <span class="vs" style="color: #64748b; font-size: 13px; font-weight: 600;">VS</span>
@@ -291,11 +328,79 @@
                                 <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${match.title}</p>
                                 ${matchTime}
                             </div>
+                            <!-- Notification Bell Toggle Button -->
+                            <button class="${bellClass}" id="bell_${match.id}" onclick="toggleNotification('${match.id}', '${match.title}')" title="Toggle Match Reminder">
+                                <i class="${bellIconStyle}"></i>
+                            </button>
                         </div>
                     `;
                 });
             }
         });
+
+        // මැච් එක ක්ලික් කළ විට ප්ලේයර් පේජ් එකට යාම
+        function openMatch(id, title) {
+            location.href = `match.html?id=${id}&title=${title}`;
+        }
+
+        // Notification Bell එක On/Off කිරීම සහ LocalStorage එකේ සේව් කිරීම
+        function toggleNotification(matchId, matchTitle) {
+            const bellBtn = document.getElementById(`bell_${matchId}`);
+            const bellIcon = bellBtn.querySelector('i');
+            const notifKey = `streamx_notif_${matchId}`;
+            
+            const currentState = localStorage.getItem(notifKey) === 'true';
+            const newState = !currentState;
+
+            localStorage.setItem(notifKey, newState);
+
+            if (newState) {
+                bellBtn.classList.add('active');
+                bellIcon.className = 'fa-solid fa-bell';
+                showNotificationAlert(`Reminder set! We'll notify you about: ${decodeURIComponent(matchTitle)}`);
+                
+                // බ්‍රවුසරයෙන් නොටිෆිකේෂන් අවසර ඉල්ලීම (Browser Notification Permission)
+                if ("Notification" in window && Notification.permission !== "granted") {
+                    Notification.requestPermission();
+                }
+            } else {
+                bellBtn.classList.remove('active');
+                bellIcon.className = 'fa-regular fa-bell';
+                showNotificationAlert(`Reminder removed for this match.`);
+            }
+        }
+
+        // පොඩි කුඩා Toast Alert එකක් පෙන්වීමට
+        function showNotificationAlert(message) {
+            const existingAlert = document.getElementById('toastAlert');
+            if (existingAlert) existingAlert.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'toastAlert';
+            toast.innerText = message;
+            toast.style.cssText = `
+                position: fixed;
+                bottom: 25px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: rgba(20, 20, 30, 0.95);
+                color: #fff;
+                padding: 12px 24px;
+                border-radius: 30px;
+                border: 1px solid rgba(99, 102, 241, 0.4);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+                font-size: 13px;
+                font-weight: 600;
+                z-index: 9999;
+                backdrop-filter: blur(10px);
+                animation: fadeInOut 3s ease forwards;
+            `;
+            document.body.appendChild(toast);
+
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
+        }
 
         function parseTimeStringToDate(timeString) {
             try {
