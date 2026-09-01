@@ -31,7 +31,9 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
-// m3u8 සහ TS Segment සඳහා Proxy Route එක (Geo-blocking මඟහරවා ගැනීමට)
+const axios = require('axios');
+
+// m3u8 සහ TS Segment සඳහා Proxy Route එක (axios සමඟ)
 app.get('/proxy/stream', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -39,30 +41,28 @@ app.get('/proxy/stream', async (req, res) => {
     }
 
     try {
-        const response = await fetch(targetUrl, {
+        const response = await axios({
+            method: 'get',
+            url: targetUrl,
+            responseType: 'text', // m3u8 පෙළ (text) ලෙස ලබා ගැනීමට
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer': 'https://www.willow.tv/'
             }
         });
 
-        if (!response.ok) {
-            return res.status(response.status).send('Failed to fetch stream source');
+        if (response.headers['content-type']) {
+            res.setHeader('Content-Type', response.headers['content-type']);
         }
 
-        const contentType = response.headers.get('content-type');
-        if (contentType) {
-            res.setHeader('Content-Type', contentType);
-        }
-
-        const data = await response.text();
-        res.send(data);
+        res.send(response.data);
 
     } catch (error) {
-        console.error('Proxy Error:', error);
+        console.error('Proxy Error:', error.message);
         res.status(500).send('Internal Server Error');
     }
 });
+
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
