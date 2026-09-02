@@ -688,6 +688,21 @@
             const msgInput = document.getElementById('msgInput');
             const chatMessages = document.getElementById('chatMessages');
 
+                            // නම මත පදනම්ව ස්ථිර පාටක් ලබා දෙන ෆන්ක්ෂන් එක මෙතැනට දාන්න
+            function stringToColor(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+                }
+                let color = '#';
+                for (let i = 0; i < 3; i++) {
+                    let value = (hash >> (i * 8)) & 0xFF;
+                    value = Math.floor((value + 120) / 2);
+                    color += ('00' + value.toString(16)).substr(-2);
+                }
+                return color;
+            }
+
             function renderMessage(data) {
                 let replyHtml = '';
                 if (data.replyTo) {
@@ -702,6 +717,9 @@
                 const safeMsgId = data.id || ('msg_' + Math.random());
                 const safeText = (data.message || '').replace(/'/g, "\\'");
                 const safeUser = (data.username || '').replace(/'/g, "\\'");
+
+                const userColor = stringToColor(data.username || 'User');
+                
 
                 chatMessages.innerHTML += `
                     <div class="message" data-msg-id="${safeMsgId}">
