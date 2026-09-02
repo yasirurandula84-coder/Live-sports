@@ -231,7 +231,6 @@
         }
         .msg-user {
             font-weight: 700;
-            color: #818cf8;
             margin-bottom: 4px;
         }
         .chat-input-area {
@@ -417,7 +416,7 @@
         </div>
     </div>
 
-    <!-- Socket.io client script & Clean Single Script Block -->
+    <!-- Socket.io client script & Dynamic Username Colors Script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
         // Right-click and F12 Block (Security)
@@ -429,6 +428,20 @@
                 return false;
             }
         };
+
+        // Function to generate consistent unique colors for usernames
+        function getUsernameColor(username) {
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = username.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const colors = [
+                '#f43f5e', '#ec4899', '#d946ef', '#a855f7', 
+                '#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', 
+                '#14b8a6', '#10b981', '#22c55e', '#eab308', '#f97316'
+            ];
+            return colors[Math.abs(hash) % colors.length];
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
         const matchId = urlParams.get('id') || 'default-match';
@@ -546,7 +559,6 @@
         function loadStream(serverType) {
             if (!isMatchLive) return;
 
-            // Show loader when switching or loading stream
             if (playerLoader) playerLoader.classList.remove('hidden');
 
             if(serverType === 'server1') {
@@ -614,7 +626,6 @@
             }
         });
 
-        // Hide loader & thumbnail once playing
         video.addEventListener('playing', () => {
             playerThumbnail.classList.add('hidden');
             if (playerLoader) playerLoader.classList.add('hidden');
@@ -767,7 +778,7 @@
                 if (data.replyTo) {
                     replyHtml = `
                         <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
-                            <strong style="color: #818cf8;">${data.replyTo.username}</strong>
+                            <strong style="color: ${getUsernameColor(data.replyTo.username)};">${data.replyTo.username}</strong>
                             <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
                         </div>
                     `;
@@ -776,11 +787,12 @@
                 const safeMsgId = data.id || ('msg_' + Math.random());
                 const safeText = (data.message || '').replace(/'/g, "\\'");
                 const safeUser = (data.username || '').replace(/'/g, "\\'");
+                const userColor = getUsernameColor(data.username || 'User');
 
                 chatMessages.innerHTML += `
                     <div class="message" data-msg-id="${safeMsgId}">
                         ${replyHtml}
-                        <div class="msg-user">
+                        <div class="msg-user" style="color: ${userColor};">
                             ${data.username} 
                             <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
                         </div>
@@ -847,7 +859,7 @@
 
             previewBar.innerHTML = `
                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
-                    <i class="fa-solid fa-reply" style="color: #6366f1;"></i> Replying to <strong style="color: #818cf8;">${username}</strong>: <span style="color: #9ca3af;">${messageText}</span>
+                    <i class="fa-solid fa-reply" style="color: #6366f1;"></i> Replying to <strong style="color: ${getUsernameColor(username)};">${username}</strong>: <span style="color: #9ca3af;">${messageText}</span>
                 </div>
                 <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 14px; padding: 4px;" onclick="cancelReply()"></i>
             `;
