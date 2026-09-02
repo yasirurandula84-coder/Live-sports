@@ -104,6 +104,43 @@
             pointer-events: none;
         }
 
+                /* Loading Spinner Animation */
+        .player-loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 15px 25px;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .spinner {
+            width: 35px;
+            height: 35px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .player-loader.hidden {
+            display: none;
+        }
+        
+
         /* Server Select Buttons */
         .server-selector button {
             background: #141419;
@@ -317,6 +354,12 @@
                 <div class="custom-video-container" id="playerContainer">
                     <!-- මැච් එකේ thumbnail එක ප්ලේයර් එක උඩින් පෙන්වීම සඳහා -->
                     <img id="playerThumbnail" class="player-thumb-overlay" src="" alt="Match Thumbnail">
+
+                     <!-- මෙන්න මේ Loader එක අලුතින් දාන්න -->
+    <div id="playerLoader" class="player-loader">
+        <div class="spinner"></div>
+        <span>Connecting Live Stream...</span>
+    </div>
                     
                     <video id="hlsPlayer" playsinline autoplay muted></video>
                     
@@ -516,8 +559,11 @@
             socket.emit('requestStreamLink', { matchId, serverType });
         }
 
-        socket.on('secureStreamLink', (directLink) => {
+                socket.on('secureStreamLink', (directLink) => {
             if (!isMatchLive || !directLink) return;
+
+            // ලින්ක් එක ලෝඩ් වන විට loader එක පෙන්වීම
+            document.getElementById('playerLoader').classList.remove('hidden');
 
             if (currentHls) {
                 currentHls.destroy();
@@ -546,9 +592,22 @@
             }
         });
 
+        // වීඩියෝව ප්ලේ වීමට පටන් ගත් වහාම Thumbnail සහ Loader එක ඉවත් කිරීම
         video.addEventListener('playing', () => {
             playerThumbnail.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+            document.getElementById('playerLoader').classList.add('hidden');
+            setTimeout(() => { 
+                playerThumbnail.style.display = 'none'; 
+            }, 400);
+        });
+
+        // ස්ට්‍රීම් එක බෆර් වෙමින් හෝ ලෝඩ් වෙමින් පවතින විට නැවත Loader එක පෙන්වීමට
+        video.addEventListener('waiting', () => {
+            document.getElementById('playerLoader').classList.remove('hidden');
+        });
+
+        video.addEventListener('canplay', () => {
+            document.getElementById('playerLoader').classList.add('hidden');
         });
 
         function switchServer(serverType) {
