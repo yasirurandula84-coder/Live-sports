@@ -31,8 +31,7 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
-// Universal m3u8 සහ TS Segment සඳහා Smart Proxy Route එක
-// Universal Smart Proxy Route with Custom Headers Support
+// Universal Smart Proxy Route with Redirect Handling
 app.get('/proxy/stream', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -43,11 +42,11 @@ app.get('/proxy/stream', async (req, res) => {
         const parsedUrl = new URL(targetUrl);
         const dynamicBaseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
 
-        // ඔබ දුන් ආකාරයට VLC / Custom User-Agent සහ අවශ්‍ය නම් Referer එක සෙට් කිරීම
         const response = await axios({
             method: 'get',
             url: targetUrl,
             responseType: 'arraybuffer',
+            maxRedirects: 5,
             headers: {
                 'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
                 'Icy-MetaData': '1',
@@ -61,6 +60,30 @@ app.get('/proxy/stream', async (req, res) => {
             res.setHeader('Content-Type', response.headers['content-type']);
         }
 
+        // m3u8 ෆයිල් එකක් නම්, ඇතුළේ තියෙන relative links සියල්ල ප්‍රොක්සි හරහා යන විදිහට රීරයිට් කිරීම
+        let contentType = response.headers['content-type'] || '';
+        if (contentType.includes('mpegurl') || contentType.includes('text') || targetUrl.includes('.m3u8')) {
+            let m3u8Content = response.data.toString('utf8');
+            const lines = m3u8Content.split('\n');
+            
+            const processedLines = lines.map(line => {
+                line = line.trim();
+                if (line && !line.startsWith('#')) {
+                    let absoluteUrl = line;
+                    if (!line.startsWith('http')) {
+                        // Relative URL එකක් නම් ඒක Absolute URL එකක් බවට හැරවීම
+                        const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+                        absoluteUrl = new URL(line, baseUrl).href;
+                    }
+                    // ප්‍රොක්සි ලින්ක් එක හරහා රීඩිරෙක්ට් කිරීම
+                    return `/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
+                }
+                return line;
+            });
+
+            return res.send(processedLines.join('\n'));
+        }
+
         res.send(response.data);
 
     } catch (error) {
@@ -68,7 +91,6 @@ app.get('/proxy/stream', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
-
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
