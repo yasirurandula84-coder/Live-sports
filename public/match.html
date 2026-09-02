@@ -140,6 +140,36 @@
             display: none;
         }
 
+        /* Connection Ping Indicator */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #cbd5e1;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+.ping-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    box-shadow: 0 0 8px #22c55e;
+    transition: background 0.3s, box-shadow 0.3s;
+}
+.ping-dot.fair {
+    background: #eab308;
+    box-shadow: 0 0 8px #eab308;
+}
+.ping-dot.poor {
+    background: #ef4444;
+    box-shadow: 0 0 8px #ef4444;
+}
+        
+
         /* Server Select Buttons */
         .server-selector button {
             background: #141419;
@@ -396,6 +426,13 @@
 
                 <div class="match-info-bar">
                     <span id="nowPlayingText" style="font-weight: 600; color: #9ca3af; display: flex; align-items: center; gap: 6px;">● Data Saver Live Stream</span>
+
+                    <div style="display: flex; gap: 10px; align-items: center;">
+        <!-- Connection Status Widget -->
+        <div class="connection-status">
+            <div class="ping-dot" id="pingDot"></div>
+            <span id="pingText">Checking ping...</span>
+        </div>
                     <div class="viewers-count">
                         <span>👀</span> <span id="viewersCount">0</span> Watching Now
                     </div>
@@ -878,6 +915,40 @@
                 document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
             }
         });
+
+        // Live Connection Ping Checker
+function checkConnectionPing() {
+    const pingDot = document.getElementById('pingDot');
+    const pingText = document.getElementById('pingText');
+    
+    const startTime = performance.now();
+    
+    // Ping measurement using a small fetch request to the server root
+    fetch('/socket.io/socket.io.js', { method: 'HEAD', cache: 'no-store' })
+        .then(() => {
+            const endTime = performance.now();
+            const pingMs = Math.round(endTime - startTime);
+            
+            pingText.innerText = `${pingMs} ms`;
+            
+            // Update indicator color based on latency
+            pingDot.className = 'ping-dot'; // Reset classes
+            if (pingMs > 250) {
+                pingDot.classList.add('poor');
+            } else if (pingMs > 120) {
+                pingDot.classList.add('fair');
+            }
+        })
+        .catch(() => {
+            pingDot.className = 'ping-dot poor';
+            pingText.innerText = 'Offline';
+        });
+}
+
+// Run immediately and then every 6 seconds
+checkConnectionPing();
+setInterval(checkConnectionPing, 6000);
+            
     </script>
 
 </body>
