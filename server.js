@@ -31,39 +31,6 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
-const axios = require('axios');
-
-// m3u8 සහ TS Segment සඳහා Proxy Route එක (axios සමඟ)
-app.get('/proxy/stream', async (req, res) => {
-    const targetUrl = req.query.url;
-    if (!targetUrl) {
-        return res.status(400).send('Missing target URL');
-    }
-
-    try {
-        const response = await axios({
-            method: 'get',
-            url: targetUrl,
-            responseType: 'text', // m3u8 පෙළ (text) ලෙස ලබා ගැනීමට
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://www.willow.tv/'
-            }
-        });
-
-        if (response.headers['content-type']) {
-            res.setHeader('Content-Type', response.headers['content-type']);
-        }
-
-        res.send(response.data);
-
-    } catch (error) {
-        console.error('Proxy Error:', error.message);
-        res.status(500).send('Internal Server Error');
-    }
-});
-
-
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
@@ -106,12 +73,6 @@ io.on('connection', (socket) => {
                 break;
             }
         }
-
-        // ලින්ක් එක CloudFront හෝ Geo-blocked එකක් නම් සර්වර් ප්‍රොක්සි එක හරහා යැවීම
-        if (directLink.includes('cloudfront.net')) {
-            directLink = `/proxy/stream?url=${encodeURIComponent(directLink)}`;
-        }
-
         socket.emit('secureStreamLink', directLink);
     });
 
@@ -148,13 +109,14 @@ io.on('connection', (socket) => {
         });
 
         const messageData = {
-            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7),
+            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
             username: socket.username,
             message: data.message,
-            replyTo: data.replyTo || null,
+            replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
             time: sriLankaTime
         };
 
+        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
         if (!matchChatHistories[matchId]) {
             matchChatHistories[matchId] = [];
         }
@@ -164,6 +126,7 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId].shift();
         }
 
+        // එම මැච් රූම් එකේ ඉන්න හැමෝටම මැසේජ් එක යැවීම
         io.to(matchId).emit('chatMessage', messageData);
     });
 
@@ -183,3 +146,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+
