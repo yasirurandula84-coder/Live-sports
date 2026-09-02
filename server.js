@@ -31,7 +31,7 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
-// Universal Smart Proxy Route with Redirect Handling
+// Universal Smart Proxy Route (ඕනෑම m3u8 සහ TS ලින්ක් එකක් සඳහා)
 app.get('/proxy/stream', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -46,11 +46,8 @@ app.get('/proxy/stream', async (req, res) => {
             method: 'get',
             url: targetUrl,
             responseType: 'arraybuffer',
-            maxRedirects: 5,
             headers: {
-                'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
-                'Icy-MetaData': '1',
-                'Accept-Encoding': 'identity',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Referer': dynamicBaseUrl + '/',
                 'Origin': dynamicBaseUrl
             }
@@ -58,30 +55,6 @@ app.get('/proxy/stream', async (req, res) => {
 
         if (response.headers['content-type']) {
             res.setHeader('Content-Type', response.headers['content-type']);
-        }
-
-        // m3u8 ෆයිල් එකක් නම්, ඇතුළේ තියෙන relative links සියල්ල ප්‍රොක්සි හරහා යන විදිහට රීරයිට් කිරීම
-        let contentType = response.headers['content-type'] || '';
-        if (contentType.includes('mpegurl') || contentType.includes('text') || targetUrl.includes('.m3u8')) {
-            let m3u8Content = response.data.toString('utf8');
-            const lines = m3u8Content.split('\n');
-            
-            const processedLines = lines.map(line => {
-                line = line.trim();
-                if (line && !line.startsWith('#')) {
-                    let absoluteUrl = line;
-                    if (!line.startsWith('http')) {
-                        // Relative URL එකක් නම් ඒක Absolute URL එකක් බවට හැරවීම
-                        const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-                        absoluteUrl = new URL(line, baseUrl).href;
-                    }
-                    // ප්‍රොක්සි ලින්ක් එක හරහා රීඩිරෙක්ට් කිරීම
-                    return `/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
-                }
-                return line;
-            });
-
-            return res.send(processedLines.join('\n'));
         }
 
         res.send(response.data);
@@ -116,6 +89,7 @@ io.on('connection', (socket) => {
         io.emit('refreshMatchesData');
     });
 
+    // සැමවිටම ඕනෑම ස්ට්‍රීම් ලින්ක් එකක් ප්‍රොක්සි එක හරහා යැවීමට සකස් කර ඇත
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
@@ -132,7 +106,7 @@ io.on('connection', (socket) => {
             }
         }
 
-        if (directLink && (directLink.includes('cloudfront.net') || directLink.startsWith('http'))) {
+        if (directLink && directLink.startsWith('http')) {
             directLink = `/proxy/stream?url=${encodeURIComponent(directLink)}`;
         }
 
