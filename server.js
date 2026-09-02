@@ -32,6 +32,7 @@ async function getMatchesDataFromGitHub() {
 }
 
 // Universal m3u8 සහ TS Segment සඳහා Smart Proxy Route එක
+// Universal Smart Proxy Route with Custom Headers Support
 app.get('/proxy/stream', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -42,12 +43,15 @@ app.get('/proxy/stream', async (req, res) => {
         const parsedUrl = new URL(targetUrl);
         const dynamicBaseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
 
+        // ඔබ දුන් ආකාරයට VLC / Custom User-Agent සහ අවශ්‍ය නම් Referer එක සෙට් කිරීම
         const response = await axios({
             method: 'get',
             url: targetUrl,
             responseType: 'arraybuffer',
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+                'Icy-MetaData': '1',
+                'Accept-Encoding': 'identity',
                 'Referer': dynamicBaseUrl + '/',
                 'Origin': dynamicBaseUrl
             }
@@ -64,6 +68,7 @@ app.get('/proxy/stream', async (req, res) => {
         res.status(500).send('Internal Server Error');
     }
 });
+
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
