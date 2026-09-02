@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -10,9 +11,8 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const matchViewers = {};
-const matchChatHistories = {}; // මැච් අනුව චැට් හිස්ට්‍රි ගබඩා කරගැනීමට
+const matchChatHistories = {};
 
-// GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
         const response = await fetch('https://api.github.com/repos/yasirurandula84-coder/Datay/contents/matches.json', {
@@ -31,10 +31,43 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
+// Universal m3u8 සහ TS Segment සඳහා Smart Proxy Route එක
+app.get('/proxy/stream', async (req, res) => {
+    const targetUrl = req.query.url;
+    if (!targetUrl) {
+        return res.status(400).send('Missing target URL');
+    }
+
+    try {
+        const parsedUrl = new URL(targetUrl);
+        const dynamicBaseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+
+        const response = await axios({
+            method: 'get',
+            url: targetUrl,
+            responseType: 'arraybuffer',
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Referer': dynamicBaseUrl + '/',
+                'Origin': dynamicBaseUrl
+            }
+        });
+
+        if (response.headers['content-type']) {
+            res.setHeader('Content-Type', response.headers['content-type']);
+        }
+
+        res.send(response.data);
+
+    } catch (error) {
+        console.error('Proxy Error:', error.message);
+        res.status(500).send('Internal Server Error');
+    }
+});
+
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
-    // 1. Category.html හෝ Match.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම
     socket.on('requestAllMatches', async () => {
         const allData = await getMatchesDataFromGitHub();
         const publicData = {};
@@ -52,12 +85,10 @@ io.on('connection', (socket) => {
         socket.emit('allMatchesData', publicData);
     });
 
-    // අලුත් මැච් අප්ඩේට් එකක් සයිට් එකේ හැමෝටම ඔටෝ පෙන්නීමට ට්‍රිගර් කළ හැකි Event එකක්
     socket.on('triggerRefresh', async () => {
         io.emit('refreshMatchesData');
     });
 
-    // 2. Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
@@ -73,34 +104,34 @@ io.on('connection', (socket) => {
                 break;
             }
         }
+
+        if (directLink && (directLink.includes('cloudfront.net') || directLink.startsWith('http'))) {
+            directLink = `/proxy/stream?url=${encodeURIComponent(directLink)}`;
+        }
+
         socket.emit('secureStreamLink', directLink);
     });
 
-    // 3. Match Join සහ Chat සඳහා අවශ්‍ය Events
     socket.on('joinMatch', ({ matchId, username }) => {
         socket.join(matchId);
         socket.username = username;
         socket.currentMatch = matchId;
 
-        // Viewer Count එක වැඩි කිරීම
         if (!matchViewers[matchId]) {
             matchViewers[matchId] = 0;
         }
         matchViewers[matchId]++;
         io.to(matchId).emit('viewerCount', matchViewers[matchId]);
 
-        // අලුතින් එන කෙනෙක්ට හෝ රිෆ්‍රෙෂ් කරන කෙනෙක්ට කලින් ගිය චැට් හිස්ට්‍රි එක යැවීම
         if (matchChatHistories[matchId] && matchChatHistories[matchId].length > 0) {
             socket.emit('chatHistory', matchChatHistories[matchId]);
         }
     });
 
-    // චැට් මැසේජ් එකක් ලැබුණු විට (ශ්‍රී ලංකා වේලාවට නිවැරදිව සකස් කර ඇත)
     socket.on('chatMessage', (data) => {
         const matchId = socket.currentMatch;
         if (!matchId) return;
 
-        // ශ්‍රී ලංකා වේලා කලාපයට (Asia/Colombo) අදාළව නිවැරදි වෙලාව ලබා ගැනීම
         const sriLankaTime = new Date().toLocaleTimeString('en-US', {
             timeZone: 'Asia/Colombo',
             hour: '2-digit',
@@ -109,14 +140,13 @@ io.on('connection', (socket) => {
         });
 
         const messageData = {
-            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
+            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7),
             username: socket.username,
             message: data.message,
-            replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
+            replyTo: data.replyTo || null,
             time: sriLankaTime
         };
 
-        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
         if (!matchChatHistories[matchId]) {
             matchChatHistories[matchId] = [];
         }
@@ -126,11 +156,9 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId].shift();
         }
 
-        // එම මැච් රූම් එකේ ඉන්න හැමෝටම මැසේජ් එක යැවීම
         io.to(matchId).emit('chatMessage', messageData);
     });
 
-    // 4. User Disconnect වීම
     socket.on('disconnect', () => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
@@ -146,4 +174,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-
