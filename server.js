@@ -1,8 +1,7 @@
-const express = require('express');
+Const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
-const axios = require('axios');
 
 const app = express();
 const server = http.createServer(app);
@@ -32,65 +31,6 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
-// Universal Smart Proxy Route (Akamai සහ අනෙකුත් m3u8/TS ලින්ක්ස් සඳහා)
-app.get('/proxy/stream', async (req, res) => {
-    const targetUrl = req.query.url;
-    if (!targetUrl) {
-        return res.status(400).send('Missing target URL');
-    }
-
-    try {
-        const parsedUrl = new URL(targetUrl);
-        const dynamicBaseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
-
-        const response = await axios({
-            method: 'get',
-            url: targetUrl,
-            responseType: 'arraybuffer',
-            maxRedirects: 5,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                'Referer': dynamicBaseUrl + '/',
-                'Origin': dynamicBaseUrl,
-                'Accept': '*/*',
-                'Accept-Language': 'en-US,en;q=0.9',
-                'Cache-Control': 'no-cache'
-            }
-        });
-
-        if (response.headers['content-type']) {
-            res.setHeader('Content-Type', response.headers['content-type']);
-        }
-
-        let contentType = response.headers['content-type'] || '';
-        if (contentType.includes('mpegurl') || contentType.includes('text') || targetUrl.includes('.m3u8')) {
-            let m3u8Content = response.data.toString('utf8');
-            const lines = m3u8Content.split('\n');
-            
-            const processedLines = lines.map(line => {
-                line = line.trim();
-                if (line && !line.startsWith('#')) {
-                    let absoluteUrl = line;
-                    if (!line.startsWith('http')) {
-                        const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-                        absoluteUrl = new URL(line, baseUrl).href;
-                    }
-                    return `/proxy/stream?url=${encodeURIComponent(absoluteUrl)}`;
-                }
-                return line;
-            });
-
-            return res.send(processedLines.join('\n'));
-        }
-
-        res.send(response.data);
-
-    } catch (error) {
-        console.error('Proxy Error:', error.message);
-        res.status(500).send('Internal Server Error');
-    }
-});
-
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
@@ -117,7 +57,7 @@ io.on('connection', (socket) => {
         io.emit('refreshMatchesData');
     });
 
-    // 2. Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම (සියලුම ලින්ක්ස් ප්‍රොක්සි හරහා යැවීම)
+    // 2. Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
@@ -133,12 +73,6 @@ io.on('connection', (socket) => {
                 break;
             }
         }
-
-        // ඕනෑම http ස්ට්‍රීම් ලින්ක් එකක් ප්‍රොක්සි රවුට් එක හරහා රූට් කිරීම
-        if (directLink && directLink.startsWith('http')) {
-            directLink = `/proxy/stream?url=${encodeURIComponent(directLink)}`;
-        }
-
         socket.emit('secureStreamLink', directLink);
     });
 
