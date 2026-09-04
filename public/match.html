@@ -622,12 +622,17 @@
                 currentHls.destroy();
             }
 
-            if (Hls.isSupported()) {
+                        if (Hls.isSupported()) {
                 const hlsConfig = {
-                    maxBufferLength: 15,
-                    maxMaxBufferLength: 30,
+                    maxBufferLength: 30,
+                    maxMaxBufferLength: 60,
                     liveSyncDurationCount: 3,
                     highBufferWatchdogPeriod: 1,
+                    // ප්‍රොක්සි ලින්ක් හරහා රික්වෙස්ට් යද්දී බාධා නොවීමට මෙය අත්‍යවශ්‍යයි
+                    xhrSetup: function (xhr, url) {
+                        xhr.open('GET', url, true);
+                        xhr.setRequestHeader('User-Agent', 'Mozilla/5.0');
+                    }
                 };
 
                 const hls = new Hls(hlsConfig);
@@ -640,21 +645,26 @@
                 });
 
                 hls.on(Hls.Events.ERROR, function(event, data) {
-                    console.error('HLS Error:', data);
+                    console.error('HLS Error Details:', data);
                     if (data.fatal) {
                         switch(data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("A network error occurred, trying to recover...");
                                 hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("A media error occurred, trying to recover...");
                                 hls.recoverMediaError();
                                 break;
                             default:
+                                console.log("Fatal error, destroying HLS instance");
                                 hls.destroy();
                                 break;
                         }
                     }
                 });
+            }
+
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', function() {
