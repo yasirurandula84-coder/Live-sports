@@ -41,9 +41,13 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                // මෙතැනදී Chrome එකක් ලෙස නොපෙන්වා VLC හෝ Mobile App එකක් ලෙස User-Agent එක මාරු කරයි
+                'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
+                'Accept': '*/*'
             }
         });
+        // ඉතිරි කෝඩ් එක එලෙසම තබන්න...
+
 
         if (!response.ok) {
             return res.status(response.status).send('Failed to fetch upstream stream');
