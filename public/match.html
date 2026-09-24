@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- HLS.js Library for .m3u8 Playback -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- Shaka Player Library for DASH (.mpd) and DRM Playback -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
     <style>
         :root {
             --primary-color: #6366f1;
@@ -388,7 +390,7 @@
                         <span>Connecting Live Stream...</span>
                     </div>
                     
-                    <!-- HLS Video Player -->
+                    <!-- Main Video Player (Supports HLS & DASH) -->
                     <video id="hlsPlayer" playsinline autoplay muted></video>
 
                     <!-- YouTube Iframe Player (Automatically shown for YouTube links) -->
@@ -499,6 +501,7 @@
         // Single unified Socket instance
         const socket = io();
         let currentHls = null;
+        let currentShakaPlayer = null;
         let isMatchLive = false;
         let username = localStorage.getItem('chat_username');
         let replyingTo = null;
@@ -619,16 +622,26 @@
             socket.emit('requestStreamLink', { matchId, serverType });
         }
 
-        socket.on('secureStreamLink', (directLink) => {
+        // Cleanup previous players
+        function destroyPlayers() {
+            if (currentHls) {
+                currentHls.destroy();
+                currentHls = null;
+            }
+            if (currentShakaPlayer) {
+                currentShakaPlayer.destroy();
+                currentShakaPlayer = null;
+            }
+        }
+
+        socket.on('secureStreamLink', async (directLink) => {
             if (!isMatchLive || !directLink) return;
 
             if (playerLoader) playerLoader.classList.remove('hidden');
+            destroyPlayers();
 
             // Check if the stream link is a YouTube URL
             if (directLink.includes('youtube.com') || directLink.includes('youtu.be')) {
-                if (currentHls) {
-                    currentHls.destroy();
-                }
                 video.style.display = 'none';
                 controlsOverlay.style.display = 'none';
 
@@ -653,15 +666,52 @@
                     setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
                 }, 1000);
 
-            } else {
-                // Regular HLS (.m3u8) stream link
+            } 
+            // Check if the stream link is a DASH (.mpd) stream with DRM
+            else if (directLink.includes('.mpd')) {
                 ytIframe.style.display = 'none';
                 video.style.display = 'block';
                 controlsOverlay.style.display = 'block';
 
-                if (currentHls) {
-                    currentHls.destroy();
+                const [mpdUrl, drmPart] = directLink.split('|drmScheme=clearkey&drmLicense=');
+                let keyId = '';
+                let key = '';
+
+                if (drmPart) {
+                    const keys = drmPart.split(':');
+                    keyId = keys[0];
+                    key = keys[1];
                 }
+
+                try {
+                    const shakaPlayer = new shaka.Player(video);
+                    currentShakaPlayer = shakaPlayer;
+
+                    shakaPlayer.addEventListener('error', (event) => {
+                        console.error('Shaka Player Error:', event.detail);
+                    });
+
+                    if (keyId && key) {
+                        shakaPlayer.configure({
+                            drm: {
+                                clearKeys: {
+                                    [keyId]: key
+                                }
+                            }
+                        });
+                    }
+
+                    await shakaPlayer.load(mpdUrl);
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
+                } catch (e) {
+                    console.error('Error loading DASH video with Shaka Player:', e);
+                }
+            } 
+            else {
+                // Regular HLS (.m3u8) stream link
+                ytIframe.style.display = 'none';
+                video.style.display = 'block';
+                controlsOverlay.style.display = 'block';
 
                 if (Hls.isSupported()) {
                     const hlsConfig = {
