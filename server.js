@@ -31,7 +31,7 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
-// --- HLS Proxy Route to bypass CORS and Google DAI restrictions ---
+// --- HLS Proxy Route to bypass CORS and restrictions ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -41,13 +41,12 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                // මෙතැනදී Chrome එකක් ලෙස නොපෙන්වා VLC හෝ Mobile App එකක් ලෙස User-Agent එක මාරු කරයි
+                // VLC එකක් ලෙස පෙන්වමින් Fancode හෝ අනෙකුත් සර්වර් බ්ලොක් කිරීම මඟහරවා ගනී
                 'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
-                'Accept': '*/*'
+                'Accept': '*/*',
+                'Referer': 'https://www.fancode.com/'
             }
         });
-        // ඉතිරි කෝඩ් එක එලෙසම තබන්න...
-
 
         if (!response.ok) {
             return res.status(response.status).send('Failed to fetch upstream stream');
@@ -100,7 +99,6 @@ app.get('/hls-proxy', async (req, res) => {
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
 
-    // 1. Category.html හෝ Match.html එකෙන් මුළු මැච් ලැයිස්තුවම ඉල්ලුවම යැවීම
     socket.on('requestAllMatches', async () => {
         const allData = await getMatchesDataFromGitHub();
         const publicData = {};
@@ -118,12 +116,10 @@ io.on('connection', (socket) => {
         socket.emit('allMatchesData', publicData);
     });
 
-    // අලුත් මැච් අප්ඩේට් එකක් සයිට් එකේ හැමෝටම ඔටෝ පෙන්නීමට ට්‍රිගර් කළ හැකි Event එකක්
     socket.on('triggerRefresh', async () => {
         io.emit('refreshMatchesData');
     });
 
-    // 2. Match.html එකෙන් නිශ්චිත මැච් එකක සර්වර් ලින්ක් එක ඉල්ලීම සහ Proxy එක හරහා යැවීම
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
@@ -140,7 +136,6 @@ io.on('connection', (socket) => {
             }
         }
 
-        // m3u8 ලින්ක් එකක් නම් ප්‍රොක්සි ලින්ක් එකක් බවට හැරවීම (YouTube නම් එලෙසම යැවේ)
         let finalLink = directLink;
         if (directLink && directLink.includes('.m3u8')) {
             finalLink = `/hls-proxy?url=${encodeURIComponent(directLink)}`;
@@ -149,31 +144,26 @@ io.on('connection', (socket) => {
         socket.emit('secureStreamLink', finalLink);
     });
 
-    // 3. Match Join සහ Chat සඳහා අවශ්‍ය Events
     socket.on('joinMatch', ({ matchId, username }) => {
         socket.join(matchId);
         socket.username = username;
         socket.currentMatch = matchId;
 
-        // Viewer Count එක වැඩි කිරීම
         if (!matchViewers[matchId]) {
             matchViewers[matchId] = 0;
         }
         matchViewers[matchId]++;
         io.to(matchId).emit('viewerCount', matchViewers[matchId]);
 
-        // අලුතින් එන කෙනෙක්ට හෝ රිෆ්‍රෙෂ් කරන කෙනෙක්ට කලින් ගිය චැට් හිස්ට්‍රි එක යැවීම
         if (matchChatHistories[matchId] && matchChatHistories[matchId].length > 0) {
             socket.emit('chatHistory', matchChatHistories[matchId]);
         }
     });
 
-    // චැට් මැසේජ් එකක් ලැබුණු විට (ශ්‍රී ලංකා වේලාවට නිවැරදිව සකස් කර ඇත)
     socket.on('chatMessage', (data) => {
         const matchId = socket.currentMatch;
         if (!matchId) return;
 
-        // ශ්‍රී ලංකා වේලා කලාපයට (Asia/Colombo) අදාළව නිවැරදි වෙලාව ලබා ගැනීම
         const sriLankaTime = new Date().toLocaleTimeString('en-US', {
             timeZone: 'Asia/Colombo',
             hour: '2-digit',
@@ -182,14 +172,13 @@ io.on('connection', (socket) => {
         });
 
         const messageData = {
-            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7), // මැසේජ් එකට අනන්‍ය ID එකක්
+            id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7),
             username: socket.username,
             message: data.message,
-            replyTo: data.replyTo || null, // වෙනත් මැසේජ් එකකට රෙප්ලයි කර ඇත්නම් එම විස්තරය
+            replyTo: data.replyTo || null,
             time: sriLankaTime
         };
 
-        // අදාළ මැච් එකේ හිස්ට්‍රි එකට මැසේජ් එක සේව් කරගැනීම (උපරිම මැසේජ් 150ක් රඳවා තබා ගනී)
         if (!matchChatHistories[matchId]) {
             matchChatHistories[matchId] = [];
         }
@@ -199,11 +188,9 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId].shift();
         }
 
-        // එම මැච් රූම් එකේ ඉන්න හැමෝටම මැසේජ් එක යැවීම
         io.to(matchId).emit('chatMessage', messageData);
     });
 
-    // 4. User Disconnect වීම
     socket.on('disconnect', () => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
