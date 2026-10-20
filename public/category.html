@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matches - StreamX</title>
-    <link rel="stylesheet" href="style.css">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
             --accent-color: #ff4757;
-            --bg-dark: #0b0b0e;
-            --card-bg: linear-gradient(145deg, #16161d, #101014);
+            --accent-glow: rgba(255, 71, 87, 0.4);
+            --bg-dark: #07070a;
+            --card-bg: rgba(20, 20, 28, 0.6);
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
@@ -38,13 +39,38 @@
             margin: 0;
             padding-bottom: 60px;
             overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Ambient Glowing Background Orbs */
+        .glow-orb-1 {
+            position: absolute;
+            top: -50px;
+            left: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glow-orb-2 {
+            position: absolute;
+            top: 400px;
+            right: -100px;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(255, 71, 87, 0.12) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
         }
 
         /* Glassmorphism Navbar */
         .navbar {
-            background: rgba(11, 11, 14, 0.85) !important;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(11, 11, 14, 0.75) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
@@ -61,22 +87,93 @@
             padding: 20px;
         }
 
-        /* Section Title Style */
+        /* Header Controls Area (Filter & Search) */
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin: 25px 0;
+        }
+
         .section-title {
-            font-size: 24px;
+            font-size: 26px;
             font-weight: 800;
             color: #fff;
-            margin: 30px 0 20px 0;
+            margin: 0;
             display: flex;
             align-items: center;
             gap: 12px;
             text-transform: capitalize;
         }
 
+        .search-filter-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-input-wrapper i {
+            position: absolute;
+            left: 14px;
+            color: #64748b;
+            font-size: 14px;
+        }
+
+        .search-input {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            padding: 10px 16px 10px 38px;
+            border-radius: 12px;
+            color: #fff;
+            font-size: 13.5px;
+            outline: none;
+            transition: all 0.3s ease;
+            width: 200px;
+            backdrop-filter: blur(10px);
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 15px var(--primary-glow);
+            width: 240px;
+        }
+
+        .filter-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            color: #9ca3af;
+            padding: 10px 16px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .filter-btn:hover, .filter-btn.active {
+            background: rgba(255, 71, 87, 0.15);
+            border-color: rgba(255, 71, 87, 0.4);
+            color: var(--accent-color);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
         /* Matches Grid */
         .matches-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
             gap: 26px;
         }
 
@@ -90,6 +187,7 @@
             border: 1px solid var(--border-color);
             box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
             position: relative;
+            backdrop-filter: blur(12px);
             animation: fadeIn 0.5s ease-in-out;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -97,14 +195,14 @@
         .match-card:hover {
             transform: translateY(-8px) scale(1.01);
             border-color: rgba(99, 102, 241, 0.6);
-            box-shadow: 0 22px 45px rgba(0, 0, 0, 0.75), 0 0 30px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 22px 45px rgba(0, 0, 0, 0.8), 0 0 30px var(--primary-glow);
         }
 
         /* Thumbnail Container */
         .match-thumb-container {
             position: relative;
             width: 100%;
-            height: 190px;
+            height: 195px;
             background: #000;
             display: flex;
             align-items: center;
@@ -118,7 +216,7 @@
             top: 0; left: 0; width: 100%; height: 100%;
             background-size: cover;
             background-position: center;
-            filter: blur(12px) brightness(0.4);
+            filter: blur(14px) brightness(0.35);
             transform: scale(1.2);
             z-index: 1;
         }
@@ -130,11 +228,11 @@
             position: relative;
             z-index: 2;
             transition: transform 0.5s ease;
-            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.6));
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7));
         }
 
         .match-card:hover .match-thumb-container img {
-            transform: scale(1.07);
+            transform: scale(1.08);
         }
 
         .match-details {
@@ -142,14 +240,54 @@
             display: flex;
             flex-direction: column;
             gap: 10px;
-            background: linear-gradient(180deg, rgba(20,20,25,0.6) 0%, rgba(16,16,20,0.95) 100%);
+            background: linear-gradient(180deg, rgba(20,20,28,0.4) 0%, rgba(12,12,18,0.95) 100%);
+            cursor: pointer;
         }
 
-        /* Notification Bell Button inside card */
+        /* Team Vs Styling */
+        .match-teams {
+            font-weight: 700;
+            font-size: 16px;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .vs-badge {
+            background: rgba(99, 102, 241, 0.15);
+            color: #818cf8;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 2px 8px;
+            border-radius: 6px;
+            border: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        /* Quality Badge */
+        .quality-tag {
+            position: absolute;
+            bottom: 14px;
+            left: 14px;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #a5b4fc;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 10px;
+            font-weight: 700;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* Notification Bell Toggle */
         .notif-bell {
             position: absolute;
-            bottom: 16px;
-            right: 16px;
+            bottom: 14px;
+            right: 14px;
             background: rgba(20, 20, 28, 0.85);
             backdrop-filter: blur(8px);
             border: 1px solid rgba(255, 255, 255, 0.15);
@@ -163,11 +301,11 @@
             cursor: pointer;
             transition: all 0.3s ease;
             z-index: 15;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
 
         .notif-bell:hover {
-            background: rgba(99, 102, 241, 0.2);
+            background: rgba(99, 102, 241, 0.25);
             color: #fff;
             border-color: var(--primary-color);
             transform: scale(1.1);
@@ -177,10 +315,10 @@
             background: var(--primary-color);
             color: #fff;
             border-color: var(--primary-color);
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.6);
+            box-shadow: 0 0 15px var(--primary-glow);
         }
 
-        /* LIVE NOW Badge with Glow Effect */
+        /* LIVE NOW Badge */
         .live-badge {
             position: absolute;
             top: 14px;
@@ -190,7 +328,7 @@
             padding: 6px 14px;
             border-radius: 20px;
             font-size: 11px;
-            font-weight: 700;
+            font-weight: 800;
             display: inline-flex;
             align-items: center;
             gap: 6px;
@@ -208,18 +346,7 @@
             box-shadow: 0 0 8px white;
         }
 
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.8; box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* UPCOMING Badge with Glassmorphism */
+        /* UPCOMING Badge */
         .upcoming-badge {
             position: absolute;
             top: 14px;
@@ -235,21 +362,63 @@
             z-index: 10;
             box-shadow: 0 4px 12px rgba(0,0,0,0.4);
         }
+
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.85; box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translate(-50%, 20px); }
+            15% { opacity: 1; transform: translate(-50%, 0); }
+            85% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, 20px); }
+        }
     </style>
 </head>
 <body>
 
+    <!-- Ambient Glowing Orbs -->
+    <div class="glow-orb-1"></div>
+    <div class="glow-orb-2"></div>
+
     <nav class="navbar">
-        <a href="index.html" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px;">STREAMX</a>
+        <a href="index.html" class="logo" style="font-weight: 800; background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px; display: flex; align-items: center; gap: 8px;">
+            <i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 16px;"></i> STREAMX
+        </a>
         <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding: 0;">
             <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; transition: color 0.3s;"><i class="fa-solid fa-house"></i> Home</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <h2 class="section-title" id="categoryTitle">
-            <i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> Matches
-        </h2>
+        
+        <!-- Header & Controls -->
+        <div class="header-controls">
+            <h2 class="section-title" id="categoryTitle">
+                <i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> Matches
+            </h2>
+
+            <div class="search-filter-box">
+                <!-- Search Input -->
+                <div class="search-input-wrapper">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" class="search-input" placeholder="Search matches..." oninput="filterMatches()">
+                </div>
+                
+                <!-- Live Only Filter Button -->
+                <button class="filter-btn" id="liveFilterBtn" onclick="toggleLiveFilter()">
+                    <span style="width: 7px; height: 7px; background: var(--accent-color); border-radius: 50%; display: inline-block;"></span>
+                    Live Only
+                </button>
+            </div>
+        </div>
         
         <div class="matches-grid" id="matchesGrid">
             <!-- Dynamic Match Cards will load here -->
@@ -263,8 +432,11 @@
         const urlParams = new URLSearchParams(window.location.search);
         const cat = urlParams.get('cat') || 'cricket';
         
-        document.getElementById('categoryTitle').innerHTML = `<i class="fa-solid fa-trophy" style="color: #6366f1;"></i> ${cat.toUpperCase()} Matches`;
+        document.getElementById('categoryTitle').innerHTML = `<i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> ${cat.toUpperCase()} Matches`;
         const grid = document.getElementById('matchesGrid');
+
+        let rawMatchesData = []; // Store raw matches data locally
+        let isLiveOnlyActive = false;
 
         socket.emit('requestAllMatches');
 
@@ -273,13 +445,46 @@
         });
 
         socket.on('allMatchesData', (matchesData) => {
-            const list = matchesData[cat] || [];
+            rawMatchesData = matchesData[cat] || [];
+            renderMatches();
+        });
 
-            if(list.length === 0) {
-                grid.innerHTML = `<p style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 40px; background: #141419; border-radius: 14px; border: 1px solid rgba(255,255,255,0.05); font-size: 15px;"><i class="fa-regular fa-face-frown" style="font-size: 24px; display: block; margin-bottom: 10px; color: #6366f1;"></i> No matches available right now.</p>`;
+        // Filter and Render Matches Dynamic Function
+        function renderMatches() {
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+
+            let filteredList = rawMatchesData.filter(match => {
+                // Search filter
+                const titleMatch = match.title ? match.title.toLowerCase().includes(searchQuery) : false;
+                const team1Match = match.team1 ? match.team1.toLowerCase().includes(searchQuery) : false;
+                const team2Match = match.team2 ? match.team2.toLowerCase().includes(searchQuery) : false;
+                const matchesSearch = titleMatch || team1Match || team2Match;
+
+                // Live status calculation
+                let isActuallyLive = false;
+                if (match.time) {
+                    const now = new Date();
+                    const startsAt = parseTimeStringToDate(match.time);
+                    if (startsAt && now >= startsAt) isActuallyLive = true;
+                }
+                const isLive = (match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive;
+
+                if (isLiveOnlyActive) {
+                    return matchesSearch && isLive;
+                }
+                return matchesSearch;
+            });
+
+            if(filteredList.length === 0) {
+                grid.innerHTML = `
+                    <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 50px 20px; background: rgba(20,20,28,0.4); border-radius: 20px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
+                        <i class="fa-regular fa-face-frown" style="font-size: 32px; display: block; margin-bottom: 12px; color: var(--primary-color);"></i>
+                        <p style="margin: 0; font-size: 15px; font-weight: 600; color: #fff;">No matches available right now.</p>
+                        <span style="font-size: 13px; color: #64748b;">Try adjusting your search or live filter.</span>
+                    </div>`;
             } else {
                 grid.innerHTML = ''; 
-                list.forEach(match => {
+                filteredList.forEach(match => {
                     let statusBadge = '';
                     let isActuallyLive = false;
                     const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
@@ -287,10 +492,7 @@
                     if (match.time) {
                         const now = new Date();
                         const startsAt = parseTimeStringToDate(match.time); 
-
-                        if (startsAt && now >= startsAt) {
-                            isActuallyLive = true;
-                        }
+                        if (startsAt && now >= startsAt) isActuallyLive = true;
                     }
 
                     if ((match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive) {
@@ -301,12 +503,11 @@
 
                     let matchTime = match.time ? `
                         <div style="display: flex; align-items: center; gap: 6px; color: #9ca3af; font-size: 13px; margin-top: 4px;">
-                            <i class="fa-regular fa-clock" style="color: #6366f1;"></i>
+                            <i class="fa-regular fa-clock" style="color: var(--primary-color);"></i>
                             <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
                         </div>
                     ` : '';
 
-                    // LocalStorage එකෙන් මෙම මැච් එකට නොටිෆිකේෂන් ඔන් කරලා තියෙනවද බලන්න
                     const notifKey = `streamx_notif_${match.id}`;
                     const isNotifOn = localStorage.getItem(notifKey) === 'true';
                     const bellClass = isNotifOn ? 'notif-bell active' : 'notif-bell';
@@ -318,11 +519,12 @@
                                 <div class="match-thumb-bg" style="background-image: url('${thumbUrl}')"></div>
                                 <img src="${thumbUrl}" alt="Match Thumbnail">
                                 ${statusBadge}
+                                <div class="quality-tag"><i class="fa-solid fa-tv"></i> HD Stream</div>
                             </div>
                             <div class="match-details" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
-                                <div class="match-teams" style="font-weight: 700; font-size: 16px; color: #fff; display: flex; align-items: center; gap: 8px;">
+                                <div class="match-teams">
                                     <span>${match.team1}</span>
-                                    <span class="vs" style="color: #64748b; font-size: 13px; font-weight: 600;">VS</span>
+                                    <span class="vs-badge">VS</span>
                                     <span>${match.team2}</span>
                                 </div>
                                 <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${match.title}</p>
@@ -336,14 +538,31 @@
                     `;
                 });
             }
-        });
+        }
 
-        // මැච් එක ක්ලික් කළ විට ප්ලේයර් පේජ් එකට යාම
+        // Live Filter Toggle
+        function toggleLiveFilter() {
+            isLiveOnlyActive = !isLiveOnlyActive;
+            const filterBtn = document.getElementById('liveFilterBtn');
+            if (isLiveOnlyActive) {
+                filterBtn.classList.add('active');
+            } else {
+                filterBtn.classList.remove('active');
+            }
+            renderMatches();
+        }
+
+        // Realtime Search Filter
+        function filterMatches() {
+            renderMatches();
+        }
+
+        // Open Match Player
         function openMatch(id, title) {
             location.href = `match.html?id=${id}&title=${title}`;
         }
 
-        // Notification Bell එක On/Off කිරීම සහ LocalStorage එකේ සේව් කිරීම
+        // Toggle Notification
         function toggleNotification(matchId, matchTitle) {
             const bellBtn = document.getElementById(`bell_${matchId}`);
             const bellIcon = bellBtn.querySelector('i');
@@ -359,7 +578,6 @@
                 bellIcon.className = 'fa-solid fa-bell';
                 showNotificationAlert(`Reminder set! We'll notify you about: ${decodeURIComponent(matchTitle)}`);
                 
-                // බ්‍රවුසරයෙන් නොටිෆිකේෂන් අවසර ඉල්ලීම (Browser Notification Permission)
                 if ("Notification" in window && Notification.permission !== "granted") {
                     Notification.requestPermission();
                 }
@@ -370,7 +588,7 @@
             }
         }
 
-        // පොඩි කුඩා Toast Alert එකක් පෙන්වීමට
+        // Toast Alert
         function showNotificationAlert(message) {
             const existingAlert = document.getElementById('toastAlert');
             if (existingAlert) existingAlert.remove();
