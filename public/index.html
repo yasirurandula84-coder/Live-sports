@@ -4,15 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>StreamX - Ultimate Live Sports Experience</title>
-    <link rel="stylesheet" href="style.css">
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
             --primary-color: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
             --accent-color: #ff4757;
-            --bg-dark: #0b0b0e;
-            --card-bg: linear-gradient(145deg, #141419, #101014);
+            --accent-glow: rgba(255, 71, 87, 0.4);
+            --bg-dark: #07070a;
+            --card-bg: rgba(20, 20, 28, 0.6);
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
@@ -24,7 +25,7 @@
             background: var(--bg-dark);
         }
         ::-webkit-scrollbar-thumb {
-            background: #23232b;
+            background: #1f1f28;
             border-radius: 4px;
         }
         ::-webkit-scrollbar-thumb:hover {
@@ -38,13 +39,38 @@
             margin: 0;
             padding-bottom: 0;
             overflow-x: hidden;
+            position: relative;
         }
 
-        /* Glassmorphism Navbar with Glow */
+        /* Ambient Background Glowing Orbs */
+        .glow-orb-1 {
+            position: absolute;
+            top: -100px;
+            left: -100px;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+        }
+        .glow-orb-2 {
+            position: absolute;
+            top: 300px;
+            right: -100px;
+            width: 450px;
+            height: 450px;
+            background: radial-gradient(circle, rgba(255, 71, 87, 0.12) 0%, transparent 70%);
+            border-radius: 50%;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        /* Glassmorphism Navbar */
         .navbar {
-            background: rgba(11, 11, 14, 0.85) !important;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(11, 11, 16, 0.75) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
             position: sticky;
             top: 0;
@@ -56,19 +82,22 @@
         }
 
         .navbar .logo {
-            letter-spacing: 1px;
-            font-weight: 800;
-            font-size: 20px;
-            background: linear-gradient(to right, #fff, #a5b4fc);
+            letter-spacing: 1.5px;
+            font-weight: 900;
+            font-size: 22px;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
 
         .nav-links {
             list-style: none;
             display: flex;
-            gap: 20px;
+            gap: 24px;
             margin: 0;
             padding: 0;
             align-items: center;
@@ -82,34 +111,36 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: color 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .nav-links a:hover, .nav-links a.active {
             color: #fff;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
         }
 
-        /* Telegram Header Button */
         .tg-nav-btn {
-            background: rgba(34, 158, 217, 0.15) !important;
-            color: #229ed9 !important;
-            padding: 7px 14px;
-            border-radius: 20px;
-            border: 1px solid rgba(34, 158, 217, 0.3);
+            background: rgba(34, 158, 217, 0.12) !important;
+            color: #38bdf8 !important;
+            padding: 8px 18px;
+            border-radius: 25px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
             transition: all 0.3s ease !important;
+            box-shadow: 0 0 10px rgba(34, 158, 217, 0.1);
         }
 
         .tg-nav-btn:hover {
             background: #229ed9 !important;
             color: #fff !important;
-            box-shadow: 0 0 15px rgba(34, 158, 217, 0.5);
+            box-shadow: 0 0 20px rgba(34, 158, 217, 0.6);
+            transform: translateY(-2px);
         }
 
-        /* Notice Bar with Glassmorphism */
+        /* Glass Announcement Notice */
         .notice-bar {
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(255, 71, 87, 0.05));
-            border: 1px solid rgba(99, 102, 241, 0.25);
-            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.12), rgba(255, 71, 87, 0.08));
+            border: 1px solid rgba(99, 102, 241, 0.3);
+            padding: 14px 22px;
             border-radius: 16px;
             margin-bottom: 35px;
             display: flex;
@@ -117,11 +148,63 @@
             gap: 15px;
             font-size: 14px;
             backdrop-filter: blur(12px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
             animation: slideDown 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        /* Enhanced Category Cards Grid */
+        /* Hero Stats Section */
+        .hero-stats {
+            display: flex;
+            gap: 25px;
+            margin-top: 35px;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            padding: 12px 20px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(8px);
+        }
+
+        .stat-card i {
+            font-size: 20px;
+            color: var(--primary-color);
+        }
+
+        .stat-card div span {
+            display: block;
+            font-weight: 800;
+            font-size: 16px;
+            color: #fff;
+        }
+
+        .stat-card div p {
+            margin: 0;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        /* Live Section Showcase */
+        .live-showcase {
+            background: linear-gradient(135deg, rgba(255, 71, 87, 0.15) 0%, rgba(15, 15, 22, 0.8) 100%);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            border-radius: 20px;
+            padding: 24px;
+            margin: 40px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            box-shadow: 0 10px 35px rgba(255, 71, 87, 0.15);
+        }
+
+        /* Modern Category Cards Grid */
         .categories-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -133,29 +216,30 @@
             background: var(--card-bg);
             border: 1px solid var(--border-color);
             border-radius: 20px;
-            padding: 40px 20px;
+            padding: 45px 20px;
             text-align: center;
             text-decoration: none;
             color: #fff;
             transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             position: relative;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .category-card::before {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, rgba(99, 102, 241, 0.15), transparent 70%);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), transparent 70%);
             opacity: 0;
             transition: opacity 0.4s ease;
         }
 
         .category-card:hover {
             transform: translateY(-8px) scale(1.02);
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(99, 102, 241, 0.25);
+            border-color: rgba(99, 102, 241, 0.6);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 30px var(--primary-glow);
         }
 
         .category-card:hover::before {
@@ -165,14 +249,14 @@
         .category-card span.emoji-icon {
             display: inline-block;
             transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-            filter: drop-shadow(0 8px 12px rgba(0,0,0,0.3));
+            filter: drop-shadow(0 10px 15px rgba(0,0,0,0.5));
         }
 
         .category-card:hover span.emoji-icon {
-            transform: scale(1.25) rotate(10deg);
+            transform: scale(1.3) rotate(8deg);
         }
 
-        /* Modern Glowing Hero Button */
+        /* Glowing Hero Button */
         .explore-btn {
             background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
             color: white;
@@ -183,7 +267,7 @@
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            box-shadow: 0 10px 30px rgba(99, 102, 241, 0.45);
+            box-shadow: 0 10px 30px var(--primary-glow);
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
@@ -193,8 +277,8 @@
             content: '';
             position: absolute;
             top: 0; left: -100%; width: 100%; height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
-            transition: 0.5s;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: 0.6s;
         }
 
         .explore-btn:hover::after {
@@ -203,13 +287,13 @@
 
         .explore-btn:hover {
             transform: translateY(-3px);
-            box-shadow: 0 15px 35px rgba(99, 102, 241, 0.65);
+            box-shadow: 0 15px 35px rgba(99, 102, 241, 0.7);
             filter: brightness(1.15);
         }
 
-        /* Professional Footer Style */
+        /* Footer Style */
         .site-footer {
-            background: linear-gradient(180deg, #0e0e13 0%, #060608 100%);
+            background: linear-gradient(180deg, #0a0a0f 0%, #030305 100%);
             border-top: 1px solid var(--border-color);
             margin-top: 80px;
             padding: 60px 20px 30px 20px;
@@ -241,15 +325,14 @@
             margin: 0 0 15px 0;
         }
 
-        /* Developer Profile Section */
         .developer-box {
             display: flex;
             align-items: center;
             gap: 15px;
-            background: rgba(25, 25, 35, 0.6);
+            background: rgba(255, 255, 255, 0.03);
             padding: 14px 18px;
             border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             backdrop-filter: blur(10px);
             margin-top: 15px;
         }
@@ -260,7 +343,7 @@
             border-radius: 50%;
             overflow: hidden;
             border: 2px solid var(--primary-color);
-            box-shadow: 0 0 12px rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 15px var(--primary-glow);
             flex-shrink: 0;
             background: #1e1e28;
             display: flex;
@@ -279,7 +362,6 @@
             font-size: 15px;
             margin: 0 0 4px 0;
             font-weight: 700;
-            letter-spacing: 0.5px;
         }
 
         .developer-info span {
@@ -289,7 +371,6 @@
             text-transform: uppercase;
         }
 
-        /* Features List in Footer */
         .features-list {
             list-style: none;
             padding: 0;
@@ -348,12 +429,12 @@
             background: var(--primary-color);
             border-color: var(--primary-color);
             transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 5px 15px var(--primary-glow);
         }
 
         @keyframes pulse {
             0% { transform: scale(0.95); opacity: 0.8; }
-            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 12px var(--accent-color); }
+            50% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 15px var(--accent-color); }
             100% { transform: scale(0.95); opacity: 0.8; }
         }
 
@@ -365,64 +446,106 @@
 </head>
 <body>
 
+    <!-- Ambient Glowing Backgrounds -->
+    <div class="glow-orb-1"></div>
+    <div class="glow-orb-2"></div>
+
     <nav class="navbar">
-        <a href="index.html" class="logo">STREAMX</a>
+        <a href="index.html" class="logo"><i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 18px;"></i> STREAMX</a>
         <ul class="nav-links">
             <li><a href="index.html" class="active"><i class="fa-solid fa-house"></i> Home</a></li>
             <li><a href="#categories"><i class="fa-solid fa-layer-group"></i> Categories</a></li>
-            <!-- Telegram Group Link Button -->
             <li><a href="https://t.me/+Qycsil9v4Zo0ZDM1" target="_blank" class="tg-nav-btn"><i class="fa-brands fa-telegram"></i> Join Telegram</a></li>
         </ul>
     </nav>
 
     <div class="container" style="max-width: 1100px; margin: 0 auto; padding: 20px;">
-        <!-- Notice / Announcement Bar -->
+        <!-- Announcement Bar -->
         <div class="notice-bar">
             <i class="fa-solid fa-bullhorn" style="color: var(--primary-color); font-size: 20px;"></i>
             <span><strong>Notice:</strong> Join our community chat during matches to share your thoughts with other fans! Server 2 is available as backup.</span>
         </div>
 
         <!-- Hero Section -->
-        <section class="hero" style="padding: 40px 0; text-align: left;">
-            <span style="background: rgba(255, 71, 87, 0.12); color: var(--accent-color); padding: 7px 14px; font-size: 12px; font-weight: 700; border-radius: 20px; border: 1px solid rgba(255, 71, 87, 0.25); display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; backdrop-filter: blur(6px);">
+        <section class="hero" style="padding: 30px 0; text-align: left;">
+            <span style="background: rgba(255, 71, 87, 0.12); color: var(--accent-color); padding: 7px 16px; font-size: 12px; font-weight: 700; border-radius: 20px; border: 1px solid rgba(255, 71, 87, 0.3); display: inline-flex; align-items: center; gap: 8px; margin-bottom: 20px; backdrop-filter: blur(6px);">
                 <span style="width: 8px; height: 8px; background: var(--accent-color); border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite;"></span> LIVE STREAMING PLATFORM
             </span>
-            <h1 style="font-size: 42px; font-weight: 800; line-height: 1.15; margin-bottom: 18px; background: linear-gradient(to right, #ffffff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Ultimate Live Sports Experience</h1>
+            <h1 style="font-size: 46px; font-weight: 800; line-height: 1.15; margin-bottom: 18px; background: linear-gradient(135deg, #ffffff 40%, #94a3b8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Ultimate Live Sports Experience</h1>
             <p style="color: #9ca3af; font-size: 16px; max-width: 620px; line-height: 1.6;">Stream your favorite cricket, football and sports matches in high definition with live interactive chats and real-time community engagement.</p>
-            <div style="margin-top: 35px;">
+            
+            <div style="margin-top: 30px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
                 <a href="#categories" class="explore-btn">
                     <i class="fa-solid fa-compass"></i> Explore Categories
                 </a>
             </div>
+
+            <!-- Stats Bar (New Addition) -->
+            <div class="hero-stats">
+                <div class="stat-card">
+                    <i class="fa-solid fa-tv"></i>
+                    <div>
+                        <span>1080p HD</span>
+                        <p>Ultra Clarity</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-bolt"></i>
+                    <div>
+                        <span>Low Latency</span>
+                        <p>Fast Buffer</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <i class="fa-solid fa-users"></i>
+                    <div>
+                        <span>Live Chat</span>
+                        <p>Community</p>
+                    </div>
+                </div>
+            </div>
         </section>
 
+        <!-- Live Match Banner Showcase (New Addition) -->
+        <div class="live-showcase">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span style="background: var(--accent-color); color: #fff; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 6px; letter-spacing: 1px;">LIVE NOW</span>
+                <div>
+                    <h4 style="margin: 0; color: #fff; font-size: 16px; font-weight: 700;">Featured Match Streams Available</h4>
+                    <p style="margin: 3px 0 0 0; color: #9ca3af; font-size: 13px;">Select a category below to choose your active server.</p>
+                </div>
+            </div>
+            <a href="#categories" style="color: #fff; text-decoration: none; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.1); padding: 8px 16px; border-radius: 10px; border: 1px solid rgba(255, 255, 255, 0.15);">
+                Watch Live <i class="fa-solid fa-arrow-right"></i>
+            </a>
+        </div>
+
         <!-- Categories Section -->
-        <h2 class="section-title" id="categories" style="font-size: 22px; font-weight: 700; margin: 50px 0 25px 0; display: flex; align-items: center; gap: 12px; color: #fff;">
+        <h2 class="section-title" id="categories" style="font-size: 22px; font-weight: 700; margin: 40px 0 20px 0; display: flex; align-items: center; gap: 12px; color: #fff;">
             <i class="fa-solid fa-layer-group" style="color: var(--primary-color);"></i> Select Category
         </h2>
+        
         <div class="categories-grid">
             <a href="category.html?cat=cricket" class="category-card">
-                <span class="emoji-icon" style="font-size: 50px; margin-bottom: 15px;">🏏</span>
-                <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 6px; color: #fff;">Cricket</h3>
+                <span class="emoji-icon" style="font-size: 55px; margin-bottom: 15px;">🏏</span>
+                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 6px; color: #fff;">Cricket</h3>
                 <p style="color: #9ca3af; font-size: 13px; margin: 0;">T20, ODI & Test Matches</p>
             </a>
             <a href="category.html?cat=football" class="category-card">
-                <span class="emoji-icon" style="font-size: 50px; margin-bottom: 15px;">⚽</span>
-                <h3 style="font-size: 19px; font-weight: 700; margin-bottom: 6px; color: #fff;">Football</h3>
+                <span class="emoji-icon" style="font-size: 55px; margin-bottom: 15px;">⚽</span>
+                <h3 style="font-size: 20px; font-weight: 700; margin-bottom: 6px; color: #fff;">Football</h3>
                 <p style="color: #9ca3af; font-size: 13px; margin: 0;">Premier League, UCL & More</p>
             </a>
         </div>
     </div>
 
-    <!-- Professional Footer with About, Developer & Features -->
+    <!-- Footer -->
     <footer class="site-footer">
         <div class="footer-content">
-            <!-- About Section -->
             <div class="footer-col">
                 <h3><i class="fa-solid fa-circle-info" style="color: var(--primary-color);"></i> About StreamX</h3>
                 <p>StreamX is your premier destination for high-definition live sports streaming. We bring crystal-clear cricket and football action directly to your screens with low latency and real-time community interactions.</p>
                 
-                <!-- Developer Profile Box -->
                 <div class="developer-box">
                     <div class="developer-img-container">
                         <img src="https://img.sanishtech.com/u/19c484434ffd5ee84ba7515f5fc97ff8.jpg" alt="YR RANDUL" onerror="this.src='https://via.placeholder.com/150?text=YR'">
@@ -434,40 +557,4 @@
                 </div>
             </div>
 
-            <!-- Platform Features Section -->
-            <div class="footer-col">
-                <h3><i class="fa-solid fa-wand-magic-sparkles" style="color: var(--primary-color);"></i> Platform Features</h3>
-                <ul class="features-list">
-                    <li><i class="fa-solid fa-check"></i> High Definition (HD) Live Streams</li>
-                    <li><i class="fa-solid fa-check"></i> Interactive Match Reminders (Bell Toggles)</li>
-                    <li><i class="fa-solid fa-check"></i> Real-time Live Match Chat Rooms</li>
-                    <li><i class="fa-solid fa-check"></i> Multi-Server Backup Support</li>
-                    <li><i class="fa-solid fa-check"></i> Fast & Responsive Modern UI Design</li>
-                    <li><i class="fa-solid fa-check"></i> Instant Automated Match Updates</li>
-                </ul>
-            </div>
-
-            <!-- Connect / Community Section -->
-            <div class="footer-col">
-                <h3><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Join Our Community</h3>
-                <p>Never miss a match update! Join our official Telegram group to get instant alerts, match schedules, and connect with fellow sports fans.</p>
-                <div style="margin-top: 15px;">
-                    <a href="https://t.me/+Qycsil9v4Zo0ZDM1" target="_blank" class="explore-btn" style="padding: 12px 24px; font-size: 14px; background: linear-gradient(135deg, #229ed9, #1778a6); box-shadow: 0 8px 25px rgba(34, 158, 217, 0.4);">
-                        <i class="fa-brands fa-telegram"></i> Join Telegram Channel
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>&copy; 2026 StreamX. Built with passion by YR RANDUL. All rights reserved.</p>
-            <div class="social-links">
-                <a href="https://t.me/+Qycsil9v4Zo0ZDM1" target="_blank" title="Telegram"><i class="fa-brands fa-telegram"></i></a>
-                <a href="#" title="GitHub"><i class="fa-brands fa-github"></i></a>
-                <a href="#" title="Website"><i class="fa-solid fa-globe"></i></a>
-            </div>
-        </div>
-    </footer>
-
-</body>
-</html>
+            <div class="foo
