@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Matches - StreamX</title>
 
-    <!-- Website Favicon / Google Search Logo (ඔබ ලබාදුන් ලින්ක් එක මෙහි ඇතුළත් කර ඇත) -->
     <link rel="icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     <link rel="shortcut icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     <link rel="apple-touch-icon" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
@@ -174,6 +173,19 @@
             border-color: rgba(255, 71, 87, 0.4);
             color: var(--accent-color);
             box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        /* Section Headings inside Main Area */
+        .group-heading {
+            font-size: 20px;
+            font-weight: 700;
+            color: #fff;
+            margin: 35px 0 15px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
         }
 
         /* Matches Grid */
@@ -399,7 +411,7 @@
             <i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 16px;"></i> STREAMX
         </a>
         <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding: 0;">
-            <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px; transition: color 0.3s;"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
         </ul>
     </nav>
 
@@ -426,9 +438,18 @@
             </div>
         </div>
         
-        <div class="matches-grid" id="matchesGrid">
-            <!-- Dynamic Match Cards will load here -->
+        <!-- Today Matches Section -->
+        <div id="todaySection">
+            <div class="group-heading"><i class="fa-solid fa-fire" style="color: var(--accent-color);"></i> Today Matches</div>
+            <div class="matches-grid" id="todayMatchesGrid"></div>
         </div>
+
+        <!-- Fixture Matches Section -->
+        <div id="fixturesSection" style="margin-top: 40px;">
+            <div class="group-heading"><i class="fa-solid fa-calendar-days" style="color: var(--primary-color);"></i> Fixture Matches</div>
+            <div class="matches-grid" id="fixtureMatchesGrid"></div>
+        </div>
+
     </div>
 
     <!-- Socket.io client script -->
@@ -439,9 +460,8 @@
         const cat = urlParams.get('cat') || 'cricket';
         
         document.getElementById('categoryTitle').innerHTML = `<i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> ${cat.toUpperCase()} Matches`;
-        const grid = document.getElementById('matchesGrid');
-
-        let rawMatchesData = []; // Store raw matches data locally
+        
+        let rawMatchesData = [];
         let isLiveOnlyActive = false;
 
         socket.emit('requestAllMatches');
@@ -458,194 +478,84 @@
         // Filter and Render Matches Dynamic Function
         function renderMatches() {
             const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
+            const todayGrid = document.getElementById('todayMatchesGrid');
+            const fixtureGrid = document.getElementById('fixtureMatchesGrid');
 
-            let filteredList = rawMatchesData.filter(match => {
+            // ශ්‍රී ලංකා වේලාවට අද දින දිනය ලබා ගැනීම (YYYY-MM-DD)
+            const todayStr = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'Asia/Colombo',
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit'
+            }).format(new Date());
+
+            let todayList = [];
+            let fixtureList = [];
+
+            rawMatchesData.forEach(match => {
                 // Search filter
                 const titleMatch = match.title ? match.title.toLowerCase().includes(searchQuery) : false;
                 const team1Match = match.team1 ? match.team1.toLowerCase().includes(searchQuery) : false;
                 const team2Match = match.team2 ? match.team2.toLowerCase().includes(searchQuery) : false;
                 const matchesSearch = titleMatch || team1Match || team2Match;
 
+                if (searchQuery && !matchesSearch) return;
+
+                // Match date check
+                let matchDate = match.date ? match.date.trim() : '';
+                
                 // Live status calculation
                 let isActuallyLive = false;
                 if (match.time) {
-                    const now = new Date();
-                    const startsAt = parseTimeStringToDate(match.time);
-                    if (startsAt && now >= startsAt) isActuallyLive = true;
+                    const startsAt = parseTimeStringToDate(match.time, matchDate);
+                    if (startsAt && new Date() >= startsAt && (!matchDate || matchDate === todayStr)) isActuallyLive = true;
                 }
                 const isLive = (match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive;
 
-                if (isLiveOnlyActive) {
-                    return matchesSearch && isLive;
+                if (isLiveOnlyActive && !isLive) return;
+
+                // වෙන් කිරීම: අද දිනය නම් Today Matches වලට, නැතහොත් Fixtures වලට
+                if (matchDate === todayStr || (!matchDate && isLive)) {
+                    todayList.push({ match, isLive });
+                } else {
+                    fixtureList.push({ match, isLive });
                 }
-                return matchesSearch;
             });
 
-            if(filteredList.length === 0) {
-                grid.innerHTML = `
-                    <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 50px 20px; background: rgba(20,20,28,0.4); border-radius: 20px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
-                        <i class="fa-regular fa-face-frown" style="font-size: 32px; display: block; margin-bottom: 12px; color: var(--primary-color);"></i>
-                        <p style="margin: 0; font-size: 15px; font-weight: 600; color: #fff;">No matches available right now.</p>
-                        <span style="font-size: 13px; color: #64748b;">Try adjusting your search or live filter.</span>
+            // 1. Render Today Matches
+            if (todayList.length === 0) {
+                todayGrid.innerHTML = `
+                    <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 30px; background: rgba(20,20,28,0.4); border-radius: 16px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
+                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">No today live matches</p>
                     </div>`;
             } else {
-                grid.innerHTML = ''; 
-                filteredList.forEach(match => {
-                    let statusBadge = '';
-                    let isActuallyLive = false;
-                    const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
+                todayGrid.innerHTML = '';
+                todayList.forEach(({ match, isLive }) => {
+                    todayGrid.innerHTML += createMatchCardHTML(match, isLive);
+                });
+            }
 
-                    if (match.time) {
-                        const now = new Date();
-                        const startsAt = parseTimeStringToDate(match.time); 
-                        if (startsAt && now >= startsAt) isActuallyLive = true;
-                    }
-
-                    if ((match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive) {
-                        statusBadge = `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>`;
-                    } else {
-                        statusBadge = `<div class="upcoming-badge"><i class="fa-regular fa-clock"></i> UPCOMING</div>`;
-                    }
-
-                    let matchTime = match.time ? `
-                        <div style="display: flex; align-items: center; gap: 6px; color: #9ca3af; font-size: 13px; margin-top: 4px;">
-                            <i class="fa-regular fa-clock" style="color: var(--primary-color);"></i>
-                            <span>Starts at: <strong style="color: #fff;">${match.time}</strong></span>
-                        </div>
-                    ` : '';
-
-                    const notifKey = `streamx_notif_${match.id}`;
-                    const isNotifOn = localStorage.getItem(notifKey) === 'true';
-                    const bellClass = isNotifOn ? 'notif-bell active' : 'notif-bell';
-                    const bellIconStyle = isNotifOn ? 'fa-solid fa-bell' : 'fa-regular fa-bell';
-
-                    grid.innerHTML += `
-                        <div class="match-card">
-                            <div class="match-thumb-container" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
-                                <div class="match-thumb-bg" style="background-image: url('${thumbUrl}')"></div>
-                                <img src="${thumbUrl}" alt="Match Thumbnail">
-                                ${statusBadge}
-                                <div class="quality-tag"><i class="fa-solid fa-tv"></i> HD Stream</div>
-                            </div>
-                            <div class="match-details" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
-                                <div class="match-teams">
-                                    <span>${match.team1}</span>
-                                    <span class="vs-badge">VS</span>
-                                    <span>${match.team2}</span>
-                                </div>
-                                <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${match.title}</p>
-                                ${matchTime}
-                            </div>
-                            <!-- Notification Bell Toggle Button -->
-                            <button class="${bellClass}" id="bell_${match.id}" onclick="toggleNotification('${match.id}', '${match.title}')" title="Toggle Match Reminder">
-                                <i class="${bellIconStyle}"></i>
-                            </button>
-                        </div>
-                    `;
+            // 2. Render Fixture Matches
+            if (fixtureList.length === 0) {
+                fixtureGrid.innerHTML = `
+                    <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 30px; background: rgba(20,20,28,0.4); border-radius: 16px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
+                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">No upcoming fixtures available.</p>
+                    </div>`;
+            } else {
+                fixtureGrid.innerHTML = '';
+                fixtureList.forEach(({ match, isLive }) => {
+                    fixtureGrid.innerHTML += createMatchCardHTML(match, isLive);
                 });
             }
         }
 
-        // Live Filter Toggle
-        function toggleLiveFilter() {
-            isLiveOnlyActive = !isLiveOnlyActive;
-            const filterBtn = document.getElementById('liveFilterBtn');
-            if (isLiveOnlyActive) {
-                filterBtn.classList.add('active');
-            } else {
-                filterBtn.classList.remove('active');
-            }
-            renderMatches();
-        }
+        function createMatchCardHTML(match, isLive) {
+            const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
+            let statusBadge = isLive ? `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>` : `<div class="upcoming-badge"><i class="fa-regular fa-clock"></i> UPCOMING</div>`;
 
-        // Realtime Search Filter
-        function filterMatches() {
-            renderMatches();
-        }
-
-        // Open Match Player
-        function openMatch(id, title) {
-            location.href = `match.html?id=${id}&title=${title}`;
-        }
-
-        // Toggle Notification
-        function toggleNotification(matchId, matchTitle) {
-            const bellBtn = document.getElementById(`bell_${matchId}`);
-            const bellIcon = bellBtn.querySelector('i');
-            const notifKey = `streamx_notif_${matchId}`;
-            
-            const currentState = localStorage.getItem(notifKey) === 'true';
-            const newState = !currentState;
-
-            localStorage.setItem(notifKey, newState);
-
-            if (newState) {
-                bellBtn.classList.add('active');
-                bellIcon.className = 'fa-solid fa-bell';
-                showNotificationAlert(`Reminder set! We'll notify you about: ${decodeURIComponent(matchTitle)}`);
-                
-                if ("Notification" in window && Notification.permission !== "granted") {
-                    Notification.requestPermission();
-                }
-            } else {
-                bellBtn.classList.remove('active');
-                bellIcon.className = 'fa-regular fa-bell';
-                showNotificationAlert(`Reminder removed for this match.`);
-            }
-        }
-
-        // Toast Alert
-        function showNotificationAlert(message) {
-            const existingAlert = document.getElementById('toastAlert');
-            if (existingAlert) existingAlert.remove();
-
-            const toast = document.createElement('div');
-            toast.id = 'toastAlert';
-            toast.innerText = message;
-            toast.style.cssText = `
-                position: fixed;
-                bottom: 25px;
-                left: 50%;
-                transform: translateX(-50%);
-                background: rgba(20, 20, 30, 0.95);
-                color: #fff;
-                padding: 12px 24px;
-                border-radius: 30px;
-                border: 1px solid rgba(99, 102, 241, 0.4);
-                box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-                font-size: 13px;
-                font-weight: 600;
-                z-index: 9999;
-                backdrop-filter: blur(10px);
-                animation: fadeInOut 3s ease forwards;
-            `;
-            document.body.appendChild(toast);
-
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
-        }
-
-        function parseTimeStringToDate(timeString) {
-            try {
-                const today = new Date();
-                let [time, modifier] = timeString.split(' ');
-                let [hours, minutes] = time.split(':');
-
-                if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') {
-                    hours = parseInt(hours, 10) + 12;
-                }
-                if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') {
-                    hours = 0;
-                }
-
-                today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-                return today;
-            } catch (e) {
-                console.error("Error parsing time:", e);
-                return null;
-            }
-        }
-    </script>
-</body>
-</html>
+            let dateTimeInfo = '';
+            if (match.date || match.time) {
+                dateTimeInfo = `
+                    <div style="display: flex; align-items: center; gap: 10px; color: #9ca3af; font-size: 13px; margin-top: 4px;">
+                        ${match.date ? `<span><i class="fa-regular fa-calendar" style="color: var(--primary-color);"></i> ${match.date}</span>` : ''}
+                        ${match.time ? `<span><i class="fa-regular fa-clock" style="co
