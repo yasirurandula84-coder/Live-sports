@@ -109,6 +109,7 @@ io.on('connection', (socket) => {
                 team1: match.team1,
                 team2: match.team2,
                 status: match.status,
+                date: match.date, // <--- දිනය (Date) යැවීම සඳහා මෙය එකතු කරන ලදී
                 time: match.time,
                 thumbnail: match.thumbnail
             }));
@@ -206,3 +207,4 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
+        
