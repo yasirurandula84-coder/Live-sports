@@ -3,559 +3,250 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Matches - StreamX</title>
-
-    <link rel="icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
-    <link rel="shortcut icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
-    <link rel="apple-touch-icon" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
-    
-    <!-- FontAwesome for Icons -->
+    <title>StreamX - Admin Panel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        :root {
-            --primary-color: #6366f1;
-            --primary-glow: rgba(99, 102, 241, 0.4);
-            --accent-color: #ff4757;
-            --accent-glow: rgba(255, 71, 87, 0.4);
-            --bg-dark: #07070a;
-            --card-bg: rgba(20, 20, 28, 0.6);
-            --border-color: rgba(255, 255, 255, 0.08);
-        }
-
-        /* Modern Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: var(--bg-dark);
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #23232b;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-color);
-        }
-
-        body {
-            background-color: var(--bg-dark);
-            color: #f3f4f6;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding-bottom: 60px;
-            overflow-x: hidden;
-            position: relative;
-        }
-
-        /* Ambient Glowing Background Orbs */
-        .glow-orb-1 {
-            position: absolute;
-            top: -50px;
-            left: -100px;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
-            border-radius: 50%;
-            z-index: -1;
-            pointer-events: none;
-        }
-        .glow-orb-2 {
-            position: absolute;
-            top: 400px;
-            right: -100px;
-            width: 450px;
-            height: 450px;
-            background: radial-gradient(circle, rgba(255, 71, 87, 0.12) 0%, transparent 70%);
-            border-radius: 50%;
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        /* Glassmorphism Navbar */
-        .navbar {
-            background: rgba(11, 11, 14, 0.75) !important;
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--border-color);
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 30px;
-        }
-
-        .container {
-            max-width: 1150px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-
-        /* Header Controls Area (Filter & Search) */
-        .header-controls {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            margin: 25px 0;
-        }
-
-        .section-title {
-            font-size: 26px;
-            font-weight: 800;
-            color: #fff;
-            margin: 0;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            text-transform: capitalize;
-        }
-
-        .search-filter-box {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            flex-wrap: wrap;
-        }
-
-        .search-input-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .search-input-wrapper i {
-            position: absolute;
-            left: 14px;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        .search-input {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            padding: 10px 16px 10px 38px;
-            border-radius: 12px;
-            color: #fff;
-            font-size: 13.5px;
-            outline: none;
-            transition: all 0.3s ease;
-            width: 200px;
-            backdrop-filter: blur(10px);
-        }
-
-        .search-input:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 15px var(--primary-glow);
-            width: 240px;
-        }
-
-        .filter-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid var(--border-color);
-            color: #9ca3af;
-            padding: 10px 16px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
-        }
-
-        .filter-btn:hover, .filter-btn.active {
-            background: rgba(255, 71, 87, 0.15);
-            border-color: rgba(255, 71, 87, 0.4);
-            color: var(--accent-color);
-            box-shadow: 0 0 15px var(--accent-glow);
-        }
-
-        /* Section Headings inside Main Area */
-        .group-heading {
-            font-size: 20px;
-            font-weight: 700;
-            color: #fff;
-            margin: 35px 0 15px 0;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        /* Matches Grid */
-        .matches-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
-            gap: 26px;
-        }
-
-        /* Enhanced Match Card */
-        .match-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.5);
-            position: relative;
-            backdrop-filter: blur(12px);
-            animation: fadeIn 0.5s ease-in-out;
-            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-        }
-
-        .match-card:hover {
-            transform: translateY(-8px) scale(1.01);
-            border-color: rgba(99, 102, 241, 0.6);
-            box-shadow: 0 22px 45px rgba(0, 0, 0, 0.8), 0 0 30px var(--primary-glow);
-        }
-
-        /* Thumbnail Container */
-        .match-thumb-container {
-            position: relative;
-            width: 100%;
-            height: 195px;
-            background: #000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            cursor: pointer;
-        }
-
-        .match-thumb-bg {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover;
-            background-position: center;
-            filter: blur(14px) brightness(0.35);
-            transform: scale(1.2);
-            z-index: 1;
-        }
-
-        .match-thumb-container img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            position: relative;
-            z-index: 2;
-            transition: transform 0.5s ease;
-            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7));
-        }
-
-        .match-card:hover .match-thumb-container img {
-            transform: scale(1.08);
-        }
-
-        .match-details {
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: linear-gradient(180deg, rgba(20,20,28,0.4) 0%, rgba(12,12,18,0.95) 100%);
-            cursor: pointer;
-        }
-
-        /* Team Vs Styling */
-        .match-teams {
-            font-weight: 700;
-            font-size: 16px;
-            color: #fff;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .vs-badge {
-            background: rgba(99, 102, 241, 0.15);
-            color: #818cf8;
-            font-size: 11px;
-            font-weight: 800;
-            padding: 2px 8px;
-            border-radius: 6px;
-            border: 1px solid rgba(99, 102, 241, 0.3);
-        }
-
-        /* Quality Badge */
-        .quality-tag {
-            position: absolute;
-            bottom: 14px;
-            left: 14px;
-            background: rgba(0, 0, 0, 0.65);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #a5b4fc;
-            padding: 3px 8px;
-            border-radius: 6px;
-            font-size: 10px;
-            font-weight: 700;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        /* Notification Bell Toggle */
-        .notif-bell {
-            position: absolute;
-            bottom: 14px;
-            right: 14px;
-            background: rgba(20, 20, 28, 0.85);
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #9ca3af;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 15;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-
-        .notif-bell:hover {
-            background: rgba(99, 102, 241, 0.25);
-            color: #fff;
-            border-color: var(--primary-color);
-            transform: scale(1.1);
-        }
-
-        .notif-bell.active {
-            background: var(--primary-color);
-            color: #fff;
-            border-color: var(--primary-color);
-            box-shadow: 0 0 15px var(--primary-glow);
-        }
-
-        /* LIVE NOW Badge */
-        .live-badge {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: white;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 800;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            animation: pulse 1.5s infinite;
-            z-index: 10;
-            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.6);
-            backdrop-filter: blur(4px);
-        }
-
-        .live-dot {
-            width: 8px;
-            height: 8px;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 0 8px white;
-        }
-
-        /* UPCOMING Badge */
-        .upcoming-badge {
-            position: absolute;
-            top: 14px;
-            right: 14px;
-            background: rgba(15, 15, 20, 0.85);
-            backdrop-filter: blur(8px);
-            color: #e2e8f0;
-            padding: 6px 12px;
-            font-size: 11px;
-            font-weight: 700;
-            border-radius: 10px;
-            border: 1px solid rgba(255, 255, 255, 0.12);
-            z-index: 10;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.05); opacity: 0.85; box-shadow: 0 0 20px rgba(239, 68, 68, 0.9); }
-            100% { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInOut {
-            0% { opacity: 0; transform: translate(-50%, 20px); }
-            15% { opacity: 1; transform: translate(-50%, 0); }
-            85% { opacity: 1; transform: translate(-50%, 0); }
-            100% { opacity: 0; transform: translate(-50%, 20px); }
-        }
+        body { background: #0b0b0e; color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #141419; border: 1px solid rgba(255,255,255,0.08); padding: 25px; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { margin-top: 0; color: #6366f1; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-size: 13px; color: #9ca3af; }
+        input, select { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 10px; border-radius: 8px; color: #fff; box-sizing: border-box; outline: none; }
+        input:focus { border-color: #6366f1; }
+        button { background: linear-gradient(135deg, #6366f1, #4f46e5); color: #fff; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button:hover { filter: brightness(1.1); }
+        .match-card { background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 10px; margin-top: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .action-btns { display: flex; gap: 8px; }
+        .edit-btn { background: #3b82f6; padding: 8px 12px; font-size: 12px; }
+        .delete-btn { background: #ef4444; padding: 8px 12px; font-size: 12px; }
+        .cancel-btn { background: #6b7280; padding: 12px 20px; display: none; margin-left: 10px; }
     </style>
 </head>
 <body>
-
-    <!-- Ambient Glowing Orbs -->
-    <div class="glow-orb-1"></div>
-    <div class="glow-orb-2"></div>
-
-    <nav class="navbar">
-        <a href="index.html" class="logo" style="font-weight: 800; background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px; display: flex; align-items: center; gap: 8px;">
-            <i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 16px;"></i> STREAMX
-        </a>
-        <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding: 0;">
-            <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
-        </ul>
-    </nav>
-
     <div class="container">
+        <h2><i class="fa-solid fa-gauge-high"></i> StreamX Admin Panel</h2>
         
-        <!-- Header & Controls -->
-        <div class="header-controls">
-            <h2 class="section-title" id="categoryTitle">
-                <i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> Matches
-            </h2>
+        <!-- Add / Edit Match Form -->
+        <div style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); margin-bottom: 25px;">
+            <h3 id="formTitle" style="margin-top:0; font-size: 16px;">Add New Match</h3>
+            <input type="hidden" id="editCategory" value="">
+            <input type="hidden" id="editIndex" value="">
 
-            <div class="search-filter-box">
-                <!-- Search Input -->
-                <div class="search-input-wrapper">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="searchInput" class="search-input" placeholder="Search matches..." oninput="filterMatches()">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>Category (e.g. cricket)</label>
+                    <input type="text" id="category" value="cricket">
                 </div>
-                
-                <!-- Live Only Filter Button -->
-                <button class="filter-btn" id="liveFilterBtn" onclick="toggleLiveFilter()">
-                    <span style="width: 7px; height: 7px; background: var(--accent-color); border-radius: 50%; display: inline-block;"></span>
-                    Live Only
-                </button>
+                <div class="form-group">
+                    <label>Match ID (e.g. match-05)</label>
+                    <input type="text" id="matchId" placeholder="match-05">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Match Title</label>
+                <input type="text" id="title" placeholder="LIVE - BAN VS WI LIVE TEST CRICKET MATCH">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>Team 1</label>
+                    <input type="text" id="team1" placeholder="BANGLADESH">
+                </div>
+                <div class="form-group">
+                    <label>Team 2</label>
+                    <input type="text" id="team2" placeholder="WEST INDIES">
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px;">
+                <div class="form-group">
+                    <label>Status</label>
+                    <select id="status">
+                        <option value="LIVE">LIVE</option>
+                        <option value="UPCOMING">UPCOMING</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Match Date</label>
+                    <input type="date" id="matchDate">
+                </div>
+                <div class="form-group">
+                    <label>Time</label>
+                    <input type="text" id="time" placeholder="09:00 AM">
+                </div>
+                <div class="form-group">
+                    <label>Thumbnail URL</label>
+                    <input type="text" id="thumbnail" placeholder="https://...">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Stream Link 1 (m3u8, mpd+drm, or youtube)</label>
+                <input type="text" id="link1" placeholder="https://...">
+            </div>
+            <div style="display: flex;">
+                <button id="saveBtn" onclick="saveMatch()"><i class="fa-solid fa-plus"></i> Add Match to GitHub</button>
+                <button id="cancelBtn" class="cancel-btn" onclick="resetForm()"><i class="fa-solid fa-xmark"></i> Cancel</button>
             </div>
         </div>
-        
-        <!-- Today Matches Section -->
-        <div id="todaySection">
-            <div class="group-heading"><i class="fa-solid fa-fire" style="color: var(--accent-color);"></i> Today Matches</div>
-            <div class="matches-grid" id="todayMatchesGrid"></div>
-        </div>
 
-        <!-- Fixture Matches Section -->
-        <div id="fixturesSection" style="margin-top: 40px;">
-            <div class="group-heading"><i class="fa-solid fa-calendar-days" style="color: var(--primary-color);"></i> Fixture Matches</div>
-            <div class="matches-grid" id="fixtureMatchesGrid"></div>
-        </div>
-
+        <h3>Existing Matches in Private Repo</h3>
+        <div id="matchesList">Loading matches...</div>
     </div>
 
-    <!-- Socket.io client script -->
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const urlParams = new URLSearchParams(window.location.search);
-        const cat = urlParams.get('cat') || 'cricket';
-        
-        document.getElementById('categoryTitle').innerHTML = `<i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> ${cat.toUpperCase()} Matches`;
-        
-        let rawMatchesData = [];
-        let isLiveOnlyActive = false;
+        let allMatchesData = {};
 
-        socket.emit('requestAllMatches');
+        async function fetchMatches() {
+            try {
+                const res = await fetch('/api/admin/matches');
+                const data = await res.json();
+                allMatchesData = data.content || {};
+                renderMatches();
+            } catch (err) {
+                document.getElementById('matchesList').innerHTML = 'Error loading matches.';
+            }
+        }
 
-        socket.on('refreshMatchesData', () => {
-            socket.emit('requestAllMatches');
-        });
-
-        socket.on('allMatchesData', (matchesData) => {
-            rawMatchesData = matchesData[cat] || [];
-            renderMatches();
-        });
-
-        // Filter and Render Matches Dynamic Function
         function renderMatches() {
-            const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
-            const todayGrid = document.getElementById('todayMatchesGrid');
-            const fixtureGrid = document.getElementById('fixtureMatchesGrid');
-
-            // ශ්‍රී ලංකා වේලාවට අද දින දිනය ලබා ගැනීම (YYYY-MM-DD)
-            const todayStr = new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'Asia/Colombo',
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit'
-            }).format(new Date());
-
-            let todayList = [];
-            let fixtureList = [];
-
-            rawMatchesData.forEach(match => {
-                // Search filter
-                const titleMatch = match.title ? match.title.toLowerCase().includes(searchQuery) : false;
-                const team1Match = match.team1 ? match.team1.toLowerCase().includes(searchQuery) : false;
-                const team2Match = match.team2 ? match.team2.toLowerCase().includes(searchQuery) : false;
-                const matchesSearch = titleMatch || team1Match || team2Match;
-
-                if (searchQuery && !matchesSearch) return;
-
-                // Match date check
-                let matchDate = match.date ? match.date.trim() : '';
-                
-                // Live status calculation
-                let isActuallyLive = false;
-                if (match.time) {
-                    const startsAt = parseTimeStringToDate(match.time, matchDate);
-                    if (startsAt && new Date() >= startsAt && (!matchDate || matchDate === todayStr)) isActuallyLive = true;
-                }
-                const isLive = (match.status && match.status.trim().toUpperCase() === 'LIVE') || isActuallyLive;
-
-                if (isLiveOnlyActive && !isLive) return;
-
-                // වෙන් කිරීම: අද දිනය නම් Today Matches වලට, නැතහොත් Fixtures වලට
-                if (matchDate === todayStr || (!matchDate && isLive)) {
-                    todayList.push({ match, isLive });
-                } else {
-                    fixtureList.push({ match, isLive });
-                }
-            });
-
-            // 1. Render Today Matches
-            if (todayList.length === 0) {
-                todayGrid.innerHTML = `
-                    <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 30px; background: rgba(20,20,28,0.4); border-radius: 16px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
-                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">No today live matches</p>
-                    </div>`;
-            } else {
-                todayGrid.innerHTML = '';
-                todayList.forEach(({ match, isLive }) => {
-                    todayGrid.innerHTML += createMatchCardHTML(match, isLive);
-                });
+            const listDiv = document.getElementById('matchesList');
+            listDiv.innerHTML = '';
+            
+            if (Object.keys(allMatchesData).length === 0) {
+                listDiv.innerHTML = '<p style="color: #9ca3af;">No matches found.</p>';
+                return;
             }
 
-            // 2. Render Fixture Matches
-            if (fixtureList.length === 0) {
-                fixtureGrid.innerHTML = `
-                    <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 30px; background: rgba(20,20,28,0.4); border-radius: 16px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
-                        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #fff;">No upcoming fixtures available.</p>
-                    </div>`;
-            } else {
-                fixtureGrid.innerHTML = '';
-                fixtureList.forEach(({ match, isLive }) => {
-                    fixtureGrid.innerHTML += createMatchCardHTML(match, isLive);
+            for (let cat in allMatchesData) {
+                allMatchesData[cat].forEach((match, index) => {
+                    listDiv.innerHTML += `
+                        <div class="match-card">
+                            <div>
+                                <strong style="color: #6366f1;">[${cat.toUpperCase()}]</strong> ${match.title} 
+                                <br><small style="color: #9ca3af;">Status: ${match.status} | Date: ${match.date || 'N/A'} | Time: ${match.time}</small>
+                            </div>
+                            <div class="action-btns">
+                                <button class="edit-btn" onclick="editMatch('${cat}', ${index})"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
+                                <button class="delete-btn" onclick="deleteMatch('${cat}', ${index})"><i class="fa-solid fa-trash"></i> Delete</button>
+                            </div>
+                        </div>
+                    `;
                 });
             }
         }
 
-        function createMatchCardHTML(match, isLive) {
-            const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
-            let statusBadge = isLive ? `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>` : `<div class="upcoming-badge"><i class="fa-regular fa-clock"></i> UPCOMING</div>`;
+        function editMatch(cat, index) {
+            const match = allMatchesData[cat][index];
+            
+            document.getElementById('category').value = cat;
+            document.getElementById('matchId').value = match.id || '';
+            document.getElementById('title').value = match.title || '';
+            document.getElementById('team1').value = match.team1 || '';
+            document.getElementById('team2').value = match.team2 || '';
+            document.getElementById('status').value = match.status || 'LIVE';
+            document.getElementById('matchDate').value = match.date || '';
+            document.getElementById('time').value = match.time || '';
+            document.getElementById('thumbnail').value = match.thumbnail || '';
+            document.getElementById('link1').value = match.link1 || '';
 
-            let dateTimeInfo = '';
-            if (match.date || match.time) {
-                dateTimeInfo = `
-                    <div style="display: flex; align-items: center; gap: 10px; color: #9ca3af; font-size: 13px; margin-top: 4px;">
-                        ${match.date ? `<span><i class="fa-regular fa-calendar" style="color: var(--primary-color);"></i> ${match.date}</span>` : ''}
-                        ${match.time ? `<span><i class="fa-regular fa-clock" style="co
+            document.getElementById('editCategory').value = cat;
+            document.getElementById('editIndex').value = index;
+
+            document.getElementById('formTitle').innerText = 'Edit Match';
+            document.getElementById('saveBtn').innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Update Match on GitHub';
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function resetForm() {
+            document.getElementById('category').value = 'cricket';
+            document.getElementById('matchId').value = '';
+            document.getElementById('title').value = '';
+            document.getElementById('team1').value = '';
+            document.getElementById('team2').value = '';
+            document.getElementById('status').value = 'LIVE';
+            document.getElementById('matchDate').value = '';
+            document.getElementById('time').value = '';
+            document.getElementById('thumbnail').value = '';
+            document.getElementById('link1').value = '';
+
+            document.getElementById('editCategory').value = '';
+            document.getElementById('editIndex').value = '';
+
+            document.getElementById('formTitle').innerText = 'Add New Match';
+            document.getElementById('saveBtn').innerHTML = '<i class="fa-solid fa-plus"></i> Add Match to GitHub';
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+
+        async function saveMatch() {
+            const cat = document.getElementById('category').value.trim();
+            const editCat = document.getElementById('editCategory').value;
+            const editIdx = document.getElementById('editIndex').value;
+
+            // නිවැරදි කරන ලද Thumbnail සහ Date ලබා ගැනීම
+            const matchData = {
+                id: document.getElementById('matchId').value.trim(),
+                title: document.getElementById('title').value.trim(),
+                team1: document.getElementById('team1').value.trim(),
+                team2: document.getElementById('team2').value.trim(),
+                status: document.getElementById('status').value,
+                date: document.getElementById('matchDate').value.trim(),
+                time: document.getElementById('time').value.trim(),
+                thumbnail: document.getElementById('thumbnail').value.trim(),
+                link1: document.getElementById('link1').value.trim(),
+                link2: ""
+            };
+
+            if (!matchData.id || !matchData.title) {
+                alert('Please fill Match ID and Title!');
+                return;
+            }
+
+            if (editCat !== '' && editIdx !== '') {
+                if (editCat === cat) {
+                    allMatchesData[cat][editIdx] = matchData;
+                } else {
+                    allMatchesData[editCat].splice(editIdx, 1);
+                    if (allMatchesData[editCat].length === 0) delete allMatchesData[editCat];
+                    
+                    if (!allMatchesData[cat]) allMatchesData[cat] = [];
+                    allMatchesData[cat].push(matchData);
+                }
+            } else {
+                if (!allMatchesData[cat]) {
+                    allMatchesData[cat] = [];
+                }
+                allMatchesData[cat].push(matchData);
+            }
+
+            await saveToGitHub();
+            resetForm();
+        }
+
+        async function deleteMatch(cat, index) {
+            if (confirm('Are you sure you want to delete this match?')) {
+                allMatchesData[cat].splice(index, 1);
+                if (allMatchesData[cat].length === 0) {
+                    delete allMatchesData[cat];
+                }
+                await saveToGitHub();
+            }
+        }
+
+        async function saveToGitHub() {
+            const res = await fetch('/api/admin/save-matches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ updatedData: allMatchesData })
+            });
+            const result = await res.json();
+            if (result.success) {
+                alert('Successfully updated matches.json on Private Repo!');
+                fetchMatches();
+            } else {
+                alert('Error: ' + result.error);
+            }
+        }
+
+        fetchMatches();
+    </script>
+</body>
+</html>
