@@ -148,6 +148,45 @@
             display: none;
         }
 
+        /* Quality Popup Menu Styling */
+        .quality-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+        .quality-menu {
+            position: absolute;
+            bottom: 45px;
+            right: 0;
+            background: rgba(20, 20, 25, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            padding: 8px 0;
+            list-style: none;
+            margin: 0;
+            min-width: 110px;
+            display: none;
+            z-index: 20;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+        }
+        .quality-menu.active { display: block; }
+        .quality-menu li {
+            padding: 8px 16px;
+            font-size: 13px;
+            color: #cbd5e1;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s;
+            text-align: center;
+        }
+        .quality-menu li:hover {
+            background: var(--primary-color);
+            color: #fff;
+        }
+        .quality-menu li.selected {
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+
         /* Connection Ping Indicator */
         .connection-status {
             display: flex;
@@ -421,7 +460,14 @@
                                 </div>
                             </div>
 
-                            <div class="right-controls">
+                            <div class="right-controls" style="display: flex; gap: 10px; align-items: center;">
+                                <!-- Quality Menu Wrapper with Gear Icon -->
+                                <div class="quality-wrapper" id="qualityWrapper" style="display: none;">
+                                    <button class="control-btn" id="qualityBtn" title="Change Quality"><i class="fa-solid fa-gear"></i></button>
+                                    <ul class="quality-menu" id="qualityMenu">
+                                        <!-- Dynamic Quality options will be injected here -->
+                                    </ul>
+                                </div>
                                 <button class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
                                 <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
                             </div>
@@ -504,6 +550,10 @@
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
         
+        const qualityWrapper = document.getElementById('qualityWrapper');
+        const qualityBtn = document.getElementById('qualityBtn');
+        const qualityMenu = document.getElementById('qualityMenu');
+
         // Single unified Socket instance
         const socket = io();
         let currentHls = null;
@@ -612,6 +662,7 @@
             if (!isMatchLive) return;
 
             if (playerLoader) playerLoader.classList.remove('hidden');
+            qualityWrapper.style.display = 'none';
 
             if(serverType === 'server1') {
                 document.getElementById('btnServer1').style.background = 'linear-gradient(135deg, #6366f1, #4f46e5)';
@@ -645,6 +696,7 @@
 
             if (playerLoader) playerLoader.classList.remove('hidden');
             destroyPlayers();
+            qualityWrapper.style.display = 'none';
 
             // Check if the stream link is a YouTube URL
             if (directLink.includes('youtube.com') || directLink.includes('youtu.be')) {
@@ -709,6 +761,34 @@
 
                     await shakaPlayer.load(mpdUrl);
                     video.play().catch(e => console.log("Auto-play prevented:", e));
+
+                    // Shaka Player Multi-bitrate check
+                    const tracks = shakaPlayer.getVariantTracks();
+                    const videoTracks = tracks.filter(t => t.type === 'variant' && t.height);
+                    
+                    if (videoTracks.length > 1) {
+                        qualityWrapper.style.display = 'inline-block';
+                        qualityMenu.innerHTML = `<li data-index="auto" class="selected">Auto</li>`;
+                        
+                        videoTracks.forEach((track) => {
+                            qualityMenu.innerHTML += `<li data-index="${track.id}">${track.height}p</li>`;
+                        });
+
+                        qualityMenu.querySelectorAll('li').forEach(li => {
+                            li.onclick = () => {
+                                qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
+                                li.classList.add('selected');
+                                const val = li.getAttribute('data-index');
+                                if (val === 'auto') {
+                                    shakaPlayer.configure({ abr: { enabled: true } });
+                                } else {
+                                    shakaPlayer.configure({ abr: { enabled: false } });
+                                    shakaPlayer.selectVariantTrack(videoTracks.find(t => t.id == val), true);
+                                }
+                                qualityMenu.classList.remove('active');
+                            };
+                        });
+                    }
                 } catch (e) {
                     console.error('Error loading DASH video with Shaka Player:', e);
                 }
@@ -731,8 +811,28 @@
                     currentHls = hls;
                     hls.loadSource(directLink);
                     hls.attachMedia(video);
-                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    
+                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
                         video.play().catch(e => console.log("Auto-play prevented:", e));
+                        
+                        // HLS Multi-bitrate check
+                        if (data.levels && data.levels.length > 1) {
+                            qualityWrapper.style.display = 'inline-block';
+                            qualityMenu.innerHTML = `<li data-index="-1" class="selected">Auto</li>`;
+                            
+                            data.levels.forEach((lvl, index) => {
+                                qualityMenu.innerHTML += `<li data-index="${index}">${lvl.height}p</li>`;
+                            });
+
+                            qualityMenu.querySelectorAll('li').forEach(li => {
+                                li.onclick = () => {
+                                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
+                                    li.classList.add('selected');
+                                    hls.currentLevel = parseInt(li.getAttribute('data-index'));
+                                    qualityMenu.classList.remove('active');
+                                };
+                            });
+                        }
                     });
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = directLink;
@@ -741,6 +841,15 @@
                     });
                 }
             }
+        });
+
+        // Toggle Quality Popup Menu
+        qualityBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            qualityMenu.classList.toggle('active');
+        });
+        window.addEventListener('click', () => {
+            qualityMenu.classList.remove('active');
         });
 
         video.addEventListener('playing', () => {
