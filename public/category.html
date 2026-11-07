@@ -22,7 +22,6 @@
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
-        /* Modern Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-dark); }
         ::-webkit-scrollbar-thumb { background: #23232b; border-radius: 4px; }
@@ -38,7 +37,6 @@
             position: relative;
         }
 
-        /* Ambient Glowing Background Orbs */
         .glow-orb-1 {
             position: absolute; top: -50px; left: -100px; width: 400px; height: 400px;
             background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, transparent 70%);
@@ -50,7 +48,6 @@
             border-radius: 50%; z-index: -1; pointer-events: none;
         }
 
-        /* Glassmorphism Navbar */
         .navbar {
             background: rgba(11, 11, 14, 0.75) !important;
             backdrop-filter: blur(20px);
@@ -67,7 +64,6 @@
             padding: 20px;
         }
 
-        /* Header Controls Area */
         .header-controls {
             display: flex; justify-content: space-between; align-items: center;
             flex-wrap: wrap; gap: 15px; margin: 25px 0;
@@ -121,7 +117,34 @@
             border-bottom: 1px solid var(--border-color); padding-bottom: 10px;
         }
 
-        /* --- 1. LIVE MATCHES GRID (רגูลර් පළල සහිතයි) --- */
+        /* --- LOADING SPINNER OVERLAY --- */
+        #loadingOverlay {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 20px;
+            gap: 15px;
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .spinner {
+            width: 45px;
+            height: 45px;
+            border: 4px solid rgba(99, 102, 241, 0.15);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+            box-shadow: 0 0 15px var(--primary-glow);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Grids */
         .matches-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -141,10 +164,9 @@
             box-shadow: 0 22px 45px rgba(0, 0, 0, 0.8), 0 0 30px var(--primary-glow);
         }
 
-        /* --- 2. FIXTURE MATCHES GRID (පළලින් අඩු, සංයුක්ත - Compact & Narrow Grid) --- */
         .fixtures-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); /* පළලින් අඩු කර ඇත */
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
             gap: 20px;
         }
 
@@ -155,36 +177,21 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); position: relative;
             backdrop-filter: blur(10px); transition: all 0.3s ease;
         }
-        .fixture-card:hover {
-            transform: translateY(-5px);
-            border-color: rgba(99, 102, 241, 0.5);
-            box-shadow: 0 15px 35px rgba(0,0,0,0.6), 0 0 20px rgba(99, 102, 241, 0.2);
-        }
 
-        /* Fixture Header with Highlighted Date & Time */
         .fixture-datetime-banner {
             background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(79, 70, 229, 0.05));
             border-bottom: 1px solid rgba(99, 102, 241, 0.2);
             padding: 10px 16px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #a5b4fc;
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12.5px; font-weight: 700; color: #a5b4fc;
         }
-        .fixture-datetime-banner span {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
+        .fixture-datetime-banner span { display: flex; align-items: center; gap: 6px; }
 
-        /* Common Thumbnail */
         .match-thumb-container {
             position: relative; width: 100%; height: 180px; background: #000;
             display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer;
         }
-        .fixture-card .match-thumb-container { height: 140px; } /* Fixture වල තම්බ්නෙල් එක ප්‍රමාණයෙන් කුඩා කරයි */
+        .fixture-card .match-thumb-container { height: 140px; cursor: default; }
 
         .match-thumb-bg {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -195,14 +202,14 @@
             max-width: 100%; max-height: 100%; object-fit: contain; position: relative; z-index: 2;
             transition: transform 0.5s ease; filter: drop-shadow(0 8px 16px rgba(0,0,0,0.7));
         }
-        .match-card:hover .match-thumb-container img, .fixture-card:hover .match-thumb-container img { transform: scale(1.08); }
+        .match-card:hover .match-thumb-container img { transform: scale(1.08); }
 
         .match-details {
             padding: 18px; display: flex; flex-direction: column; gap: 8px;
             background: linear-gradient(180deg, rgba(20,20,28,0.4) 0%, rgba(12,12,18,0.95) 100%);
             cursor: pointer;
         }
-        .fixture-card .match-details { padding: 14px; }
+        .fixture-card .match-details { padding: 14px; cursor: default; background: rgba(12,12,18,0.95); }
 
         .match-teams { font-weight: 700; font-size: 15px; color: #fff; display: flex; align-items: center; gap: 8px; }
         .fixture-card .match-teams { font-size: 14px; }
@@ -277,7 +284,7 @@
         
         <div class="header-controls">
             <h2 class="section-title" id="categoryTitle">
-                <i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> Matches
+                <i class="fa-solid fa-trophy" style="color: var(--primary-color);"></i> MATCHES
             </h2>
 
             <div class="search-filter-box">
@@ -296,13 +303,24 @@
         <!-- Today Matches Section -->
         <div id="todaySection">
             <div class="group-heading"><i class="fa-solid fa-fire" style="color: var(--accent-color);"></i> Today Matches</div>
-            <div class="matches-grid" id="todayMatchesGrid"></div>
+            <div class="matches-grid" id="todayMatchesGrid">
+                <!-- Initial Loading Animation -->
+                <div id="loadingOverlay">
+                    <div class="spinner"></div>
+                    <span style="color: #9ca3af; font-size: 14px; font-weight: 600;">Loading matches...</span>
+                </div>
+            </div>
         </div>
 
         <!-- Fixture Matches Section -->
         <div id="fixturesSection" style="margin-top: 45px;">
             <div class="group-heading"><i class="fa-solid fa-calendar-days" style="color: var(--primary-color);"></i> Fixture Matches</div>
-            <div class="fixtures-grid" id="fixtureMatchesGrid"></div>
+            <div class="fixtures-grid" id="fixtureMatchesGrid">
+                <!-- Initial Loading Animation -->
+                <div id="loadingOverlayFixture" style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; grid-column: 1/-1;">
+                    <div class="spinner" style="width: 35px; height: 35px; border-width: 3px;"></div>
+                </div>
+            </div>
         </div>
 
     </div>
@@ -326,7 +344,11 @@
 
         socket.on('allMatchesData', (matchesData) => {
             rawMatchesData = matchesData[cat] || [];
-            renderMatches();
+            
+            // තත්පර 3ක (seconds 3) ප්‍රමාදයක් (Delay) ලබා දී ලෝඩින් සජීවීකරණයෙන් පසු කාඩ්ස් පෙන්වීම
+            setTimeout(() => {
+                renderMatches();
+            }, 3000);
         });
 
         function renderMatches() {
@@ -370,7 +392,7 @@
                 }
             });
 
-            // 1. Render Today Matches (Standard Grid)
+            // 1. Render Today Matches
             if (todayList.length === 0) {
                 todayGrid.innerHTML = `
                     <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 30px; background: rgba(20,20,28,0.4); border-radius: 16px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
@@ -383,7 +405,7 @@
                 });
             }
 
-            // 2. Render Fixture Matches (Compact & Narrow Grid with Day/Time Focus Banner)
+            // 2. Render Fixture Matches
             if (fixtureList.length === 0) {
                 fixtureGrid.innerHTML = `
                     <div style="color: #9ca3af; grid-column: 1/-1; text-align: center; padding: 30px; background: rgba(20,20,28,0.4); border-radius: 16px; border: 1px solid var(--border-color); backdrop-filter: blur(10px);">
@@ -397,7 +419,6 @@
             }
         }
 
-        // Standard Card for Today Matches
         function createTodayMatchCardHTML(match, isLive) {
             const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
             let statusBadge = isLive ? `<div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>` : `<div class="upcoming-badge"><i class="fa-regular fa-clock"></i> UPCOMING</div>`;
@@ -438,7 +459,6 @@
             `;
         }
 
-        // Special Compact Card for Fixture Matches (Day/Time Focused & Narrower)
         function createFixtureMatchCardHTML(match) {
             const thumbUrl = match.thumbnail || 'https://via.placeholder.com/600x337?text=StreamX';
             const notifKey = `streamx_notif_${match.id}`;
@@ -448,19 +468,18 @@
 
             return `
                 <div class="fixture-card">
-                    <!-- Day & Time Highlight Banner -->
                     <div class="fixture-datetime-banner">
                         <span><i class="fa-regular fa-calendar-days" style="color: #818cf8;"></i> ${match.date || 'Upcoming'}</span>
                         <span><i class="fa-regular fa-clock" style="color: #818cf8;"></i> ${match.time || 'TBA'}</span>
                     </div>
 
-                    <div class="match-thumb-container" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
+                    <div class="match-thumb-container">
                         <div class="match-thumb-bg" style="background-image: url('${thumbUrl}')"></div>
                         <img src="${thumbUrl}" alt="Match Thumbnail">
                         <div class="upcoming-badge"><i class="fa-regular fa-bell"></i> Fixture</div>
                     </div>
 
-                    <div class="match-details" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
+                    <div class="match-details">
                         <div class="match-teams">
                             <span>${match.team1}</span>
                             <span class="vs-badge">VS</span>
@@ -485,7 +504,10 @@
         }
 
         function filterMatches() { renderMatches(); }
-        function openMatch(id, title) { location.href = `match.html?id=${id}&title=${title}`; }
+        
+        function openMatch(id, title) { 
+            location.href = `match.html?id=${id}&title=${title}`; 
+        }
 
         function toggleNotification(matchId, matchTitle) {
             const bellBtn = document.getElementById(`bell_${matchId}`);
