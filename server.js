@@ -7,7 +7,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 const matchViewers = {};
 const matchChatHistories = {}; // මැච් අනුව චැට් හිස්ට්‍රි ගබඩා කරගැනීමට
@@ -31,6 +31,23 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
+// --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
+
+// 1. Home Page (ස්වයංක්‍රීයව index.html පෙන්වයි)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// 2. Category Page (උදා: /category/cricket)
+app.get('/category/:name', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'category.html'));
+});
+
+// 3. Match Player Page (උදා: /match?id=xxx&title=xxx හෝ /watch/xxx)
+app.get('/match', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'match.html'));
+});
+
 // --- HLS Proxy Route to bypass CORS and restrictions ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
@@ -41,7 +58,6 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                // VLC එකක් ලෙස පෙන්වමින් Fancode හෝ අනෙකුත් සර්වර් බ්ලොක් කිරීම මඟහරවා ගනී
                 'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
                 'Accept': '*/*',
                 'Referer': 'https://www.fancode.com/'
@@ -54,12 +70,10 @@ app.get('/hls-proxy', async (req, res) => {
 
         const contentType = response.headers.get('content-type') || '';
         
-        // CORS Headers සක්‍රීය කිරීම
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
 
-        // .m3u8 මැනිෆේස්ට් එකක් නම් ඇතුළත ඇති සگ්මන්ට් ලින්ක්ස් (segments) ද ප්‍රොক্সি හරහා යන ලෙස වෙනස් කිරීම
         if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/vnd.apple.mpegurl')) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
             let bodyText = await response.text();
@@ -85,7 +99,6 @@ app.get('/hls-proxy', async (req, res) => {
 
             return res.send(rewrittenLines.join('\n'));
         } else {
-            // .ts වීඩියෝ සگ්මන්ට්ස් සඳහා බයිනරි ඩේටා ලෙස යැවීම
             res.setHeader('Content-Type', contentType);
             const buffer = await response.arrayBuffer();
             return res.send(Buffer.from(buffer));
@@ -109,7 +122,7 @@ io.on('connection', (socket) => {
                 team1: match.team1,
                 team2: match.team2,
                 status: match.status,
-                date: match.date, // <--- දිනය (Date) යැවීම සඳහා මෙය එකතු කරන ලදී
+                date: match.date,
                 time: match.time,
                 thumbnail: match.thumbnail
             }));
@@ -207,4 +220,3 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
-        
