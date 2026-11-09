@@ -210,6 +210,26 @@
         }
         .chat-input-area button:hover { filter: brightness(1.1); }
 
+    
+        /* Modern Video Container & Iframe Styling */
+        .custom-video-container {
+            position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 480px;
+            background: #000; display: flex; align-items: center; justify-content: center;
+            overflow: hidden; border-radius: 18px; border: 1px solid var(--border-color);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
+        }
+        
+        .custom-video-container video,
+        .custom-video-container iframe {
+            width: 100%; height: 100%; object-fit: cover; position: absolute; top: 0; left: 0; border: none;
+        }
+
+        /* Iframe එක ප්ලේයර් එක ඇතුළටම මැච් කර පෙන්වීම සඳහා */
+        #youtubePlayer {
+            z-index: 3;
+            background: #000;
+        }
+
         /* Modern Username Modal */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
