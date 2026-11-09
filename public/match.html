@@ -83,13 +83,7 @@
         }
 
         #youtubePlayer {
-            width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; z-index: 2;
-        }
-
-        /* Transparent Click Shield for Embeds to block unwanted external clicks */
-        .iframe-click-shield {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 5; background: transparent; pointer-events: auto; display: none;
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; z-index: 5;
         }
 
         .player-thumb-overlay {
@@ -120,7 +114,7 @@
         .video-controls-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
             background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
-            padding: 15px 20px; z-index: 20; display: flex; flex-direction: column; gap: 10px;
+            padding: 15px 20px; z-index: 20; display: flex; justify-content: space-between; align-items: center;
             transition: opacity 0.3s ease;
         }
         .video-controls-overlay.hidden { opacity: 0; pointer-events: none; }
@@ -297,41 +291,24 @@
                         <span>Connecting Live Stream...</span>
                     </div>
                     
-                    <!-- Main Video Player -->
+                    <!-- Main Video Player (.m3u8) -->
                     <video id="hlsPlayer" playsinline autoplay muted></video>
 
                     <!-- YouTube / Kick Embed Player -->
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
                     
-                    <!-- Embed Click Shield -->
-                    <div id="iframeShield" class="iframe-click-shield"></div>
-
-                    <!-- Custom Controls Overlay -->
+                    <!-- Clean Custom Controls Overlay (Volume, PiP, Fullscreen only) -->
                     <div class="video-controls-overlay" id="controlsOverlay">
-                        <div class="progress-bar-container" id="progressContainer">
-                            <div class="progress-bar" id="progressBar"></div>
+                        <div class="left-controls" style="display: flex; gap: 10px; align-items: center;">
+                            <div class="volume-box" style="display: flex; gap: 8px; align-items: center;">
+                                <button class="control-btn" id="muteBtn" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer;"><i class="fa-solid fa-volume-xmark"></i></button>
+                                <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0" style="accent-color: var(--primary-color); cursor: pointer;">
+                            </div>
                         </div>
 
-                        <div class="controls-row">
-                            <div class="left-controls">
-                                <button class="control-btn" id="playPauseBtn"><i class="fa-solid fa-pause"></i></button>
-                                <button class="control-btn" id="skipBackwardBtn"><i class="fa-solid fa-rotate-left"></i> 10s</button>
-                                <button class="control-btn" id="skipForwardBtn"><i class="fa-solid fa-rotate-right"></i> 10s</button>
-                                
-                                <div class="volume-box">
-                                    <button class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-xmark"></i></button>
-                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0">
-                                </div>
-                            </div>
-
-                            <div class="right-controls" style="display: flex; gap: 10px; align-items: center;">
-                                <div class="quality-wrapper" id="qualityWrapper" style="display: none;">
-                                    <button class="control-btn" id="qualityBtn" title="Change Quality"><i class="fa-solid fa-gear"></i></button>
-                                    <ul class="quality-menu" id="qualityMenu"></ul>
-                                </div>
-                                <button class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
-                                <button class="control-btn" id="fullscreenBtn"><i class="fa-solid fa-expand"></i></button>
-                            </div>
+                        <div class="right-controls" style="display: flex; gap: 10px; align-items: center;">
+                            <button class="control-btn" id="pipBtn" title="Picture-in-Picture" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer;"><i class="fa-solid fa-clone"></i></button>
+                            <button class="control-btn" id="fullscreenBtn" title="Fullscreen" style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 8px 12px; border-radius: 8px; cursor: pointer;"><i class="fa-solid fa-expand"></i></button>
                         </div>
                     </div>
                 </div>
@@ -403,18 +380,12 @@
 
         const video = document.getElementById('hlsPlayer');
         const ytIframe = document.getElementById('youtubePlayer');
-        const iframeShield = document.getElementById('iframeShield');
         const controlsOverlay = document.getElementById('controlsOverlay');
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
-        
-        const qualityWrapper = document.getElementById('qualityWrapper');
-        const qualityBtn = document.getElementById('qualityBtn');
-        const qualityMenu = document.getElementById('qualityMenu');
 
         const socket = io();
         let currentHls = null;
-        let currentShakaPlayer = null;
         let isMatchLive = false;
         let username = localStorage.getItem('chat_username');
         let replyingTo = null;
@@ -513,7 +484,6 @@
             if (!isMatchLive) return;
 
             if (playerLoader) playerLoader.classList.remove('hidden');
-            qualityWrapper.style.display = 'none';
 
             for (let i = 1; i <= 5; i++) {
                 const btn = document.getElementById(`btnServer${i}`);
@@ -529,7 +499,6 @@
 
         function destroyPlayers() {
             if (currentHls) { currentHls.destroy(); currentHls = null; }
-            if (currentShakaPlayer) { currentShakaPlayer.destroy(); currentShakaPlayer = null; }
         }
 
         socket.on('secureStreamLink', async (directLink) => {
@@ -537,12 +506,10 @@
 
             if (playerLoader) playerLoader.classList.remove('hidden');
             destroyPlayers();
-            qualityWrapper.style.display = 'none';
 
             // Check if link is YouTube, Rumble, Kick, or generic Iframe embed
             if (directLink.includes('youtube.com') || directLink.includes('youtu.be') || directLink.includes('rumble.com') || directLink.includes('kick.com') || directLink.includes('<iframe')) {
                 video.style.display = 'none';
-                iframeShield.style.display = 'block'; // Enable shield for embeds
 
                 let embedUrl = directLink;
                 
@@ -572,7 +539,6 @@
                 }, 1000);
 
             } else {
-                iframeShield.style.display = 'none'; // Disable shield for direct HLS stream
                 ytIframe.style.display = 'none';
                 video.style.display = 'block';
 
@@ -582,25 +548,8 @@
                     hls.loadSource(directLink);
                     hls.attachMedia(video);
                     
-                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
+                    hls.on(Hls.Events.MANIFEST_PARSED, function() {
                         video.play().catch(e => console.log("Auto-play prevented:", e));
-                        
-                        if (data.levels && data.levels.length > 1) {
-                            qualityWrapper.style.display = 'inline-block';
-                            qualityMenu.innerHTML = `<li data-index="-1" class="selected">Auto</li>`;
-                            data.levels.forEach((lvl, index) => {
-                                qualityMenu.innerHTML += `<li data-index="${index}">${lvl.height}p</li>`;
-                            });
-
-                            qualityMenu.querySelectorAll('li').forEach(li => {
-                                li.onclick = () => {
-                                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
-                                    li.classList.add('selected');
-                                    hls.currentLevel = parseInt(li.getAttribute('data-index'));
-                                    qualityMenu.classList.remove('active');
-                                };
-                            });
-                        }
                     });
                 } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                     video.src = directLink;
@@ -610,12 +559,6 @@
                 }
             }
         });
-
-        qualityBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            qualityMenu.classList.toggle('active');
-        });
-        window.addEventListener('click', () => { qualityMenu.classList.remove('active'); });
 
         video.addEventListener('playing', () => {
             playerThumbnail.classList.add('hidden');
@@ -636,28 +579,12 @@
             loadStream(serverType);
         }
 
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const skipBackBtn = document.getElementById('skipBackwardBtn');
-        const skipFwdBtn = document.getElementById('skipForwardBtn');
+        // Controls Logic for Volume, Mute, Fullscreen, and PiP
         const muteBtn = document.getElementById('muteBtn');
         const volumeSlider = document.getElementById('volumeSlider');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         const playerContainer = document.getElementById('playerContainer');
-        const progressBar = document.getElementById('progressBar');
-        const progressContainer = document.getElementById('progressContainer');
-
-        playPauseBtn.addEventListener('click', () => {
-            if (video.paused) {
-                video.play();
-                playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-            } else {
-                video.pause();
-                playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-            }
-        });
-
-        skipBackBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
-        skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration, video.currentTime + 10); });
+        const pipBtn = document.getElementById('pipBtn');
 
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
@@ -669,7 +596,8 @@
             if (video.muted) {
                 video.muted = false;
                 muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-                volumeSlider.value = video.volume;
+                volumeSlider.value = video.volume || 0.5;
+                video.volume = volumeSlider.value;
             } else {
                 video.muted = true;
                 muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
@@ -687,32 +615,22 @@
             }
         });
 
-        const pipBtn = document.getElementById('pipBtn');
         if ('pictureInPictureEnabled' in document) {
             pipBtn.style.display = 'inline-block';
             pipBtn.addEventListener('click', async () => {
                 try {
                     if (document.pictureInPictureElement) await document.exitPictureInPicture();
-                    else await video.requestPictureInPicture();
+                    else if (video.style.display !== 'none') await video.requestPictureInPicture();
                 } catch (error) { console.error(error); }
             });
         } else { pipBtn.style.display = 'none'; }
-
-        video.addEventListener('timeupdate', () => {
-            if (video.duration > 0) progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
-        });
-
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            if(video.duration) video.currentTime = video.duration * ((e.clientX - rect.left) / rect.width);
-        });
 
         let hideTimeout;
         function showControls() {
             controlsOverlay.classList.remove('hidden');
             clearTimeout(hideTimeout);
             hideTimeout = setTimeout(() => {
-                if (!video.paused) controlsOverlay.classList.add('hidden');
+                controlsOverlay.classList.add('hidden');
             }, 3000);
         }
 
