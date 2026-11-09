@@ -134,17 +134,24 @@ io.on('connection', (socket) => {
         io.emit('refreshMatchesData');
     });
 
-    socket.on('requestStreamLink', async ({ matchId, serverType }) => {
+        socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
         
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
-                if (serverType === 'server2') {
-                    directLink = found.link2 || found.link1;
+                // සර්වර් 1 සිට 5 දක්වා අදාළ ලින්ක් එක ලබා ගැනීම (නැත්නම් Server 1 හි ලින්ක් එක Backup එකක් ලෙස භාවිතා කරයි)
+                if (serverType === 'server5') {
+                    directLink = found.streamUrl5 || found.streamUrl1;
+                } else if (serverType === 'server4') {
+                    directLink = found.streamUrl4 || found.streamUrl1;
+                } else if (serverType === 'server3') {
+                    directLink = found.streamUrl3 || found.streamUrl1;
+                } else if (serverType === 'server2') {
+                    directLink = found.streamUrl2 || found.streamUrl1;
                 } else {
-                    directLink = found.link1;
+                    directLink = found.streamUrl1; // Default Server 1
                 }
                 break;
             }
@@ -157,6 +164,7 @@ io.on('connection', (socket) => {
 
         socket.emit('secureStreamLink', finalLink);
     });
+
 
     socket.on('joinMatch', ({ matchId, username }) => {
         socket.join(matchId);
