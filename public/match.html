@@ -508,18 +508,20 @@
             if (currentShakaPlayer) { currentShakaPlayer.destroy(); currentShakaPlayer = null; }
         }
 
-        socket.on('secureStreamLink', async (directLink) => {
+                socket.on('secureStreamLink', async (directLink) => {
             if (!isMatchLive || !directLink) return;
 
             if (playerLoader) playerLoader.classList.remove('hidden');
             destroyPlayers();
             qualityWrapper.style.display = 'none';
 
-            if (directLink.includes('youtube.com') || directLink.includes('youtu.be') || directLink.includes('rumble.com') || directLink.includes('<iframe')) {
+            // Check if link is YouTube, Rumble, Kick, or generic Iframe embed
+            if (directLink.includes('youtube.com') || directLink.includes('youtu.be') || directLink.includes('rumble.com') || directLink.includes('kick.com') || directLink.includes('<iframe')) {
                 video.style.display = 'none';
                 controlsOverlay.style.display = 'none';
 
                 let embedUrl = directLink;
+                
                 if (directLink.includes('watch?v=')) {
                     const videoId = directLink.split('watch?v=')[1].split('&')[0];
                     embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
@@ -529,7 +531,11 @@
                 } else if (directLink.includes('/live/')) {
                     const videoId = directLink.split('/live/')[1].split('?')[0];
                     embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+                } else if (directLink.includes('kick.com') && !directLink.includes('<iframe')) {
+                    // Kick direct link support (e.g. https://player.kick.com/yasiru186)
+                    embedUrl = directLink;
                 } else if (directLink.includes('<iframe')) {
+                    // Extract src from full iframe HTML code
                     const matchSrc = directLink.match(/src="([^"]+)"/);
                     if (matchSrc && matchSrc[1]) embedUrl = matchSrc[1];
                 }
@@ -582,6 +588,7 @@
                 }
             }
         });
+
 
         qualityBtn.addEventListener('click', (e) => {
             e.stopPropagation();
