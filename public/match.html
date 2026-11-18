@@ -94,18 +94,6 @@
             opacity: 0; visibility: hidden; pointer-events: none;
         }
 
-        /* Player Internal Countdown Overlay */
-        .player-countdown-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(11, 11, 14, 0.85); backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px); z-index: 30; display: flex;
-            flex-direction: column; align-items: center; justify-content: center; text-align: center;
-            padding: 20px; box-sizing: border-box; transition: opacity 0.4s ease;
-        }
-        .player-countdown-overlay.hidden {
-            opacity: 0; visibility: hidden; pointer-events: none;
-        }
-
         /* Loading Spinner Animation */
         .player-loader {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -236,12 +224,11 @@
         }
         .chat-input-area button:hover { filter: brightness(1.1); }
 
-        /* Modern Username Modal - Initially Hidden */
+        /* Modern Username Modal */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
             display: flex; align-items: center; justify-content: center; z-index: 2000;
-            display: none; /* මුලින්ම සයිට් එකට එද්දී පේන්නේ නැතිවෙන්න හাইড කර ඇත */
         }
         .modal-content {
             background: linear-gradient(145deg, #181820, #121217); border: 1px solid rgba(255, 255, 255, 0.1);
@@ -271,11 +258,11 @@
 </head>
 <body>
 
-    <!-- Username Modal (Appears ONLY when trying to chat without username) -->
+    <!-- Username Modal -->
     <div class="modal-overlay" id="usernameModal">
         <div class="modal-content">
             <h2>Enter Chat Username</h2>
-            <p>Choose a unique name to chat and join the live community.</p>
+            <p>Choose a unique name to chat and join the community stream.</p>
             <input type="text" id="usernameInput" placeholder="Your Username..." autocomplete="off">
             <button id="joinChatBtn">Enter Live Room</button>
         </div>
@@ -298,25 +285,8 @@
                     <!-- Thumbnail overlay -->
                     <img id="playerThumbnail" class="player-thumb-overlay" src="" alt="Match Thumbnail">
 
-                    <!-- Player Internal Countdown Overlay (Shows when Upcoming) -->
-                    <div id="playerCountdownOverlay" class="player-countdown-overlay hidden">
-                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 20px; backdrop-filter: blur(15px); max-width: 400px; width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.6);">
-                            <div style="color: var(--primary-color); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-                                <i class="fa-regular fa-clock"></i> Upcoming Match
-                            </div>
-                            <h3 id="countdownMatchTitle" style="color: #fff; font-size: 18px; margin: 0 0 15px 0;">Stream Starting Soon</h3>
-                            <div style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">Scheduled Time: <strong id="scheduledTimeText" style="color: #fff;">--:--</strong></div>
-                            
-                            <div id="countdownTimerBoxes" style="display: flex; justify-content: center; gap: 10px; font-weight: 700; color: #fff; font-size: 20px;">
-                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdHours">00h</span> : 
-                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdMinutes">00m</span> : 
-                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdSeconds">00s</span>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Loader element -->
-                    <div id="playerLoader" class="player-loader hidden">
+                    <div id="playerLoader" class="player-loader">
                         <div class="spinner"></div>
                         <span>Connecting Live Stream...</span>
                     </div>
@@ -386,7 +356,7 @@
                 <div class="chat-header"><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Live Fan Chat</div>
                 <div class="chat-messages" id="chatMessages"></div>
                 <form class="chat-input-area" id="chatForm">
-                    <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
+                    <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off" required>
                     <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
                 </form>
             </div>
@@ -427,7 +397,6 @@
         const controlsOverlay = document.getElementById('controlsOverlay');
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
-        const playerCountdownOverlay = document.getElementById('playerCountdownOverlay');
         const progressContainer = document.getElementById('progressContainer');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const skipBackBtn = document.getElementById('skipBackwardBtn');
@@ -442,7 +411,6 @@
         let isMatchLive = false;
         let username = localStorage.getItem('chat_username');
         let replyingTo = null;
-        let countdownInterval = null;
 
         socket.on('refreshMatchesData', () => {
             socket.emit('requestAllMatches');
@@ -465,46 +433,48 @@
                     playerThumbnail.src = foundMatch.thumbnail;
                 }
 
-                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.date && foundMatch.time) {
+                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
                     isMatchLive = false;
                     for (let i = 1; i <= 5; i++) {
                         document.getElementById(`btnServer${i}`).style.opacity = '0.5';
                     }
 
-                    playerCountdownOverlay.classList.remove('hidden');
-                    document.getElementById('countdownMatchTitle').innerText = foundMatch.title || matchTitle;
-                    document.getElementById('scheduledTimeText').innerText = foundMatch.time + " (" + foundMatch.date + ")";
-                    
-                    startPlayerCountdown(foundMatch.date, foundMatch.time);
+                    let timerDiv = document.getElementById('matchCountdownTimer');
+                    if (!timerDiv) {
+                        timerDiv = document.createElement('div');
+                        timerDiv.id = 'matchCountdownTimer';
+                        timerDiv.style.cssText = "background: linear-gradient(145deg, #141419, #101014); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 16px; text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);";
+                        
+                        const targetArea = document.getElementById('playerContainer');
+                        targetArea.parentNode.insertBefore(timerDiv, targetArea);
+                    }
+                    startCountdown(foundMatch.time, timerDiv);
                 } else {
                     isMatchLive = true;
-                    playerCountdownOverlay.classList.add('hidden');
                     loadStream('server1');
                 }
             }
         });
 
-        function startPlayerCountdown(dateStr, timeStr) {
-            if (countdownInterval) clearInterval(countdownInterval);
-
-            let [time, modifier] = timeStr.split(' ');
+        function startCountdown(timeString, displayElement) {
+            const today = new Date();
+            let [time, modifier] = timeString.split(' ');
             let [hours, minutes] = time.split(':');
             
             if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
             if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') hours = 0;
 
-            const sriLankaOffsetMs = (5 * 60 + 30) * 60 * 1000;
-            let matchDateObj = new Date(`${dateStr}T${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:00Z`);
-            let targetTimeUtc = matchDateObj.getTime() - sriLankaOffsetMs;
+            today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
+            let targetTime = today.getTime();
 
-            countdownInterval = setInterval(() => {
+            const interval = setInterval(() => {
                 const now = new Date().getTime();
-                const distance = targetTimeUtc - now;
+                const distance = targetTime - now;
 
                 if (distance < 0) {
-                    clearInterval(countdownInterval);
-                    playerCountdownOverlay.classList.add('hidden');
+                    clearInterval(interval);
                     document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
+                    displayElement.innerHTML = `<span style="color: #ef4444; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
                     
                     isMatchLive = true;
                     for (let i = 1; i <= 5; i++) {
@@ -518,9 +488,17 @@
                 const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
 
-                document.getElementById('cdHours').innerText = String(hoursLeft).padStart(2, '0') + 'h';
-                document.getElementById('cdMinutes').innerText = String(minutesLeft).padStart(2, '0') + 'm';
-                document.getElementById('cdSeconds').innerText = String(secondsLeft).padStart(2, '0') + 's';
+                displayElement.innerHTML = `
+                    <div style="color: #9ca3af; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
+                        <i class="fa-regular fa-clock" style="color: #6366f1;"></i> 
+                        <span>Match Starts In: <strong style="color: #fff;">${timeString}</strong></span>
+                    </div>
+                    <div style="display: flex; justify-content: center; gap: 12px; font-weight: 700; color: #fff; font-size: 18px;">
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${hoursLeft}h</span> : 
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${minutesLeft}m</span> : 
+                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${secondsLeft}s</span>
+                    </div>
+                `;
             }, 1000);
         }
 
@@ -553,9 +531,11 @@
             destroyPlayers();
             qualityWrapper.style.display = 'none';
 
+            // Check if link is YouTube, Rumble, Kick, or generic Iframe embed
             if (directLink.includes('youtube.com') || directLink.includes('youtu.be') || directLink.includes('rumble.com') || directLink.includes('kick.com') || directLink.includes('<iframe')) {
                 video.style.display = 'none';
 
+                // EMBED වලදී Play, Skip සහ Progress Bar ඉවත් කර Volume, PiP, Fullscreen පමණක් පෙන්වීම
                 progressContainer.style.display = 'none';
                 playPauseBtn.style.display = 'none';
                 skipBackBtn.style.display = 'none';
@@ -589,6 +569,7 @@
                 }, 1000);
 
             } else {
+                // DIRECT HLS (.m3u8) වලදී සියලුම කන්ට්‍රෝල්ස් පෙන්වීම
                 ytIframe.style.display = 'none';
                 video.style.display = 'block';
 
@@ -736,18 +717,15 @@
         playerContainer.addEventListener('mousemove', showControls);
         playerContainer.addEventListener('touchstart', showControls);
 
-        // චැට් සිස්ටම් සහ යූසර්නෙම් හැසිරවීම (Username Modal handled on chat submission)
         const modal = document.getElementById('usernameModal');
         const usernameInput = document.getElementById('usernameInput');
         const joinBtn = document.getElementById('joinChatBtn');
-        const chatForm = document.getElementById('chatForm');
-        const msgInput = document.getElementById('msgInput');
-        const chatMessages = document.getElementById('chatMessages');
 
-        // සයිට් එකට එන විටම Username මෝඩල් එක පෙන්වන්නේ නැත (Hidden). 
-        // මැච් එක බැලීමට Username අවශ්‍ය නැත.
+        if (username) {
+            modal.style.display = 'none';
+            setupChat(username);
+        }
 
-        // යූසර්නෙම් එක සේව් කිරීමේ මෝඩල් බටන් එක ක්ලික් කළ විට
         joinBtn.addEventListener('click', () => {
             const val = usernameInput.value.trim();
             if (val.length < 2) {
@@ -757,102 +735,76 @@
             username = val;
             localStorage.setItem('chat_username', username);
             modal.style.display = 'none';
-            
-            // Username දුන් පසු හැමෝටම පෙනෙන්න මැසේජ් එක සෙන්ඩ් කිරීම
-            submitPendingMessage();
+            setupChat(username);
         });
 
-        // Enter key එක මඟින් Username සබ්මිට් කිරීම
-        usernameInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                joinBtn.click();
-            }
-        });
+        function setupChat(user) {
+            socket.emit('joinMatch', { matchId, username: user });
 
-        let pendingMessage = "";
+            socket.on('viewerCount', (count) => {
+                document.getElementById('viewersCount').innerText = count;
+            });
 
-        socket.on('connect', () => {
-            socket.emit('joinMatch', { matchId, username: username || "Guest" });
-        });
+            const chatForm = document.getElementById('chatForm');
+            const msgInput = document.getElementById('msgInput');
+            const chatMessages = document.getElementById('chatMessages');
 
-        socket.on('viewerCount', (count) => {
-            document.getElementById('viewersCount').innerText = count;
-        });
+            function renderMessage(data) {
+                let replyHtml = '';
+                if (data.replyTo) {
+                    replyHtml = `
+                        <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
+                            <strong style="color: ${getUsernameColor(data.replyTo.username)};">${data.replyTo.username}</strong>
+                            <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
+                        </div>
+                    `;
+                }
 
-        function renderMessage(data) {
-            let replyHtml = '';
-            if (data.replyTo) {
-                replyHtml = `
-                    <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
-                        <strong style="color: ${getUsernameColor(data.replyTo.username)};">${data.replyTo.username}</strong>
-                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
-                    </div>
-                `;
-            }
+                const safeMsgId = data.id || ('msg_' + Math.random());
+                const safeText = (data.message || '').replace(/'/g, "\\'");
+                const safeUser = (data.username || '').replace(/'/g, "\\'");
+                const userColor = getUsernameColor(data.username || 'User');
 
-            const safeMsgId = data.id || ('msg_' + Math.random());
-            const safeText = (data.message || '').replace(/'/g, "\\'");
-            const safeUser = (data.username || '').replace(/'/g, "\\'");
-            const userColor = getUsernameColor(data.username || 'User');
-
-            chatMessages.innerHTML += `
-                <div class="message" data-msg-id="${safeMsgId}">
-                    ${replyHtml}
-                    <div class="msg-user" style="color: ${userColor};">
-                        ${data.username} 
-                        <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
-                    </div>
-                    <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${data.message}</div>
-                    
-                    <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${safeMsgId}')">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                    </div>
-                    
-                    <div id="menu-${safeMsgId}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
-                        <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${safeMsgId}', '${safeUser}', '${safeText}')">
-                            <i class="fa-solid fa-reply"></i> Reply
+                chatMessages.innerHTML += `
+                    <div class="message" data-msg-id="${safeMsgId}">
+                        ${replyHtml}
+                        <div class="msg-user" style="color: ${userColor};">
+                            ${data.username} 
+                            <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
+                        </div>
+                        <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${data.message}</div>
+                        
+                        <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${safeMsgId}')">
+                            <i class="fa-solid fa-ellipsis-vertical"></i>
+                        </div>
+                        
+                        <div id="menu-${safeMsgId}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
+                            <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${safeMsgId}', '${safeUser}', '${safeText}')">
+                                <i class="fa-solid fa-reply"></i> Reply
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
-            chatMessages.scrollTop = chatMessages.scrollHeight;
-        }
-
-        socket.on('chatHistory', (history) => {
-            chatMessages.innerHTML = ''; 
-            history.forEach(data => renderMessage(data));
-        });
-
-        // චැට් එකෙන් යූසර් මැසේජ් එකක් ටයිප් කර Enter හෝ Send බටන් එක ගැසූ විට
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const msg = msgInput.value.trim();
-            if (!msg) return;
-
-            // පਹਿਲੀ වතාවට චැට් කරන්න එනවා නම් Username නැති නිසා මෝඩල් එක පෙන්වීම
-            if (!username) {
-                pendingMessage = msg;
-                modal.style.display = 'flex';
-                usernameInput.focus();
-                return;
+                `;
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
 
-            socket.emit('chatMessage', { message: msg, replyTo: replyingTo });
-            msgInput.value = '';
-            cancelReply();
-        });
+            socket.on('chatHistory', (history) => {
+                chatMessages.innerHTML = ''; 
+                history.forEach(data => renderMessage(data));
+            });
 
-        function submitPendingMessage() {
-            if (pendingMessage) {
-                socket.emit('chatMessage', { message: pendingMessage, replyTo: replyingTo });
-                pendingMessage = "";
-                msgInput.value = '';
-                cancelReply();
-            }
+            chatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const msg = msgInput.value.trim();
+                if(msg) {
+                    socket.emit('chatMessage', { message: msg, replyTo: replyingTo });
+                    msgInput.value = '';
+                    cancelReply();
+                }
+            });
+
+            socket.on('chatMessage', (data) => { renderMessage(data); });
         }
-
-        socket.on('chatMessage', (data) => { renderMessage(data); });
 
         function toggleMsgMenu(msgId) {
             const menu = document.getElementById(`menu-${msgId}`);
@@ -882,7 +834,6 @@
             document.getElementById('msgInput').focus();
         }
 
-        // දෝෂය නිවැරදි කරන ලදී (fn cancelReply සිට function cancelReply දක්වා)
         function cancelReply() {
             replyingTo = null;
             const previewBar = document.getElementById('replyPreviewBar');
@@ -891,7 +842,7 @@
 
         window.addEventListener('click', (e) => {
             if (!e.target.closest('.fa-ellipsis-vertical') && !e.target.closest('[id^="menu-"]')) {
-                document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none';
+                document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
             }
         });
 
