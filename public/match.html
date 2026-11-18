@@ -464,7 +464,8 @@
                     playerThumbnail.src = foundMatch.thumbnail;
                 }
 
-                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
+                // Check using UTC datetime ISO format
+                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.datetime) {
                     isMatchLive = false;
                     for (let i = 1; i <= 5; i++) {
                         document.getElementById(`btnServer${i}`).style.opacity = '0.5';
@@ -472,9 +473,12 @@
 
                     playerCountdownOverlay.classList.remove('hidden');
                     document.getElementById('countdownMatchTitle').innerText = foundMatch.title || matchTitle;
-                    document.getElementById('scheduledTimeText').innerText = foundMatch.time;
                     
-                    startPlayerCountdown(foundMatch.time);
+                    // Convert UTC datetime to user's local time string for display
+                    const localFormattedTime = new Date(foundMatch.datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    document.getElementById('scheduledTimeText').innerText = localFormattedTime;
+                    
+                    startPlayerCountdown(foundMatch.datetime);
                 } else {
                     isMatchLive = true;
                     playerCountdownOverlay.classList.add('hidden');
@@ -483,18 +487,11 @@
             }
         });
 
-        function startPlayerCountdown(timeString) {
+        function startPlayerCountdown(isoTimeString) {
             if (countdownInterval) clearInterval(countdownInterval);
 
-            const today = new Date();
-            let [time, modifier] = timeString.split(' ');
-            let [hours, minutes] = time.split(':');
-            
-            if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
-            if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') hours = 0;
-
-            today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-            let targetTime = today.getTime();
+            // Parse UTC/ISO time string into local device epoch timestamp
+            let targetTime = new Date(isoTimeString).getTime();
 
             countdownInterval = setInterval(() => {
                 const now = new Date().getTime();
@@ -855,7 +852,7 @@
             document.getElementById('msgInput').focus();
         }
 
-        function cancelReply() {
+        fn cancelReply() {
             replyingTo = null;
             const previewBar = document.getElementById('replyPreviewBar');
             if (previewBar) previewBar.remove();
