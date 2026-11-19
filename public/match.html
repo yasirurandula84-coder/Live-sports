@@ -15,7 +15,7 @@
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="StreamX - Ultimate Live Sports Experience">
-    <meta property="twitter:description" content="Stream your favorite cricket and football matches in high definition with live interactive chats.">
+    <meta name="twitter:description" content="Stream your favorite cricket and football matches in high definition with live interactive chats.">
     <meta name="twitter:image" content="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
 
     <!-- Website Favicon / Google Search Logo -->
@@ -114,7 +114,7 @@
 
         .player-thumb-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.4s ease;
+            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.35s ease;
         }
         .player-thumb-overlay.hidden {
             opacity: 0; visibility: hidden; pointer-events: none;
@@ -154,20 +154,24 @@
         }
         .video-controls-overlay.hidden { opacity: 0; pointer-events: none; }
 
-        .quality-wrapper { position: relative; display: inline-block; }
+        .quality-wrapper { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+        .quality-badge-label {
+            font-size: 11px; font-weight: 700; color: #e2e8f0;
+            background: rgba(255, 255, 255, 0.08); padding: 3px 7px; border-radius: 6px;
+        }
         .quality-menu {
-            position: absolute; bottom: 45px; right: 0; background: rgba(20, 20, 25, 0.95);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 10px; padding: 8px 0;
-            list-style: none; margin: 0; min-width: 110px; display: none; z-index: 25;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.6); backdrop-filter: blur(8px);
+            position: absolute; bottom: 45px; right: 0; background: rgba(20, 20, 25, 0.96);
+            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 6px 0;
+            list-style: none; margin: 0; min-width: 120px; display: none; z-index: 25;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.7); backdrop-filter: blur(10px);
         }
         .quality-menu.active { display: block; }
         .quality-menu li {
             padding: 8px 16px; font-size: 13px; color: #cbd5e1; cursor: pointer;
-            transition: background 0.2s, color 0.2s; text-align: center;
+            transition: background 0.2s, color 0.2s; text-align: center; font-weight: 600;
         }
         .quality-menu li:hover { background: var(--primary-color); color: #fff; }
-        .quality-menu li.selected { color: var(--primary-color); font-weight: bold; }
+        .quality-menu li.selected { color: #a5b4fc; background: rgba(99, 102, 241, 0.18); font-weight: 700; }
 
         .connection-status {
             display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.05);
@@ -376,7 +380,8 @@
 
                             <div class="right-controls" style="display: flex; gap: 10px; align-items: center;">
                                 <div class="quality-wrapper" id="qualityWrapper" style="display: none;">
-                                    <button class="control-btn" id="qualityBtn" title="Change Quality"><i class="fa-solid fa-gear"></i></button>
+                                    <span class="quality-badge-label" id="currentQualityLabel">Auto</span>
+                                    <button class="control-btn" id="qualityBtn" title="Select Quality"><i class="fa-solid fa-gear"></i></button>
                                     <ul class="quality-menu" id="qualityMenu"></ul>
                                 </div>
                                 <button class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
@@ -470,123 +475,7 @@
         const qualityWrapper = document.getElementById('qualityWrapper');
         const qualityBtn = document.getElementById('qualityBtn');
         const qualityMenu = document.getElementById('qualityMenu');
-
-        // Lag/Buffering badge with live countdown until actual playback/frame advancement
-        const bufferingStatusEl = document.createElement('div');
-        bufferingStatusEl.id = 'liveBufferingBadge';
-        bufferingStatusEl.style.cssText = `
-            position: absolute; top: 14px; left: 14px; z-index: 22;
-            background: rgba(11, 11, 16, 0.85); color: #f8fafc;
-            border: 1px solid rgba(99, 102, 241, 0.5); padding: 6px 12px;
-            border-radius: 20px; font-size: 12px; font-weight: 700;
-            display: none; align-items: center; gap: 7px; backdrop-filter: blur(8px);
-        `;
-        playerContainer.appendChild(bufferingStatusEl);
-
-        let lagStartedAtMs = null;
-        let lagCountdownTimer = null;
-        let currentStreamMode = 'hls';
-        let lastObservedVideoTime = -1;
-        let lastObservedPlayingFlag = false;
-        let lastPingMs = 120;
-
-        function getLearnedLagSeconds(mode) {
-            let baseSec = mode === 'dash' ? 6 : 3;
-            try {
-                const saved = localStorage.getItem(`streamx_lag_sec_${mode}`);
-                const parsed = saved ? parseFloat(saved) : NaN;
-                if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 30) {
-                    baseSec = parsed;
-                }
-            } catch (e) {}
-            const factor = lastPingMs > 250 ? 1.25 : (lastPingMs < 70 ? 0.9 : 1.0);
-            return Math.max(1, Math.min(30, Math.round(baseSec * factor)));
-        }
-
-        function saveLearnedLagSeconds(mode, actualSec) {
-            if (actualSec < 0.3 || actualSec > 45) return;
-            const val = Math.round(actualSec * 10) / 10;
-            try {
-                localStorage.setItem(`streamx_lag_sec_${mode}`, String(val));
-            } catch (e) {}
-        }
-
-        function updateBufferingBadgeText(secText) {
-            bufferingStatusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color);"></i> Buffering... ${secText}`;
-        }
-
-        function beginLagCountdown() {
-            if (video.style.display === 'none' || video.paused) return;
-            if (lagStartedAtMs !== null) return;
-
-            lagStartedAtMs = performance.now();
-            const totalSec = getLearnedLagSeconds(currentStreamMode);
-            let remaining = totalSec;
-
-            updateBufferingBadgeText(`${String(remaining).padStart(2, '0')}s`);
-            bufferingStatusEl.style.display = 'inline-flex';
-
-            if (lagCountdownTimer) clearInterval(lagCountdownTimer);
-            lagCountdownTimer = setInterval(() => {
-                if (lagStartedAtMs === null) {
-                    clearInterval(lagCountdownTimer);
-                    lagCountdownTimer = null;
-                    return;
-                }
-                if (remaining > 0) {
-                    remaining -= 1;
-                    updateBufferingBadgeText(`${String(remaining).padStart(2, '0')}s`);
-                } else {
-                    // Stay at 00s until actual playback starts so 00s aligns with real play start
-                    updateBufferingBadgeText(`00s`);
-                    if (video.paused && video.style.display !== 'none') {
-                        video.muted = true;
-                        video.play().catch(() => {});
-                    }
-                }
-            }, 1000);
-        }
-
-        function resolveLagOnActualPlay() {
-            if (lagStartedAtMs !== null) {
-                const actualDurationSec = (performance.now() - lagStartedAtMs) / 1000;
-                saveLearnedLagSeconds(currentStreamMode, actualDurationSec);
-                lagStartedAtMs = null;
-            }
-            if (lagCountdownTimer) {
-                clearInterval(lagCountdownTimer);
-                lagCountdownTimer = null;
-            }
-            bufferingStatusEl.style.display = 'none';
-        }
-
-        // Catch actual playback start by tracking BOTH playing state AND real currentTime frame advancement
-        setInterval(() => {
-            if (video.style.display === 'none' || video.paused) {
-                if (video.paused) {
-                    if (lagCountdownTimer) {
-                        clearInterval(lagCountdownTimer);
-                        lagCountdownTimer = null;
-                    }
-                    lagStartedAtMs = null;
-                    bufferingStatusEl.style.display = 'none';
-                }
-                return;
-            }
-
-            const timeAdvanced = Math.abs(video.currentTime - lastObservedVideoTime) >= 0.02 && video.currentTime > 0.01;
-            const isActivelyPlaying = !video.paused && !video.ended && video.readyState >= 3;
-
-            if (timeAdvanced && isActivelyPlaying) {
-                resolveLagOnActualPlay();
-                lastObservedPlayingFlag = true;
-            } else if (!timeAdvanced || video.readyState < 3) {
-                beginLagCountdown();
-                lastObservedPlayingFlag = false;
-            }
-
-            lastObservedVideoTime = video.currentTime;
-        }, 250);
+        const currentQualityLabel = document.getElementById('currentQualityLabel');
 
         let socket = null;
         try {
@@ -607,64 +496,144 @@
         let countdownInterval = null;
         let pendingMessage = null;
 
+        function setQualityLabelText(text) {
+            if (currentQualityLabel) currentQualityLabel.innerText = text;
+        }
+
+        function setupHlsQualityMenu(hls, levels) {
+            const validLevels = (levels || [])
+                .map((lvl, idx) => ({ idx, height: lvl.height || 0, bitrate: lvl.bitrate || 0 }))
+                .filter(item => item.height > 0)
+                .sort((a, b) => b.height - a.height);
+
+            if (validLevels.length <= 1) {
+                qualityWrapper.style.display = 'none';
+                return;
+            }
+
+            qualityWrapper.style.display = 'inline-flex';
+            setQualityLabelText('Auto');
+
+            qualityMenu.innerHTML = `<li data-mode="auto" class="selected">Auto</li>`;
+            validLevels.forEach(lvl => {
+                qualityMenu.innerHTML += `<li data-mode="manual" data-level="${lvl.idx}" data-label="${lvl.height}p">${lvl.height}p</li>`;
+            });
+
+            qualityMenu.querySelectorAll('li').forEach(li => {
+                li.onclick = (e) => {
+                    e.stopPropagation();
+                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
+                    li.classList.add('selected');
+
+                    const mode = li.getAttribute('data-mode');
+                    if (mode === 'auto') {
+                        hls.currentLevel = -1;
+                        hls.loadLevel = -1;
+                        setQualityLabelText('Auto');
+                    } else {
+                        const targetIdx = parseInt(li.getAttribute('data-level'), 10);
+                        hls.loadLevel = targetIdx;
+                        hls.currentLevel = targetIdx;
+                        setQualityLabelText(li.getAttribute('data-label') || 'HD');
+                    }
+                    qualityMenu.classList.remove('active');
+                };
+            });
+        }
+
+        function setupShakaQualityMenu(shakaPlayer) {
+            const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
+            const byHeight = new Map();
+            tracks.forEach(t => {
+                if (t.height && t.height > 0) {
+                    const existing = byHeight.get(t.height);
+                    if (!existing || (t.bandwidth || 0) > (existing.bandwidth || 0)) {
+                        byHeight.set(t.height, t);
+                    }
+                }
+            });
+
+            const sortedHeights = Array.from(byHeight.keys()).sort((a, b) => b - a);
+            if (sortedHeights.length <= 1) {
+                qualityWrapper.style.display = 'none';
+                return;
+            }
+
+            qualityWrapper.style.display = 'inline-flex';
+            setQualityLabelText('Auto');
+
+            qualityMenu.innerHTML = `<li data-mode="auto" class="selected">Auto</li>`;
+            sortedHeights.forEach(h => {
+                qualityMenu.innerHTML += `<li data-mode="manual" data-height="${h}" data-label="${h}p">${h}p</li>`;
+            });
+
+            qualityMenu.querySelectorAll('li').forEach(li => {
+                li.onclick = (e) => {
+                    e.stopPropagation();
+                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
+                    li.classList.add('selected');
+
+                    const mode = li.getAttribute('data-mode');
+                    if (mode === 'auto') {
+                        shakaPlayer.configure({ abr: { enabled: true } });
+                        setQualityLabelText('Auto');
+                    } else {
+                        const chosenHeight = parseInt(li.getAttribute('data-height'), 10);
+                        const chosenTrack = byHeight.get(chosenHeight);
+                        shakaPlayer.configure({ abr: { enabled: false } });
+                        if (chosenTrack) {
+                            shakaPlayer.selectVariantTrack(chosenTrack, true);
+                        }
+                        setQualityLabelText(`${chosenHeight}p`);
+                    }
+                    qualityMenu.classList.remove('active');
+                };
+            });
+        }
+
         function hideOverlaysSafely() {
             playerThumbnail.classList.add('hidden');
             if (playerLoader) playerLoader.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 350);
         }
 
-        async function startPlaybackSafely() {
+        async function kickPlayNow() {
+            if (video.style.display === 'none') return;
             try {
                 video.muted = true;
-                const playPromise = video.play();
-                if (playPromise !== undefined) {
-                    await playPromise;
+                const p = video.play();
+                if (p !== undefined) {
+                    await p;
                 }
-                hideOverlaysSafely();
-                beginLagCountdown();
-            } catch (err) {
-                console.warn("Initial play() retry needed:", err);
-                setTimeout(() => {
-                    video.muted = true;
-                    video.play().catch(() => {});
-                }, 500);
-            }
+            } catch (e) {}
         }
 
         video.addEventListener('playing', () => {
             hideOverlaysSafely();
-            if (video.currentTime > 0.01) {
-                resolveLagOnActualPlay();
-            } else {
-                beginLagCountdown();
-            }
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
         });
 
         video.addEventListener('pause', () => {
-            resolveLagOnActualPlay();
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-        });
-
-        video.addEventListener('stalled', () => {
-            if (video.style.display !== 'none') {
-                beginLagCountdown();
-                if (video.paused) {
-                    video.muted = true;
-                    video.play().catch(() => {});
-                }
-            }
-        });
-
-        video.addEventListener('waiting', () => {
-            if (video.style.display !== 'none') {
-                beginLagCountdown();
-            }
         });
 
         video.addEventListener('canplay', () => {
             if (playerLoader) playerLoader.classList.add('hidden');
+            kickPlayNow();
         });
+
+        video.addEventListener('loadeddata', () => {
+            kickPlayNow();
+        });
+
+        let lastWatchTime = -1;
+        setInterval(() => {
+            if (video.style.display === 'none' || video.paused) return;
+            if (Math.abs(video.currentTime - lastWatchTime) < 0.02) {
+                kickPlayNow();
+            }
+            lastWatchTime = video.currentTime;
+        }, 1200);
 
         function buildSlugId(cat, idx, title) {
             return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
@@ -852,13 +821,10 @@
             const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
             const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
 
-            lastObservedVideoTime = -1;
-            lastObservedPlayingFlag = false;
-            resolveLagOnActualPlay();
-
             if (playerLoader) playerLoader.classList.remove('hidden');
             await destroyPlayers();
             qualityWrapper.style.display = 'none';
+            setQualityLabelText('Auto');
 
             const isEmbed =
                 directLink.includes('youtube.com') ||
@@ -894,7 +860,7 @@
 
                 setTimeout(() => {
                     hideOverlaysSafely();
-                }, 1000);
+                }, 800);
                 return;
             }
 
@@ -906,7 +872,6 @@
             skipFwdBtn.style.display = 'inline-block';
 
             const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
-            currentStreamMode = isDashMpd ? 'dash' : 'hls';
 
             if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
                 try {
@@ -918,11 +883,24 @@
                         console.error('Shaka Player Error:', event.detail);
                     });
 
+                    // Fast initial start on ~2 Mbps while keeping all qualities selectable
                     const shakaConfig = {
                         streaming: {
-                            bufferingGoal: 4,
-                            rebufferingGoal: 2,
-                            jumpLargeGaps: true
+                            bufferingGoal: 2,
+                            rebufferingGoal: 1,
+                            startAtSegmentBoundary: false,
+                            jumpLargeGaps: true,
+                            inaccurateManifestTolerance: 2,
+                            retryParameters: {
+                                timeout: 4500,
+                                maxAttempts: 3,
+                                baseDelay: 500
+                            }
+                        },
+                        abr: {
+                            enabled: true,
+                            defaultBandwidthEstimate: 1400000,
+                            switchInterval: 2
                         }
                     };
                     if (kid && key) {
@@ -935,20 +913,28 @@
                     shakaPlayer.configure(shakaConfig);
 
                     await shakaPlayer.load(directLink);
-                    await startPlaybackSafely();
+                    setupShakaQualityMenu(shakaPlayer);
+                    await kickPlayNow();
+                    hideOverlaysSafely();
                     return;
                 } catch (err) {
                     console.error("Shaka load failed:", err);
                     if (playerLoader) playerLoader.classList.add('hidden');
-                    resolveLagOnActualPlay();
                 }
             }
 
             if (window.Hls && Hls.isSupported()) {
                 const hls = new Hls({
-                    maxBufferLength: 6,
-                    maxMaxBufferLength: 15,
-                    liveSyncDurationCount: 2,
+                    startLevel: 0,
+                    maxBufferLength: 3,
+                    maxMaxBufferLength: 8,
+                    liveSyncDurationCount: 1,
+                    liveMaxLatencyDurationCount: 2,
+                    abrBandWidthFactor: 0.7,
+                    abrBandWidthUpFactor: 0.5,
+                    manifestLoadingTimeOut: 4000,
+                    levelLoadingTimeOut: 4000,
+                    fragLoadingTimeOut: 5000,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -956,29 +942,13 @@
                 hls.attachMedia(video);
 
                 hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
-                    await startPlaybackSafely();
-
-                    if (data.levels && data.levels.length > 1) {
-                        qualityWrapper.style.display = 'inline-block';
-                        qualityMenu.innerHTML = `<li data-index="-1" class="selected">Auto</li>`;
-                        data.levels.forEach((lvl, index) => {
-                            qualityMenu.innerHTML += `<li data-index="${index}">${lvl.height}p</li>`;
-                        });
-
-                        qualityMenu.querySelectorAll('li').forEach(li => {
-                            li.onclick = () => {
-                                qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
-                                li.classList.add('selected');
-                                hls.currentLevel = parseInt(li.getAttribute('data-index'), 10);
-                                qualityMenu.classList.remove('active');
-                            };
-                        });
-                    }
+                    setupHlsQualityMenu(hls, data.levels || hls.levels);
+                    await kickPlayNow();
+                    hideOverlaysSafely();
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
-                        console.error("Fatal HLS error:", data);
                         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
                             hls.startLoad();
                         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -989,7 +959,8 @@
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', async function () {
-                    await startPlaybackSafely();
+                    await kickPlayNow();
+                    hideOverlaysSafely();
                 }, { once: true });
             }
         }
@@ -1090,9 +1061,6 @@
 
         video.addEventListener('timeupdate', () => {
             if (video.duration > 0) progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
-            if (!video.paused && video.currentTime > 0.01) {
-                resolveLagOnActualPlay();
-            }
         });
 
         progressContainer.addEventListener('click', (e) => {
@@ -1309,14 +1277,12 @@
             fetch(`${SPORTS_JSON_URL}?ping=${Date.now()}`, { method: 'HEAD', cache: 'no-store' })
                 .then(() => {
                     const pingMs = Math.round(performance.now() - startTime);
-                    lastPingMs = pingMs;
                     pingText.innerText = `${pingMs} ms`;
                     pingDot.className = 'ping-dot';
                     if (pingMs > 250) pingDot.classList.add('poor');
                     else if (pingMs > 120) pingDot.classList.add('fair');
                 })
                 .catch(() => {
-                    lastPingMs = 500;
                     pingDot.className = 'ping-dot poor';
                     pingText.innerText = 'Offline';
                 });
