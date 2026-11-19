@@ -15,7 +15,7 @@
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="StreamX - Ultimate Live Sports Experience">
-    <meta name="twitter:description" content="Stream your favorite cricket and football matches in high definition with live interactive chats.">
+    <meta property="twitter:description" content="Stream your favorite cricket and football matches in high definition with live interactive chats.">
     <meta name="twitter:image" content="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
 
     <!-- Website Favicon / Google Search Logo -->
@@ -114,7 +114,7 @@
 
         .player-thumb-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.35s ease;
+            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.4s ease;
         }
         .player-thumb-overlay.hidden {
             opacity: 0; visibility: hidden; pointer-events: none;
@@ -129,23 +129,6 @@
         }
         .player-countdown-overlay.hidden {
             opacity: 0; visibility: hidden; pointer-events: none;
-        }
-
-        .startup-wait-overlay {
-            position: absolute; inset: 0; z-index: 18;
-            background: rgba(10, 10, 15, 0.8);
-            backdrop-filter: blur(8px);
-            display: none; flex-direction: column;
-            align-items: center; justify-content: center; gap: 10px;
-            text-align: center; padding: 16px;
-        }
-        .startup-wait-overlay.active { display: flex; }
-        .startup-counter-pill {
-            font-size: 30px; font-weight: 800; color: #fff;
-            background: rgba(99, 102, 241, 0.22);
-            border: 1px solid rgba(99, 102, 241, 0.55);
-            padding: 8px 22px; border-radius: 14px;
-            letter-spacing: 1px;
         }
 
         .player-loader {
@@ -366,15 +349,6 @@
                         </div>
                     </div>
 
-                    <!-- Speed-Adjusted Auto-Catch Play Timer -->
-                    <div id="startupWaitOverlay" class="startup-wait-overlay">
-                        <div style="font-size: 12px; font-weight: 700; color: #a5b4fc; letter-spacing: 0.6px; text-transform: uppercase;">
-                            <i class="fa-solid fa-gauge-high"></i> Catching Play Time
-                        </div>
-                        <div class="startup-counter-pill" id="startupCountdownText">06s</div>
-                        <div style="font-size: 12px; color: #cbd5e1;" id="startupSubLabel">Calculating speed & exact play start...</div>
-                    </div>
-
                     <div id="playerLoader" class="player-loader hidden">
                         <div class="spinner"></div>
                         <span>Connecting Live Stream...</span>
@@ -487,9 +461,6 @@
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
         const playerCountdownOverlay = document.getElementById('playerCountdownOverlay');
-        const startupWaitOverlay = document.getElementById('startupWaitOverlay');
-        const startupCountdownText = document.getElementById('startupCountdownText');
-        const startupSubLabel = document.getElementById('startupSubLabel');
         const progressContainer = document.getElementById('progressContainer');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const skipBackBtn = document.getElementById('skipBackwardBtn');
@@ -500,66 +471,75 @@
         const qualityBtn = document.getElementById('qualityBtn');
         const qualityMenu = document.getElementById('qualityMenu');
 
-        // Speed-aware exact play-time catcher
-        let streamLoadStartMs = 0;
-        let currentStreamKind = 'hls';
-        let startupCountdownTicker = null;
-        let hasConfirmedPlaying = false;
-        let lastMeasuredPingMs = 120;
+        // Lag/Buffering badge with live countdown until actual playback/frame advancement
+        const bufferingStatusEl = document.createElement('div');
+        bufferingStatusEl.id = 'liveBufferingBadge';
+        bufferingStatusEl.style.cssText = `
+            position: absolute; top: 14px; left: 14px; z-index: 22;
+            background: rgba(11, 11, 16, 0.85); color: #f8fafc;
+            border: 1px solid rgba(99, 102, 241, 0.5); padding: 6px 12px;
+            border-radius: 20px; font-size: 12px; font-weight: 700;
+            display: none; align-items: center; gap: 7px; backdrop-filter: blur(8px);
+        `;
+        playerContainer.appendChild(bufferingStatusEl);
 
-        function getSpeedMultiplier() {
-            // Adjust estimated start time according to current connection latency/speed
-            if (lastMeasuredPingMs > 300) return 1.35;
-            if (lastMeasuredPingMs > 160) return 1.15;
-            if (lastMeasuredPingMs < 70) return 0.9;
-            return 1.0;
-        }
+        let lagStartedAtMs = null;
+        let lagCountdownTimer = null;
+        let currentStreamMode = 'hls';
+        let lastObservedVideoTime = -1;
+        let lastObservedPlayingFlag = false;
+        let lastPingMs = 120;
 
-        function getLearnedPlayTimeSeconds(kind) {
-            let baseSec = kind === 'dash' ? 7 : 4;
+        function getLearnedLagSeconds(mode) {
+            let baseSec = mode === 'dash' ? 6 : 3;
             try {
-                const raw = localStorage.getItem(`streamx_exact_play_sec_${kind}`);
-                const parsed = raw ? parseFloat(raw) : NaN;
-                if (!Number.isNaN(parsed) && parsed >= 2 && parsed <= 30) {
+                const saved = localStorage.getItem(`streamx_lag_sec_${mode}`);
+                const parsed = saved ? parseFloat(saved) : NaN;
+                if (!Number.isNaN(parsed) && parsed >= 1 && parsed <= 30) {
                     baseSec = parsed;
                 }
             } catch (e) {}
-            const adjusted = Math.round(baseSec * getSpeedMultiplier());
-            return Math.max(2, Math.min(30, adjusted));
+            const factor = lastPingMs > 250 ? 1.25 : (lastPingMs < 70 ? 0.9 : 1.0);
+            return Math.max(1, Math.min(30, Math.round(baseSec * factor)));
         }
 
-        function saveExactPlayTimeSeconds(kind, elapsedSec) {
-            if (elapsedSec < 0.5 || elapsedSec > 45) return;
-            const rounded = Math.round(elapsedSec * 10) / 10;
+        function saveLearnedLagSeconds(mode, actualSec) {
+            if (actualSec < 0.3 || actualSec > 45) return;
+            const val = Math.round(actualSec * 10) / 10;
             try {
-                localStorage.setItem(`streamx_exact_play_sec_${kind}`, String(rounded));
+                localStorage.setItem(`streamx_lag_sec_${mode}`, String(val));
             } catch (e) {}
         }
 
-        function startPlayTimeCountdown(kind) {
-            stopPlayTimeCountdown();
-            currentStreamKind = kind;
-            streamLoadStartMs = performance.now();
-            hasConfirmedPlaying = false;
+        function updateBufferingBadgeText(secText) {
+            bufferingStatusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color);"></i> Buffering... ${secText}`;
+        }
 
-            let remaining = getLearnedPlayTimeSeconds(kind);
-            startupCountdownText.innerText = `${String(remaining).padStart(2, '0')}s`;
-            startupSubLabel.innerText = `Speed ${lastMeasuredPingMs}ms • Playing right at 00s`;
-            startupWaitOverlay.classList.add('active');
+        function beginLagCountdown() {
+            if (video.style.display === 'none' || video.paused) return;
+            if (lagStartedAtMs !== null) return;
 
-            startupCountdownTicker = setInterval(() => {
-                if (hasConfirmedPlaying) {
-                    stopPlayTimeCountdown();
+            lagStartedAtMs = performance.now();
+            const totalSec = getLearnedLagSeconds(currentStreamMode);
+            let remaining = totalSec;
+
+            updateBufferingBadgeText(`${String(remaining).padStart(2, '0')}s`);
+            bufferingStatusEl.style.display = 'inline-flex';
+
+            if (lagCountdownTimer) clearInterval(lagCountdownTimer);
+            lagCountdownTimer = setInterval(() => {
+                if (lagStartedAtMs === null) {
+                    clearInterval(lagCountdownTimer);
+                    lagCountdownTimer = null;
                     return;
                 }
                 if (remaining > 0) {
                     remaining -= 1;
-                    startupCountdownText.innerText = `${String(remaining).padStart(2, '0')}s`;
+                    updateBufferingBadgeText(`${String(remaining).padStart(2, '0')}s`);
                 } else {
-                    // Hold strictly at 00s until actual playback starts so play begins right as 0 finishes
-                    startupCountdownText.innerText = "00s";
-                    startupSubLabel.innerText = "00s reached • Waiting for live frame to play...";
-                    if (video.style.display !== 'none' && video.paused) {
+                    // Stay at 00s until actual playback starts so 00s aligns with real play start
+                    updateBufferingBadgeText(`00s`);
+                    if (video.paused && video.style.display !== 'none') {
                         video.muted = true;
                         video.play().catch(() => {});
                     }
@@ -567,33 +547,45 @@
             }, 1000);
         }
 
-        function stopPlayTimeCountdown() {
-            if (startupCountdownTicker) {
-                clearInterval(startupCountdownTicker);
-                startupCountdownTicker = null;
+        function resolveLagOnActualPlay() {
+            if (lagStartedAtMs !== null) {
+                const actualDurationSec = (performance.now() - lagStartedAtMs) / 1000;
+                saveLearnedLagSeconds(currentStreamMode, actualDurationSec);
+                lagStartedAtMs = null;
             }
-            startupWaitOverlay.classList.remove('active');
+            if (lagCountdownTimer) {
+                clearInterval(lagCountdownTimer);
+                lagCountdownTimer = null;
+            }
+            bufferingStatusEl.style.display = 'none';
         }
 
-        function confirmExactPlayStart() {
-            if (!hasConfirmedPlaying && streamLoadStartMs > 0) {
-                hasConfirmedPlaying = true;
-                const exactSec = (performance.now() - streamLoadStartMs) / 1000;
-                saveExactPlayTimeSeconds(currentStreamKind, exactSec);
-            }
-            stopPlayTimeCountdown();
-            playerThumbnail.classList.add('hidden');
-            if (playerLoader) playerLoader.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 200);
-        }
-
-        let lastFrameTime = -1;
+        // Catch actual playback start by tracking BOTH playing state AND real currentTime frame advancement
         setInterval(() => {
-            if (video.style.display === 'none' || video.paused) return;
-            if (video.currentTime > 0.02 && Math.abs(video.currentTime - lastFrameTime) >= 0.02) {
-                confirmExactPlayStart();
+            if (video.style.display === 'none' || video.paused) {
+                if (video.paused) {
+                    if (lagCountdownTimer) {
+                        clearInterval(lagCountdownTimer);
+                        lagCountdownTimer = null;
+                    }
+                    lagStartedAtMs = null;
+                    bufferingStatusEl.style.display = 'none';
+                }
+                return;
             }
-            lastFrameTime = video.currentTime;
+
+            const timeAdvanced = Math.abs(video.currentTime - lastObservedVideoTime) >= 0.02 && video.currentTime > 0.01;
+            const isActivelyPlaying = !video.paused && !video.ended && video.readyState >= 3;
+
+            if (timeAdvanced && isActivelyPlaying) {
+                resolveLagOnActualPlay();
+                lastObservedPlayingFlag = true;
+            } else if (!timeAdvanced || video.readyState < 3) {
+                beginLagCountdown();
+                lastObservedPlayingFlag = false;
+            }
+
+            lastObservedVideoTime = video.currentTime;
         }, 250);
 
         let socket = null;
@@ -615,6 +607,12 @@
         let countdownInterval = null;
         let pendingMessage = null;
 
+        function hideOverlaysSafely() {
+            playerThumbnail.classList.add('hidden');
+            if (playerLoader) playerLoader.classList.add('hidden');
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+        }
+
         async function startPlaybackSafely() {
             try {
                 video.muted = true;
@@ -622,31 +620,50 @@
                 if (playPromise !== undefined) {
                     await playPromise;
                 }
+                hideOverlaysSafely();
+                beginLagCountdown();
             } catch (err) {
+                console.warn("Initial play() retry needed:", err);
                 setTimeout(() => {
                     video.muted = true;
                     video.play().catch(() => {});
-                }, 300);
+                }, 500);
             }
         }
 
         video.addEventListener('playing', () => {
-            if (video.currentTime > 0.02) {
-                confirmExactPlayStart();
+            hideOverlaysSafely();
+            if (video.currentTime > 0.01) {
+                resolveLagOnActualPlay();
+            } else {
+                beginLagCountdown();
             }
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
         });
 
         video.addEventListener('pause', () => {
+            resolveLagOnActualPlay();
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        });
+
+        video.addEventListener('stalled', () => {
+            if (video.style.display !== 'none') {
+                beginLagCountdown();
+                if (video.paused) {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                }
+            }
+        });
+
+        video.addEventListener('waiting', () => {
+            if (video.style.display !== 'none') {
+                beginLagCountdown();
+            }
         });
 
         video.addEventListener('canplay', () => {
             if (playerLoader) playerLoader.classList.add('hidden');
-            if (video.paused && video.style.display !== 'none') {
-                video.muted = true;
-                video.play().catch(() => {});
-            }
         });
 
         function buildSlugId(cat, idx, title) {
@@ -734,7 +751,6 @@
 
                 if (statusUpper === "UPCOMING") {
                     isMatchLive = false;
-                    stopPlayTimeCountdown();
                     playerCountdownOverlay.classList.remove('hidden');
                     document.getElementById('countdownMatchTitle').innerText = matched.title;
                     document.getElementById('scheduledTimeText').innerText = startTimeStr || "Scheduled Soon";
@@ -836,7 +852,11 @@
             const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
             const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
 
-            if (playerLoader) playerLoader.classList.add('hidden');
+            lastObservedVideoTime = -1;
+            lastObservedPlayingFlag = false;
+            resolveLagOnActualPlay();
+
+            if (playerLoader) playerLoader.classList.remove('hidden');
             await destroyPlayers();
             qualityWrapper.style.display = 'none';
 
@@ -848,7 +868,6 @@
                 directLink.includes('<iframe');
 
             if (isEmbed) {
-                stopPlayTimeCountdown();
                 video.style.display = 'none';
                 progressContainer.style.display = 'none';
                 playPauseBtn.style.display = 'none';
@@ -874,9 +893,8 @@
                 ytIframe.style.display = 'block';
 
                 setTimeout(() => {
-                    playerThumbnail.classList.add('hidden');
-                    setTimeout(() => { playerThumbnail.style.display = 'none'; }, 200);
-                }, 500);
+                    hideOverlaysSafely();
+                }, 1000);
                 return;
             }
 
@@ -888,7 +906,7 @@
             skipFwdBtn.style.display = 'inline-block';
 
             const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
-            startPlayTimeCountdown(isDashMpd ? 'dash' : 'hls');
+            currentStreamMode = isDashMpd ? 'dash' : 'hls';
 
             if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
                 try {
@@ -902,17 +920,9 @@
 
                     const shakaConfig = {
                         streaming: {
-                            bufferingGoal: 1,
-                            rebufferingGoal: 0.8,
-                            startAtSegmentBoundary: false,
-                            jumpLargeGaps: true,
-                            inaccurateManifestTolerance: 2,
-                            preferNativeHls: false
-                        },
-                        abr: {
-                            enabled: true,
-                            defaultBandwidthEstimate: 2000000,
-                            switchInterval: 2
+                            bufferingGoal: 4,
+                            rebufferingGoal: 2,
+                            jumpLargeGaps: true
                         }
                     };
                     if (kid && key) {
@@ -929,19 +939,16 @@
                     return;
                 } catch (err) {
                     console.error("Shaka load failed:", err);
-                    stopPlayTimeCountdown();
+                    if (playerLoader) playerLoader.classList.add('hidden');
+                    resolveLagOnActualPlay();
                 }
             }
 
             if (window.Hls && Hls.isSupported()) {
                 const hls = new Hls({
-                    maxBufferLength: 1.5,
-                    maxMaxBufferLength: 4,
-                    liveSyncDurationCount: 1,
-                    liveMaxLatencyDurationCount: 2,
-                    manifestLoadingTimeOut: 3500,
-                    levelLoadingTimeOut: 3500,
-                    fragLoadingTimeOut: 5000,
+                    maxBufferLength: 6,
+                    maxMaxBufferLength: 15,
+                    liveSyncDurationCount: 2,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -971,6 +978,7 @@
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
+                        console.error("Fatal HLS error:", data);
                         if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
                             hls.startLoad();
                         } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
@@ -1082,6 +1090,9 @@
 
         video.addEventListener('timeupdate', () => {
             if (video.duration > 0) progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
+            if (!video.paused && video.currentTime > 0.01) {
+                resolveLagOnActualPlay();
+            }
         });
 
         progressContainer.addEventListener('click', (e) => {
@@ -1298,14 +1309,14 @@
             fetch(`${SPORTS_JSON_URL}?ping=${Date.now()}`, { method: 'HEAD', cache: 'no-store' })
                 .then(() => {
                     const pingMs = Math.round(performance.now() - startTime);
-                    lastMeasuredPingMs = pingMs;
+                    lastPingMs = pingMs;
                     pingText.innerText = `${pingMs} ms`;
                     pingDot.className = 'ping-dot';
                     if (pingMs > 250) pingDot.classList.add('poor');
                     else if (pingMs > 120) pingDot.classList.add('fair');
                 })
                 .catch(() => {
-                    lastMeasuredPingMs = 500;
+                    lastPingMs = 500;
                     pingDot.className = 'ping-dot poor';
                     pingText.innerText = 'Offline';
                 });
