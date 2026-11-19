@@ -481,13 +481,62 @@
         let currentShakaPlayer = null;
         let isMatchLive = false;
         let activeMatchFeedItem = null;
-        let activeServersMap = {}; // { server1: streamObj, server2: streamObj ... }
+        let activeServersMap = {};
         let currentServerKey = 'server1';
 
         let username = localStorage.getItem('chat_username') || '';
         let replyingTo = null;
         let countdownInterval = null;
         let pendingMessage = null;
+
+        function hideOverlaysSafely() {
+            playerThumbnail.classList.add('hidden');
+            if (playerLoader) playerLoader.classList.add('hidden');
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+        }
+
+        async function startPlaybackSafely() {
+            try {
+                video.muted = true;
+                const playPromise = video.play();
+                if (playPromise !== undefined) {
+                    await playPromise;
+                }
+                hideOverlaysSafely();
+            } catch (err) {
+                console.warn("Initial play() retry needed:", err);
+                setTimeout(() => {
+                    video.muted = true;
+                    video.play().catch(() => {});
+                }, 600);
+            }
+        }
+
+        video.addEventListener('playing', () => {
+            hideOverlaysSafely();
+            if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+        });
+
+        video.addEventListener('pause', () => {
+            if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        });
+
+        video.addEventListener('stalled', () => {
+            if (video.style.display !== 'none' && video.paused) {
+                video.muted = true;
+                video.play().catch(() => {});
+            }
+        });
+
+        video.addEventListener('waiting', () => {
+            if (playerLoader && video.style.display !== 'none') {
+                playerLoader.classList.remove('hidden');
+            }
+        });
+
+        video.addEventListener('canplay', () => {
+            if (playerLoader) playerLoader.classList.add('hidden');
+        });
 
         function buildSlugId(cat, idx, title) {
             return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
@@ -518,7 +567,6 @@
                 });
 
                 if (!matched) {
-                    // Fallback: pick first LIVE match if ID didn't match an entry
                     const firstLiveIdx = list.findIndex(m => (m.status || "").toUpperCase() === "LIVE");
                     const idxToUse = firstLiveIdx !== -1 ? firstLiveIdx : 0;
                     if (list[idxToUse]) {
@@ -553,7 +601,6 @@
                     document.getElementById('bannerTeamB').innerText = matched.teamB;
                 }
 
-                // Map valid streams to server1..server5
                 const validStreams = Array.isArray(matched.raw.streams)
                     ? matched.raw.streams.filter(s => s && s.stream_url && s.stream_url.trim() !== "")
                     : [];
@@ -596,7 +643,6 @@
         function startPlayerCountdown(timeString) {
             if (countdownInterval) clearInterval(countdownInterval);
 
-            // Parse formats like "19/11/2026 07:30:00 PM" or "07:30 PM"
             let targetDate = new Date();
             const fullMatch = timeString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
 
@@ -610,7 +656,6 @@
                 const mod = (fullMatch[7] || "").toUpperCase();
                 if (mod === "PM" && hrs < 12) hrs += 12;
                 if (mod === "AM" && hrs === 12) hrs = 0;
-                // Feed startTime is typically GMT+6
                 const utcMs = Date.UTC(year, month, day, hrs - 6, mins, secs);
                 targetDate = new Date(utcMs);
             } else {
@@ -676,8 +721,8 @@
         async function playStreamItem(streamObj) {
             if (!streamObj || !streamObj.stream_url) return;
             const directLink = streamObj.stream_url.trim();
-            const kid = (streamObj.kid || "").trim();
-            const key = (streamObj.key || "").trim();
+            const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
+            const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
 
             if (playerLoader) playerLoader.classList.remove('hidden');
             await destroyPlayers();
@@ -716,9 +761,7 @@
                 ytIframe.style.display = 'block';
 
                 setTimeout(() => {
-                    playerThumbnail.classList.add('hidden');
-                    if (playerLoader) playerLoader.classList.add('hidden');
-                    setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+                    hideOverlaysSafely();
                 }, 1000);
                 return;
             }
@@ -732,10 +775,10 @@
 
             const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
 
-            // 1. DASH (.mpd) + ClearKey DRM via Shaka Player
             if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
                 try {
-                    const shakaPlayer = new shaka.Player(video);
+                    const shakaPlayer = new shaka.Player();
+                    await shakaPlayer.attach(video);
                     currentShakaPlayer = shakaPlayer;
 
                     shakaPlayer.addEventListener('error', (event) => {
@@ -753,24 +796,27 @@
                     }
 
                     await shakaPlayer.load(directLink);
-                    video.play().catch(e => console.log("Auto-play prevented:", e));
-                    playerThumbnail.classList.add('hidden');
-                    if (playerLoader) playerLoader.classList.add('hidden');
+                    await startPlaybackSafely();
                     return;
                 } catch (err) {
-                    console.error("Shaka load failed, trying HLS fallback:", err);
+                    console.error("Shaka load failed:", err);
+                    if (playerLoader) playerLoader.classList.add('hidden');
                 }
             }
 
-            // 2. HLS (.m3u8) via HLS.js
             if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls({ maxBufferLength: 15, maxMaxBufferLength: 30, liveSyncDurationCount: 3 });
+                const hls = new Hls({
+                    maxBufferLength: 15,
+                    maxMaxBufferLength: 30,
+                    liveSyncDurationCount: 3,
+                    enableWorker: true
+                });
                 currentHls = hls;
                 hls.loadSource(directLink);
                 hls.attachMedia(video);
 
-                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
-                    video.play().catch(e => console.log("Auto-play prevented:", e));
+                hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
+                    await startPlaybackSafely();
 
                     if (data.levels && data.levels.length > 1) {
                         qualityWrapper.style.display = 'inline-block';
@@ -789,11 +835,22 @@
                         });
                     }
                 });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        console.error("Fatal HLS error:", data);
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                            hls.startLoad();
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                            hls.recoverMediaError();
+                        }
+                    }
+                });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
-                video.addEventListener('loadedmetadata', function () {
-                    video.play().catch(e => console.log("Auto-play prevented:", e));
-                });
+                video.addEventListener('loadedmetadata', async function () {
+                    await startPlaybackSafely();
+                }, { once: true });
             }
         }
 
@@ -833,15 +890,6 @@
             qualityMenu.classList.toggle('active');
         });
         window.addEventListener('click', () => { qualityMenu.classList.remove('active'); });
-
-        video.addEventListener('playing', () => {
-            playerThumbnail.classList.add('hidden');
-            if (playerLoader) playerLoader.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
-        });
-
-        video.addEventListener('waiting', () => { if (playerLoader) playerLoader.classList.remove('hidden'); });
-        video.addEventListener('canplay', () => { if (playerLoader) playerLoader.classList.add('hidden'); });
 
         const muteBtn = document.getElementById('muteBtn');
         const volumeSlider = document.getElementById('volumeSlider');
