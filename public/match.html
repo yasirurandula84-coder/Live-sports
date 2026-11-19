@@ -500,7 +500,16 @@
             if (currentQualityLabel) currentQualityLabel.innerText = text;
         }
 
-        function setupHlsQualityMenu(hls, levels) {
+        function markQualityOptionSelected(matchAttrName, matchAttrValue) {
+            qualityMenu.querySelectorAll('li').forEach(l => {
+                l.classList.remove('selected');
+                if (l.getAttribute(matchAttrName) === String(matchAttrValue)) {
+                    l.classList.add('selected');
+                }
+            });
+        }
+
+        function setupHlsQualityMenu(hls, levels, defaultLowestIdx = null) {
             const validLevels = (levels || [])
                 .map((lvl, idx) => ({ idx, height: lvl.height || 0, bitrate: lvl.bitrate || 0 }))
                 .filter(item => item.height > 0)
@@ -512,11 +521,20 @@
             }
 
             qualityWrapper.style.display = 'inline-flex';
-            setQualityLabelText('Auto');
+            const lowestItem = defaultLowestIdx !== null
+                ? validLevels.find(v => v.idx === defaultLowestIdx)
+                : null;
 
-            qualityMenu.innerHTML = `<li data-mode="auto" class="selected">Auto</li>`;
+            if (lowestItem) {
+                setQualityLabelText(`${lowestItem.height}p`);
+            } else {
+                setQualityLabelText('Auto');
+            }
+
+            qualityMenu.innerHTML = `<li data-mode="auto" class="${lowestItem ? '' : 'selected'}">Auto</li>`;
             validLevels.forEach(lvl => {
-                qualityMenu.innerHTML += `<li data-mode="manual" data-level="${lvl.idx}" data-label="${lvl.height}p">${lvl.height}p</li>`;
+                const isLowSelected = lowestItem && lvl.idx === lowestItem.idx;
+                qualityMenu.innerHTML += `<li data-mode="manual" data-level="${lvl.idx}" data-label="${lvl.height}p" class="${isLowSelected ? 'selected' : ''}">${lvl.height}p</li>`;
             });
 
             qualityMenu.querySelectorAll('li').forEach(li => {
@@ -529,11 +547,13 @@
                     if (mode === 'auto') {
                         hls.currentLevel = -1;
                         hls.loadLevel = -1;
+                        hls.nextLevel = -1;
                         setQualityLabelText('Auto');
                     } else {
                         const targetIdx = parseInt(li.getAttribute('data-level'), 10);
                         hls.loadLevel = targetIdx;
                         hls.currentLevel = targetIdx;
+                        hls.nextLevel = targetIdx;
                         setQualityLabelText(li.getAttribute('data-label') || 'HD');
                     }
                     qualityMenu.classList.remove('active');
@@ -541,7 +561,7 @@
             });
         }
 
-        function setupShakaQualityMenu(shakaPlayer) {
+        function setupShakaQualityMenu(shakaPlayer, lowestTrack = null) {
             const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
             const byHeight = new Map();
             tracks.forEach(t => {
@@ -560,11 +580,18 @@
             }
 
             qualityWrapper.style.display = 'inline-flex';
-            setQualityLabelText('Auto');
+            const lowestHeight = lowestTrack && lowestTrack.height ? lowestTrack.height : null;
 
-            qualityMenu.innerHTML = `<li data-mode="auto" class="selected">Auto</li>`;
+            if (lowestHeight) {
+                setQualityLabelText(`${lowestHeight}p`);
+            } else {
+                setQualityLabelText('Auto');
+            }
+
+            qualityMenu.innerHTML = `<li data-mode="auto" class="${lowestHeight ? '' : 'selected'}">Auto</li>`;
             sortedHeights.forEach(h => {
-                qualityMenu.innerHTML += `<li data-mode="manual" data-height="${h}" data-label="${h}p">${h}p</li>`;
+                const isLowSelected = lowestHeight && h === lowestHeight;
+                qualityMenu.innerHTML += `<li data-mode="manual" data-height="${h}" data-label="${h}p" class="${isLowSelected ? 'selected' : ''}">${h}p</li>`;
             });
 
             qualityMenu.querySelectorAll('li').forEach(li => {
@@ -917,7 +944,6 @@
                         console.error('Shaka Player Error:', event.detail);
                     });
 
-                    // Balanced low-latency start + enough buffer reserve to avoid early micro-lags
                     const shakaConfig = {
                         streaming: {
                             bufferingGoal: 2.5,
@@ -947,7 +973,21 @@
                     shakaPlayer.configure(shakaConfig);
 
                     await shakaPlayer.load(directLink);
-                    setupShakaQualityMenu(shakaPlayer);
+
+                    // Select lowest bitrate/height track at startup so initial playback is smooth
+                    const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
+                    let lowestTrack = null;
+                    if (tracks.length > 0) {
+                        lowestTrack = tracks.reduce((best, t) => {
+                            const bwA = best.bandwidth || (best.height ? best.height * 1000 : Infinity);
+                            const bwB = t.bandwidth || (t.height ? t.height * 1000 : Infinity);
+                            return bwB < bwA ? t : best;
+                        }, tracks[0]);
+                        shakaPlayer.configure({ abr: { enabled: false } });
+                        shakaPlayer.selectVariantTrack(lowestTrack, true);
+                    }
+
+                    setupShakaQualityMenu(shakaPlayer, lowestTrack);
                     await kickPlayNow();
                     hideOverlaysSafely();
                     return;
@@ -958,7 +998,6 @@
             }
 
             if (window.Hls && Hls.isSupported()) {
-                // Balanced buffer so playback starts fast and stays steady during initial ramp-up
                 const hls = new Hls({
                     startLevel: 0,
                     maxBufferLength: 3,
@@ -978,8 +1017,9 @@
 
                 hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
                     const levels = data.levels || hls.levels || [];
+                    let minIdx = null;
                     if (levels.length > 0) {
-                        let minIdx = 0;
+                        minIdx = 0;
                         let minBitrate = Infinity;
                         levels.forEach((lvl, idx) => {
                             const bw = lvl.bitrate || (lvl.height ? lvl.height * 1000 : Infinity);
@@ -988,10 +1028,13 @@
                                 minIdx = idx;
                             }
                         });
+                        // Force start at the lowest quality level so early playback does not lag
                         hls.startLevel = minIdx;
+                        hls.loadLevel = minIdx;
+                        hls.currentLevel = minIdx;
                         hls.nextLevel = minIdx;
                     }
-                    setupHlsQualityMenu(hls, levels);
+                    setupHlsQualityMenu(hls, levels, minIdx);
                     await kickPlayNow();
                     hideOverlaysSafely();
                 });
