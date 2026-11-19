@@ -594,7 +594,7 @@
         function hideOverlaysSafely() {
             playerThumbnail.classList.add('hidden');
             if (playerLoader) playerLoader.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 200);
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 150);
         }
 
         async function kickPlayNow() {
@@ -606,6 +606,22 @@
                     await p;
                 }
             } catch (e) {}
+        }
+
+        function nudgeStalledFrame() {
+            if (video.style.display === 'none') return;
+            try {
+                if (video.buffered && video.buffered.length > 0) {
+                    const bufEnd = video.buffered.end(video.buffered.length - 1);
+                    if (bufEnd > video.currentTime + 0.15) {
+                        video.currentTime = Math.min(bufEnd - 0.1, video.currentTime + 0.08);
+                    }
+                }
+                if (currentHls && currentHls.startLoad) {
+                    currentHls.startLoad(-1);
+                }
+            } catch (e) {}
+            kickPlayNow();
         }
 
         video.addEventListener('playing', () => {
@@ -621,24 +637,36 @@
             kickPlayNow();
         });
 
+        video.addEventListener('loadeddata', () => {
+            // Frame appeared; kick playback immediately without waiting for long buffer fill
+            if (playerLoader) playerLoader.classList.add('hidden');
+            kickPlayNow();
+        });
+
         video.addEventListener('canplay', () => {
             if (playerLoader) playerLoader.classList.add('hidden');
             kickPlayNow();
         });
 
-        video.addEventListener('loadeddata', () => {
-            kickPlayNow();
-        });
-
-        // Fast-kick if frame sits stalled during startup
+        // If frame loaded in ~2s but currentTime stays stuck without advancing, nudge & kick play every 1.2s
         let lastWatchTime = -1;
+        let stuckTicks = 0;
         setInterval(() => {
-            if (video.style.display === 'none' || video.paused) return;
-            if (Math.abs(video.currentTime - lastWatchTime) < 0.02) {
-                kickPlayNow();
+            if (video.style.display === 'none') {
+                stuckTicks = 0;
+                return;
+            }
+            const timeMoved = Math.abs(video.currentTime - lastWatchTime) >= 0.02;
+            if (!timeMoved && video.readyState >= 2) {
+                stuckTicks += 1;
+                if (stuckTicks >= 1) {
+                    nudgeStalledFrame();
+                }
+            } else {
+                stuckTicks = 0;
             }
             lastWatchTime = video.currentTime;
-        }, 700);
+        }, 1200);
 
         function buildSlugId(cat, idx, title) {
             return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
@@ -826,6 +854,9 @@
             const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
             const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
 
+            lastWatchTime = -1;
+            stuckTicks = 0;
+
             if (playerLoader) playerLoader.classList.remove('hidden');
             await destroyPlayers();
             qualityWrapper.style.display = 'none';
@@ -865,7 +896,7 @@
 
                 setTimeout(() => {
                     hideOverlaysSafely();
-                }, 600);
+                }, 500);
                 return;
             }
 
@@ -888,23 +919,22 @@
                         console.error('Shaka Player Error:', event.detail);
                     });
 
-                    // Ultra-fast startup buffer & low initial bandwidth estimate
                     const shakaConfig = {
                         streaming: {
-                            bufferingGoal: 1,
-                            rebufferingGoal: 0.5,
+                            bufferingGoal: 0.8,
+                            rebufferingGoal: 0.2,
                             startAtSegmentBoundary: false,
                             jumpLargeGaps: true,
-                            inaccurateManifestTolerance: 2,
+                            inaccurateManifestTolerance: 3,
                             retryParameters: {
-                                timeout: 3000,
+                                timeout: 2500,
                                 maxAttempts: 3,
-                                baseDelay: 250
+                                baseDelay: 200
                             }
                         },
                         abr: {
                             enabled: true,
-                            defaultBandwidthEstimate: 1100000,
+                            defaultBandwidthEstimate: 1000000,
                             switchInterval: 1.5
                         }
                     };
@@ -929,18 +959,17 @@
             }
 
             if (window.Hls && Hls.isSupported()) {
-                // Ultra-fast HLS startup with lowest-bitrate start level
                 const hls = new Hls({
                     startLevel: 0,
-                    maxBufferLength: 1.5,
-                    maxMaxBufferLength: 4,
+                    maxBufferLength: 1,
+                    maxMaxBufferLength: 3,
                     liveSyncDurationCount: 1,
                     liveMaxLatencyDurationCount: 2,
-                    abrBandWidthFactor: 0.65,
-                    abrBandWidthUpFactor: 0.45,
-                    manifestLoadingTimeOut: 2500,
-                    levelLoadingTimeOut: 2500,
-                    fragLoadingTimeOut: 3500,
+                    abrBandWidthFactor: 0.6,
+                    abrBandWidthUpFactor: 0.4,
+                    manifestLoadingTimeOut: 2200,
+                    levelLoadingTimeOut: 2200,
+                    fragLoadingTimeOut: 3000,
                     enableWorker: true
                 });
                 currentHls = hls;
