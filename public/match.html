@@ -471,7 +471,7 @@
         const qualityBtn = document.getElementById('qualityBtn');
         const qualityMenu = document.getElementById('qualityMenu');
 
-        // Buffering badge shown while initial segments/buffers are still advancing
+        // Only display buffering badge if playback stalls for > 2 seconds
         const bufferingStatusEl = document.createElement('div');
         bufferingStatusEl.id = 'liveBufferingBadge';
         bufferingStatusEl.style.cssText = `
@@ -481,26 +481,37 @@
             border-radius: 20px; font-size: 11.5px; font-weight: 700;
             display: none; align-items: center; gap: 7px; backdrop-filter: blur(8px);
         `;
-        bufferingStatusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color);"></i> Buffering stream...`;
+        bufferingStatusEl.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin" style="color: var(--primary-color);"></i> Buffering...`;
         playerContainer.appendChild(bufferingStatusEl);
 
-        function showBufferingBadge(show) {
-            bufferingStatusEl.style.display = show ? 'inline-flex' : 'none';
+        let stallTimer = null;
+        function scheduleBufferingBadge(delayMs = 2000) {
+            clearTimeout(stallTimer);
+            stallTimer = setTimeout(() => {
+                if (video.style.display !== 'none' && !video.paused) {
+                    bufferingStatusEl.style.display = 'inline-flex';
+                }
+            }, delayMs);
+        }
+
+        function hideBufferingBadgeImmediately() {
+            clearTimeout(stallTimer);
+            bufferingStatusEl.style.display = 'none';
         }
 
         let lastVideoTime = -1;
         setInterval(() => {
             if (video.style.display === 'none' || video.paused) {
-                showBufferingBadge(false);
+                hideBufferingBadgeImmediately();
                 return;
             }
             if (Math.abs(video.currentTime - lastVideoTime) < 0.05) {
-                showBufferingBadge(true);
+                scheduleBufferingBadge(1500);
             } else {
-                showBufferingBadge(false);
+                hideBufferingBadgeImmediately();
             }
             lastVideoTime = video.currentTime;
-        }, 900);
+        }, 700);
 
         let socket = null;
         try {
@@ -524,7 +535,7 @@
         function hideOverlaysSafely() {
             playerThumbnail.classList.add('hidden');
             if (playerLoader) playerLoader.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 300);
         }
 
         async function startPlaybackSafely() {
@@ -535,30 +546,30 @@
                     await playPromise;
                 }
                 hideOverlaysSafely();
-                showBufferingBadge(true);
+                scheduleBufferingBadge(2200);
             } catch (err) {
                 console.warn("Initial play() retry needed:", err);
                 setTimeout(() => {
                     video.muted = true;
                     video.play().catch(() => {});
-                }, 600);
+                }, 400);
             }
         }
 
         video.addEventListener('playing', () => {
             hideOverlaysSafely();
-            showBufferingBadge(false);
+            hideBufferingBadgeImmediately();
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
         });
 
         video.addEventListener('pause', () => {
-            showBufferingBadge(false);
+            hideBufferingBadgeImmediately();
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
         });
 
         video.addEventListener('stalled', () => {
             if (video.style.display !== 'none') {
-                showBufferingBadge(true);
+                scheduleBufferingBadge(1800);
                 if (video.paused) {
                     video.muted = true;
                     video.play().catch(() => {});
@@ -568,12 +579,16 @@
 
         video.addEventListener('waiting', () => {
             if (video.style.display !== 'none') {
-                showBufferingBadge(true);
+                scheduleBufferingBadge(1800);
             }
         });
 
         video.addEventListener('canplay', () => {
             if (playerLoader) playerLoader.classList.add('hidden');
+            if (video.paused) {
+                video.muted = true;
+                video.play().catch(() => {});
+            }
         });
 
         function buildSlugId(cat, idx, title) {
@@ -763,7 +778,7 @@
             const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
 
             if (playerLoader) playerLoader.classList.remove('hidden');
-            showBufferingBadge(true);
+            hideBufferingBadgeImmediately();
             await destroyPlayers();
             qualityWrapper.style.display = 'none';
 
@@ -780,7 +795,6 @@
                 playPauseBtn.style.display = 'none';
                 skipBackBtn.style.display = 'none';
                 skipFwdBtn.style.display = 'none';
-                showBufferingBadge(false);
 
                 let embedUrl = directLink;
                 if (directLink.includes('watch?v=')) {
@@ -802,7 +816,7 @@
 
                 setTimeout(() => {
                     hideOverlaysSafely();
-                }, 1000);
+                }, 800);
                 return;
             }
 
@@ -825,11 +839,17 @@
                         console.error('Shaka Player Error:', event.detail);
                     });
 
+                    // Fast start configuration for DASH (.mpd)
                     const shakaConfig = {
                         streaming: {
-                            bufferingGoal: 4,
-                            rebufferingGoal: 2,
-                            jumpLargeGaps: true
+                            bufferingGoal: 1.5,
+                            rebufferingGoal: 1,
+                            startAtSegmentBoundary: false,
+                            jumpLargeGaps: true,
+                            inaccurateManifestTolerance: 2
+                        },
+                        abr: {
+                            defaultBandwidthEstimate: 1500000
                         }
                     };
                     if (kid && key) {
@@ -847,15 +867,20 @@
                 } catch (err) {
                     console.error("Shaka load failed:", err);
                     if (playerLoader) playerLoader.classList.add('hidden');
-                    showBufferingBadge(false);
+                    hideBufferingBadgeImmediately();
                 }
             }
 
             if (window.Hls && Hls.isSupported()) {
+                // Fast start configuration for HLS (.m3u8)
                 const hls = new Hls({
-                    maxBufferLength: 6,
-                    maxMaxBufferLength: 15,
-                    liveSyncDurationCount: 2,
+                    maxBufferLength: 2,
+                    maxMaxBufferLength: 6,
+                    liveSyncDurationCount: 1,
+                    liveMaxLatencyDurationCount: 3,
+                    manifestLoadingTimeOut: 4000,
+                    levelLoadingTimeOut: 4000,
+                    fragLoadingTimeOut: 6000,
                     enableWorker: true
                 });
                 currentHls = hls;
