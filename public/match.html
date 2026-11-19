@@ -39,7 +39,6 @@
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
-        /* Modern Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #101014; }
         ::-webkit-scrollbar-thumb { background: #23232b; border-radius: 4px; }
@@ -54,7 +53,6 @@
             overflow-x: hidden;
         }
 
-        /* Glassmorphism Navbar */
         .navbar {
             background: rgba(11, 11, 14, 0.85) !important;
             backdrop-filter: blur(16px);
@@ -71,7 +69,35 @@
             padding: 20px;
         }
 
-        /* Modern Video Container */
+        .match-teams-banner {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 14px;
+            margin-bottom: 16px;
+        }
+
+        .match-team-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .match-team-chip img {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: #181822;
+        }
+
         .custom-video-container {
             position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 480px;
             background: #000; display: flex; align-items: center; justify-content: center;
@@ -94,7 +120,6 @@
             opacity: 0; visibility: hidden; pointer-events: none;
         }
 
-        /* Player Internal Countdown Overlay */
         .player-countdown-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(11, 11, 14, 0.85); backdrop-filter: blur(12px);
@@ -106,7 +131,6 @@
             opacity: 0; visibility: hidden; pointer-events: none;
         }
 
-        /* Loading Spinner Animation */
         .player-loader {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 16; display: flex; flex-direction: column; align-items: center; gap: 10px;
@@ -122,7 +146,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .player-loader.hidden { display: none; }
 
-        /* Custom Controls Overlay */
         .video-controls-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
             background: linear-gradient(to top, rgba(0,0,0,0.85), transparent);
@@ -131,7 +154,6 @@
         }
         .video-controls-overlay.hidden { opacity: 0; pointer-events: none; }
 
-        /* Quality Popup Menu Styling */
         .quality-wrapper { position: relative; display: inline-block; }
         .quality-menu {
             position: absolute; bottom: 45px; right: 0; background: rgba(20, 20, 25, 0.95);
@@ -147,7 +169,6 @@
         .quality-menu li:hover { background: var(--primary-color); color: #fff; }
         .quality-menu li.selected { color: var(--primary-color); font-weight: bold; }
 
-        /* Connection Ping Indicator */
         .connection-status {
             display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.05);
             padding: 6px 12px; border-radius: 8px; font-size: 13px; color: #cbd5e1;
@@ -160,7 +181,6 @@
         .ping-dot.fair { background: #eab308; box-shadow: 0 0 8px #eab308; }
         .ping-dot.poor { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
-        /* Server Select Buttons (Server 1 to 5) */
         .server-selector {
             display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0;
         }
@@ -180,12 +200,11 @@
             box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
         }
 
-        /* Match Info Bar */
         .match-info-bar {
             background: var(--card-bg); border: 1px solid var(--border-color);
             padding: 14px 20px; border-radius: 14px; display: flex;
             justify-content: space-between; align-items: center; margin-top: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 10px;
         }
         .viewers-count {
             background: rgba(255, 255, 255, 0.05); padding: 6px 12px;
@@ -193,7 +212,6 @@
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
 
-        /* Modern Glassmorphic Chat Box */
         .watch-container {
             display: grid; grid-template-columns: 1fr 360px; gap: 24px;
         }
@@ -236,7 +254,6 @@
         }
         .chat-input-area button:hover { filter: brightness(1.1); }
 
-        /* Modern Username Modal */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
@@ -279,7 +296,6 @@
 </head>
 <body>
 
-    <!-- Username Modal (Shown only on first chat attempt if no username is saved) -->
     <div class="modal-overlay" id="usernameModal">
         <div class="modal-content">
             <button type="button" class="modal-close-btn" id="closeModalBtn" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
@@ -291,23 +307,32 @@
     </div>
 
     <nav class="navbar">
-        <a href="index.html" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px;">STREAMX</a>
+        <a href="/" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px;">STREAMX</a>
         <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding: 0;">
-            <li><a href="index.html" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li><a href="/" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <h2 id="matchTitle" class="section-title" style="margin-bottom: 15px; font-size: 22px; font-weight: 800; color: #fff;">Loading Match...</h2>
+        <h2 id="matchTitle" class="section-title" style="margin-bottom: 10px; font-size: 22px; font-weight: 800; color: #fff;">Loading Match...</h2>
+
+        <div class="match-teams-banner" id="matchTeamsBanner" style="display: none;">
+            <div class="match-team-chip">
+                <img id="bannerFlagA" src="" alt="">
+                <span id="bannerTeamA"></span>
+            </div>
+            <span style="font-size: 11px; font-weight: 800; color: #a5b4fc; background: rgba(99,102,241,0.18); padding: 3px 7px; border-radius: 6px;">VS</span>
+            <div class="match-team-chip">
+                <img id="bannerFlagB" src="" alt="">
+                <span id="bannerTeamB"></span>
+            </div>
+        </div>
         
         <div class="watch-container">
             <div>
-                <!-- Custom Modern Video Player Wrapper -->
                 <div class="custom-video-container" id="playerContainer">
-                    <!-- Thumbnail overlay -->
-                    <img id="playerThumbnail" class="player-thumb-overlay" src="" alt="Match Thumbnail">
+                    <img id="playerThumbnail" class="player-thumb-overlay" src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Match Thumbnail">
 
-                    <!-- Player Internal Countdown Overlay (Shows when Upcoming) -->
                     <div id="playerCountdownOverlay" class="player-countdown-overlay hidden">
                         <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 20px; backdrop-filter: blur(15px); max-width: 400px; width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.6);">
                             <div style="color: var(--primary-color); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
@@ -324,19 +349,14 @@
                         </div>
                     </div>
 
-                    <!-- Loader element -->
                     <div id="playerLoader" class="player-loader hidden">
                         <div class="spinner"></div>
                         <span>Connecting Live Stream...</span>
                     </div>
                     
-                    <!-- Main Video Player -->
                     <video id="hlsPlayer" playsinline autoplay muted></video>
-
-                    <!-- YouTube / Kick Embed Player -->
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
                     
-                    <!-- Custom Controls Overlay -->
                     <div class="video-controls-overlay" id="controlsOverlay">
                         <div class="progress-bar-container" id="progressContainer" style="display: block;">
                             <div class="progress-bar" id="progressBar"></div>
@@ -367,7 +387,7 @@
                 </div>
 
                 <!-- Server Select Buttons (Server 1 to 5) -->
-                <div class="server-selector">
+                <div class="server-selector" id="serverSelector">
                     <button id="btnServer1" class="active-server" onclick="switchServer('server1')"><i class="fa-solid fa-server"></i> Server 1</button>
                     <button id="btnServer2" onclick="switchServer('server2')"><i class="fa-solid fa-server"></i> Server 2</button>
                     <button id="btnServer3" onclick="switchServer('server3')"><i class="fa-solid fa-server"></i> Server 3</button>
@@ -402,9 +422,11 @@
         </div>
     </div>
 
-    <!-- Socket.io client script -->
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
+        const FALLBACK_FLAG = "https://via.placeholder.com/48x48/161622/a5b4fc?text=VS";
+
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
             if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73) || (e.ctrlKey && e.keyCode == 85)) {
@@ -427,9 +449,11 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const matchId = urlParams.get('id') || 'default-match';
-        const matchTitle = urlParams.get('title') || 'Live Match';
+        const queryTitle = urlParams.get('title') || '';
 
-        document.getElementById('matchTitle').innerText = matchTitle;
+        if (queryTitle) {
+            document.getElementById('matchTitle').innerText = decodeURIComponent(queryTitle);
+        }
 
         const video = document.getElementById('hlsPlayer');
         const ytIframe = document.getElementById('youtubePlayer');
@@ -446,85 +470,174 @@
         const qualityBtn = document.getElementById('qualityBtn');
         const qualityMenu = document.getElementById('qualityMenu');
 
-        const socket = io();
+        let socket = null;
+        try {
+            if (typeof io === "function") {
+                socket = io();
+            }
+        } catch (e) {}
+
         let currentHls = null;
+        let currentShakaPlayer = null;
         let isMatchLive = false;
+        let activeMatchFeedItem = null;
+        let activeServersMap = {}; // { server1: streamObj, server2: streamObj ... }
+        let currentServerKey = 'server1';
+
         let username = localStorage.getItem('chat_username') || '';
         let replyingTo = null;
         let countdownInterval = null;
         let pendingMessage = null;
 
-        socket.on('refreshMatchesData', () => {
-            socket.emit('requestAllMatches');
-        });
-        
-        socket.emit('requestAllMatches');
+        function buildSlugId(cat, idx, title) {
+            return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+        }
 
-        socket.on('allMatchesData', (matchesData) => {
-            let foundMatch = null;
-            for (let cat in matchesData) {
-                const match = matchesData[cat].find(m => m.id === matchId);
-                if (match) {
-                    foundMatch = match;
-                    break;
-                }
-            }
+        async function loadMatchFromFeed() {
+            try {
+                const res = await fetch(`${SPORTS_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
+                if (!res.ok) return;
+                const data = await res.json();
+                const list = Array.isArray(data.matches) ? data.matches : [];
 
-            if (foundMatch) {
-                if (foundMatch.thumbnail) {
-                    playerThumbnail.src = foundMatch.thumbnail;
-                }
+                let matched = null;
+                list.forEach((m, idx) => {
+                    const info = m.eventInfo || {};
+                    const tA = info.teamA || m.event_name || "Team A";
+                    const tB = info.teamB || "Team B";
+                    const title = m.event_name || `${tA} Vs ${tB}`;
+                    const slugId = buildSlugId(m.Category, idx, title);
 
-                if (foundMatch.status && foundMatch.status.toUpperCase() === 'UPCOMING' && foundMatch.time) {
-                    isMatchLive = false;
-                    for (let i = 1; i <= 5; i++) {
-                        document.getElementById(`btnServer${i}`).style.opacity = '0.5';
+                    if (
+                        slugId === matchId ||
+                        decodeURIComponent(slugId) === decodeURIComponent(matchId) ||
+                        (queryTitle && title.toLowerCase() === decodeURIComponent(queryTitle).toLowerCase())
+                    ) {
+                        matched = { raw: m, title, teamA: tA, teamB: tB, flagA: info.teamAFlag, flagB: info.teamBFlag, info };
                     }
+                });
 
+                if (!matched) {
+                    // Fallback: pick first LIVE match if ID didn't match an entry
+                    const firstLiveIdx = list.findIndex(m => (m.status || "").toUpperCase() === "LIVE");
+                    const idxToUse = firstLiveIdx !== -1 ? firstLiveIdx : 0;
+                    if (list[idxToUse]) {
+                        const m = list[idxToUse];
+                        const info = m.eventInfo || {};
+                        const tA = info.teamA || m.event_name || "Team A";
+                        const tB = info.teamB || "Team B";
+                        matched = {
+                            raw: m,
+                            title: m.event_name || `${tA} Vs ${tB}`,
+                            teamA: tA,
+                            teamB: tB,
+                            flagA: info.teamAFlag,
+                            flagB: info.teamBFlag,
+                            info
+                        };
+                    }
+                }
+
+                if (!matched) return;
+                activeMatchFeedItem = matched;
+
+                if (!queryTitle) {
+                    document.getElementById('matchTitle').innerText = matched.title;
+                }
+
+                if (matched.flagA || matched.flagB) {
+                    document.getElementById('matchTeamsBanner').style.display = 'inline-flex';
+                    document.getElementById('bannerFlagA').src = matched.flagA || FALLBACK_FLAG;
+                    document.getElementById('bannerFlagB').src = matched.flagB || FALLBACK_FLAG;
+                    document.getElementById('bannerTeamA').innerText = matched.teamA;
+                    document.getElementById('bannerTeamB').innerText = matched.teamB;
+                }
+
+                // Map valid streams to server1..server5
+                const validStreams = Array.isArray(matched.raw.streams)
+                    ? matched.raw.streams.filter(s => s && s.stream_url && s.stream_url.trim() !== "")
+                    : [];
+
+                activeServersMap = {};
+                for (let i = 1; i <= 5; i++) {
+                    const sObj = validStreams[i - 1] || null;
+                    const btn = document.getElementById(`btnServer${i}`);
+                    if (sObj) {
+                        activeServersMap[`server${i}`] = sObj;
+                        btn.style.display = 'inline-flex';
+                        btn.innerHTML = `<i class="fa-solid fa-server"></i> ${sObj.name || `Server ${i}`}`;
+                    } else {
+                        btn.style.display = i === 1 ? 'inline-flex' : 'none';
+                    }
+                }
+
+                const statusUpper = (matched.raw.status || "").toUpperCase();
+                const startTimeStr = matched.info?.startTime || "";
+
+                if (statusUpper === "UPCOMING") {
+                    isMatchLive = false;
                     playerCountdownOverlay.classList.remove('hidden');
-                    document.getElementById('countdownMatchTitle').innerText = foundMatch.title || matchTitle;
-                    document.getElementById('scheduledTimeText').innerText = foundMatch.time;
-                    
-                    startPlayerCountdown(foundMatch.time);
+                    document.getElementById('countdownMatchTitle').innerText = matched.title;
+                    document.getElementById('scheduledTimeText').innerText = startTimeStr || "Scheduled Soon";
+                    if (startTimeStr) {
+                        startPlayerCountdown(startTimeStr);
+                    }
                 } else {
                     isMatchLive = true;
                     playerCountdownOverlay.classList.add('hidden');
-                    loadStream('server1');
+                    const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
+                    loadFeedServer(firstAvailableKey);
                 }
+            } catch (err) {
+                console.error("Error loading match from Sports_data.json:", err);
             }
-        });
+        }
 
         function startPlayerCountdown(timeString) {
             if (countdownInterval) clearInterval(countdownInterval);
 
-            const today = new Date();
-            let [time, modifier] = timeString.split(' ');
-            let [hours, minutes] = time.split(':');
-            
-            if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
-            if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') hours = 0;
+            // Parse formats like "19/11/2026 07:30:00 PM" or "07:30 PM"
+            let targetDate = new Date();
+            const fullMatch = timeString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
 
-            today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
-            let targetTime = today.getTime();
+            if (fullMatch) {
+                const day = parseInt(fullMatch[1], 10);
+                const month = parseInt(fullMatch[2], 10) - 1;
+                const year = parseInt(fullMatch[3], 10);
+                let hrs = parseInt(fullMatch[4], 10);
+                const mins = parseInt(fullMatch[5], 10);
+                const secs = parseInt(fullMatch[6] || "0", 10);
+                const mod = (fullMatch[7] || "").toUpperCase();
+                if (mod === "PM" && hrs < 12) hrs += 12;
+                if (mod === "AM" && hrs === 12) hrs = 0;
+                // Feed startTime is typically GMT+6
+                const utcMs = Date.UTC(year, month, day, hrs - 6, mins, secs);
+                targetDate = new Date(utcMs);
+            } else {
+                let [time, modifier] = timeString.split(' ');
+                let [hours, minutes] = (time || "00:00").split(':');
+                if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
+                if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') hours = 0;
+                targetDate.setHours(parseInt(hours || 0, 10), parseInt(minutes || 0, 10), 0, 0);
+            }
+
+            const targetTime = targetDate.getTime();
 
             countdownInterval = setInterval(() => {
-                const now = new Date().getTime();
+                const now = Date.now();
                 const distance = targetTime - now;
 
-                if (distance < 0) {
+                if (distance <= 0) {
                     clearInterval(countdownInterval);
                     playerCountdownOverlay.classList.add('hidden');
                     document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
-                    
                     isMatchLive = true;
-                    for (let i = 1; i <= 5; i++) {
-                        document.getElementById(`btnServer${i}`).style.opacity = '1';
-                    }
-                    loadStream('server1');
+                    const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
+                    loadFeedServer(firstAvailableKey);
                     return;
                 }
 
-                const hoursLeft = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const hoursLeft = Math.floor(distance / (1000 * 60 * 60));
                 const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
 
@@ -534,45 +647,57 @@
             }, 1000);
         }
 
-        function loadStream(serverType) {
-            if (!isMatchLive) return;
-
-            if (playerLoader) playerLoader.classList.remove('hidden');
-            qualityWrapper.style.display = 'none';
-
+        function highlightServerButton(serverKey) {
+            currentServerKey = serverKey;
             for (let i = 1; i <= 5; i++) {
                 const btn = document.getElementById(`btnServer${i}`);
-                if (serverType === `server${i}`) {
+                if (serverKey === `server${i}`) {
                     btn.classList.add('active-server');
                 } else {
                     btn.classList.remove('active-server');
                 }
             }
-
-            socket.emit('requestStreamLink', { matchId, serverType });
         }
 
-        function destroyPlayers() {
-            if (currentHls) { currentHls.destroy(); currentHls = null; }
+        async function destroyPlayers() {
+            if (currentHls) {
+                currentHls.destroy();
+                currentHls = null;
+            }
+            if (currentShakaPlayer) {
+                try {
+                    await currentShakaPlayer.unload();
+                    await currentShakaPlayer.destroy();
+                } catch (e) {}
+                currentShakaPlayer = null;
+            }
         }
 
-        socket.on('secureStreamLink', async (directLink) => {
-            if (!isMatchLive || !directLink) return;
+        async function playStreamItem(streamObj) {
+            if (!streamObj || !streamObj.stream_url) return;
+            const directLink = streamObj.stream_url.trim();
+            const kid = (streamObj.kid || "").trim();
+            const key = (streamObj.key || "").trim();
 
             if (playerLoader) playerLoader.classList.remove('hidden');
-            destroyPlayers();
+            await destroyPlayers();
             qualityWrapper.style.display = 'none';
 
-            if (directLink.includes('youtube.com') || directLink.includes('youtu.be') || directLink.includes('rumble.com') || directLink.includes('kick.com') || directLink.includes('<iframe')) {
-                video.style.display = 'none';
+            const isEmbed =
+                directLink.includes('youtube.com') ||
+                directLink.includes('youtu.be') ||
+                directLink.includes('rumble.com') ||
+                directLink.includes('kick.com') ||
+                directLink.includes('<iframe');
 
+            if (isEmbed) {
+                video.style.display = 'none';
                 progressContainer.style.display = 'none';
                 playPauseBtn.style.display = 'none';
                 skipBackBtn.style.display = 'none';
                 skipFwdBtn.style.display = 'none';
 
                 let embedUrl = directLink;
-                
                 if (directLink.includes('watch?v=')) {
                     const videoId = directLink.split('watch?v=')[1].split('&')[0];
                     embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
@@ -582,8 +707,6 @@
                 } else if (directLink.includes('/live/')) {
                     const videoId = directLink.split('/live/')[1].split('?')[0];
                     embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
-                } else if (directLink.includes('kick.com') && !directLink.includes('<iframe')) {
-                    embedUrl = directLink;
                 } else if (directLink.includes('<iframe')) {
                     const matchSrc = directLink.match(/src="([^"]+)"/);
                     if (matchSrc && matchSrc[1]) embedUrl = matchSrc[1];
@@ -597,50 +720,113 @@
                     if (playerLoader) playerLoader.classList.add('hidden');
                     setTimeout(() => { playerThumbnail.style.display = 'none'; }, 400);
                 }, 1000);
+                return;
+            }
 
-            } else {
-                ytIframe.style.display = 'none';
-                video.style.display = 'block';
+            ytIframe.style.display = 'none';
+            video.style.display = 'block';
+            progressContainer.style.display = 'block';
+            playPauseBtn.style.display = 'inline-block';
+            skipBackBtn.style.display = 'inline-block';
+            skipFwdBtn.style.display = 'inline-block';
 
-                progressContainer.style.display = 'block';
-                playPauseBtn.style.display = 'inline-block';
-                skipBackBtn.style.display = 'inline-block';
-                skipFwdBtn.style.display = 'inline-block';
+            const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
 
-                if (Hls.isSupported()) {
-                    const hls = new Hls({ maxBufferLength: 15, maxMaxBufferLength: 30, liveSyncDurationCount: 3 });
-                    currentHls = hls;
-                    hls.loadSource(directLink);
-                    hls.attachMedia(video);
-                    
-                    hls.on(Hls.Events.MANIFEST_PARSED, function(event, data) {
-                        video.play().catch(e => console.log("Auto-play prevented:", e));
-                        
-                        if (data.levels && data.levels.length > 1) {
-                            qualityWrapper.style.display = 'inline-block';
-                            qualityMenu.innerHTML = `<li data-index="-1" class="selected">Auto</li>`;
-                            data.levels.forEach((lvl, index) => {
-                                qualityMenu.innerHTML += `<li data-index="${index}">${lvl.height}p</li>`;
-                            });
+            // 1. DASH (.mpd) + ClearKey DRM via Shaka Player
+            if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
+                try {
+                    const shakaPlayer = new shaka.Player(video);
+                    currentShakaPlayer = shakaPlayer;
 
-                            qualityMenu.querySelectorAll('li').forEach(li => {
-                                li.onclick = () => {
-                                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
-                                    li.classList.add('selected');
-                                    hls.currentLevel = parseInt(li.getAttribute('data-index'));
-                                    qualityMenu.classList.remove('active');
-                                };
-                            });
-                        }
+                    shakaPlayer.addEventListener('error', (event) => {
+                        console.error('Shaka Player Error:', event.detail);
                     });
-                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                    video.src = directLink;
-                    video.addEventListener('loadedmetadata', function() {
-                        video.play().catch(e => console.log("Auto-play prevented:", e));
-                    });
+
+                    if (kid && key) {
+                        shakaPlayer.configure({
+                            drm: {
+                                clearKeys: {
+                                    [kid]: key
+                                }
+                            }
+                        });
+                    }
+
+                    await shakaPlayer.load(directLink);
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
+                    playerThumbnail.classList.add('hidden');
+                    if (playerLoader) playerLoader.classList.add('hidden');
+                    return;
+                } catch (err) {
+                    console.error("Shaka load failed, trying HLS fallback:", err);
                 }
             }
-        });
+
+            // 2. HLS (.m3u8) via HLS.js
+            if (window.Hls && Hls.isSupported()) {
+                const hls = new Hls({ maxBufferLength: 15, maxMaxBufferLength: 30, liveSyncDurationCount: 3 });
+                currentHls = hls;
+                hls.loadSource(directLink);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
+
+                    if (data.levels && data.levels.length > 1) {
+                        qualityWrapper.style.display = 'inline-block';
+                        qualityMenu.innerHTML = `<li data-index="-1" class="selected">Auto</li>`;
+                        data.levels.forEach((lvl, index) => {
+                            qualityMenu.innerHTML += `<li data-index="${index}">${lvl.height}p</li>`;
+                        });
+
+                        qualityMenu.querySelectorAll('li').forEach(li => {
+                            li.onclick = () => {
+                                qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
+                                li.classList.add('selected');
+                                hls.currentLevel = parseInt(li.getAttribute('data-index'), 10);
+                                qualityMenu.classList.remove('active');
+                            };
+                        });
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = directLink;
+                video.addEventListener('loadedmetadata', function () {
+                    video.play().catch(e => console.log("Auto-play prevented:", e));
+                });
+            }
+        }
+
+        function loadFeedServer(serverKey) {
+            highlightServerButton(serverKey);
+            const streamObj = activeServersMap[serverKey];
+            if (streamObj && streamObj.stream_url) {
+                playStreamItem(streamObj);
+            } else if (socket) {
+                socket.emit('requestStreamLink', { matchId, serverType: serverKey });
+            }
+        }
+
+        if (socket) {
+            socket.on('refreshMatchesData', () => {
+                loadMatchFromFeed();
+            });
+
+            socket.on('secureStreamLink', async (directLink) => {
+                if (!isMatchLive || !directLink) return;
+                await playStreamItem({ stream_url: directLink });
+            });
+        }
+
+        function switchServer(serverType) {
+            if (!isMatchLive) {
+                alert('Match has not started yet!');
+                return;
+            }
+            playerThumbnail.style.display = 'block';
+            playerThumbnail.classList.remove('hidden');
+            loadFeedServer(serverType);
+        }
 
         qualityBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -656,16 +842,6 @@
 
         video.addEventListener('waiting', () => { if (playerLoader) playerLoader.classList.remove('hidden'); });
         video.addEventListener('canplay', () => { if (playerLoader) playerLoader.classList.add('hidden'); });
-
-        function switchServer(serverType) {
-            if (!isMatchLive) {
-                alert('Match has not started yet!');
-                return;
-            }
-            playerThumbnail.style.display = 'block';
-            playerThumbnail.classList.remove('hidden'); 
-            loadStream(serverType);
-        }
 
         const muteBtn = document.getElementById('muteBtn');
         const volumeSlider = document.getElementById('volumeSlider');
@@ -684,7 +860,7 @@
         });
 
         skipBackBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
-        skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration, video.currentTime + 10); });
+        skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration || 0, video.currentTime + 10); });
 
         volumeSlider.addEventListener('input', (e) => {
             video.volume = e.target.value;
@@ -731,7 +907,7 @@
 
         progressContainer.addEventListener('click', (e) => {
             const rect = progressContainer.getBoundingClientRect();
-            if(video.duration) video.currentTime = video.duration * ((e.clientX - rect.left) / rect.width);
+            if (video.duration) video.currentTime = video.duration * ((e.clientX - rect.left) / rect.width);
         });
 
         let hideTimeout;
@@ -746,6 +922,7 @@
         playerContainer.addEventListener('mousemove', showControls);
         playerContainer.addEventListener('touchstart', showControls);
 
+        // Chat & Room Logic
         const modal = document.getElementById('usernameModal');
         const usernameInput = document.getElementById('usernameInput');
         const joinBtn = document.getElementById('joinChatBtn');
@@ -757,17 +934,15 @@
         let hasJoinedRoom = false;
 
         function joinMatchRoom(userLabel) {
+            if (!socket) return;
             if (hasJoinedRoom) {
-                if (userLabel) {
-                    socket.emit('joinMatch', { matchId, username: userLabel });
-                }
+                if (userLabel) socket.emit('joinMatch', { matchId, username: userLabel });
                 return;
             }
             hasJoinedRoom = true;
             socket.emit('joinMatch', { matchId, username: userLabel || 'Guest' });
         }
 
-        // Join match room immediately on page load so viewers count and chat history load without asking for name
         joinMatchRoom(username || 'Guest');
 
         function openUsernameModal(messageToSend) {
@@ -793,10 +968,10 @@
             localStorage.setItem('chat_username', username);
             modal.classList.remove('active');
 
-            // Register saved username in the match room
-            socket.emit('joinMatch', { matchId, username });
+            if (socket) {
+                socket.emit('joinMatch', { matchId, username });
+            }
 
-            // Send the message the user was trying to send
             const msgToSend = pendingMessage || msgInput.value.trim();
             pendingMessage = null;
             if (msgToSend) {
@@ -811,10 +986,6 @@
                 e.preventDefault();
                 saveUsernameAndSend();
             }
-        });
-
-        socket.on('viewerCount', (count) => {
-            document.getElementById('viewersCount').innerText = count;
         });
 
         function renderMessage(data) {
@@ -856,13 +1027,33 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        socket.on('chatHistory', (history) => {
-            chatMessages.innerHTML = ''; 
-            history.forEach(data => renderMessage(data));
-        });
+        if (socket) {
+            socket.on('viewerCount', (count) => {
+                document.getElementById('viewersCount').innerText = count;
+            });
+
+            socket.on('chatHistory', (history) => {
+                chatMessages.innerHTML = '';
+                history.forEach(data => renderMessage(data));
+            });
+
+            socket.on('chatMessage', (data) => {
+                renderMessage(data);
+            });
+        }
 
         function sendChatMessage(msg) {
-            socket.emit('chatMessage', { message: msg, replyTo: replyingTo });
+            if (socket) {
+                socket.emit('chatMessage', { message: msg, replyTo: replyingTo });
+            } else {
+                renderMessage({
+                    id: 'local_' + Date.now(),
+                    username: username || 'You',
+                    message: msg,
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    replyTo: replyingTo
+                });
+            }
             msgInput.value = '';
             cancelReply();
         }
@@ -880,17 +1071,15 @@
             sendChatMessage(msg);
         });
 
-        socket.on('chatMessage', (data) => { renderMessage(data); });
-
         function toggleMsgMenu(msgId) {
             const menu = document.getElementById(`menu-${msgId}`);
-            document.querySelectorAll('[id^="menu-"]').forEach(m => { if(m.id !== `menu-${msgId}`) m.style.display = 'none'; });
+            document.querySelectorAll('[id^="menu-"]').forEach(m => { if (m.id !== `menu-${msgId}`) m.style.display = 'none'; });
             menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
         }
 
         function setReply(msgId, username, messageText) {
             replyingTo = { id: msgId, username: username, message: messageText };
-            document.querySelectorAll('[id^="menu-"]').forEach(m => { if(m.id !== `menu-${msgId}`) m.style.display = 'none'; });
+            document.querySelectorAll('[id^="menu-"]').forEach(m => { if (m.id !== `menu-${msgId}`) m.style.display = 'none'; });
 
             let previewBar = document.getElementById('replyPreviewBar');
             if (!previewBar) {
@@ -926,8 +1115,8 @@
             const pingDot = document.getElementById('pingDot');
             const pingText = document.getElementById('pingText');
             const startTime = performance.now();
-            
-            fetch('/socket.io/socket.io.js', { method: 'HEAD', cache: 'no-store' })
+
+            fetch(`${SPORTS_JSON_URL}?ping=${Date.now()}`, { method: 'HEAD', cache: 'no-store' })
                 .then(() => {
                     const pingMs = Math.round(performance.now() - startTime);
                     pingText.innerText = `${pingMs} ms`;
@@ -941,6 +1130,8 @@
                 });
         }
 
+        loadMatchFromFeed();
+        setInterval(loadMatchFromFeed, 120000);
         checkConnectionPing();
         setInterval(checkConnectionPing, 6000);
     </script>
