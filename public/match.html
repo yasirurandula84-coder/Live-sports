@@ -94,6 +94,18 @@
             opacity: 0; visibility: hidden; pointer-events: none;
         }
 
+        /* Player Internal Countdown Overlay */
+        .player-countdown-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(11, 11, 14, 0.85); backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px); z-index: 30; display: flex;
+            flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            padding: 20px; box-sizing: border-box; transition: opacity 0.4s ease;
+        }
+        .player-countdown-overlay.hidden {
+            opacity: 0; visibility: hidden; pointer-events: none;
+        }
+
         /* Loading Spinner Animation */
         .player-loader {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -285,8 +297,25 @@
                     <!-- Thumbnail overlay -->
                     <img id="playerThumbnail" class="player-thumb-overlay" src="" alt="Match Thumbnail">
 
+                    <!-- Player Internal Countdown Overlay (Shows when Upcoming) -->
+                    <div id="playerCountdownOverlay" class="player-countdown-overlay hidden">
+                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 20px; backdrop-filter: blur(15px); max-width: 400px; width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.6);">
+                            <div style="color: var(--primary-color); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                                <i class="fa-regular fa-clock"></i> Upcoming Match
+                            </div>
+                            <h3 id="countdownMatchTitle" style="color: #fff; font-size: 18px; margin: 0 0 15px 0;">Stream Starting Soon</h3>
+                            <div style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">Scheduled Time: <strong id="scheduledTimeText" style="color: #fff;">--:--</strong></div>
+                            
+                            <div id="countdownTimerBoxes" style="display: flex; justify-content: center; gap: 10px; font-weight: 700; color: #fff; font-size: 20px;">
+                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdHours">00h</span> : 
+                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdMinutes">00m</span> : 
+                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdSeconds">00s</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Loader element -->
-                    <div id="playerLoader" class="player-loader">
+                    <div id="playerLoader" class="player-loader hidden">
                         <div class="spinner"></div>
                         <span>Connecting Live Stream...</span>
                     </div>
@@ -397,6 +426,7 @@
         const controlsOverlay = document.getElementById('controlsOverlay');
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
+        const playerCountdownOverlay = document.getElementById('playerCountdownOverlay');
         const progressContainer = document.getElementById('progressContainer');
         const playPauseBtn = document.getElementById('playPauseBtn');
         const skipBackBtn = document.getElementById('skipBackwardBtn');
@@ -411,6 +441,7 @@
         let isMatchLive = false;
         let username = localStorage.getItem('chat_username');
         let replyingTo = null;
+        let countdownInterval = null;
 
         socket.on('refreshMatchesData', () => {
             socket.emit('requestAllMatches');
@@ -439,24 +470,22 @@
                         document.getElementById(`btnServer${i}`).style.opacity = '0.5';
                     }
 
-                    let timerDiv = document.getElementById('matchCountdownTimer');
-                    if (!timerDiv) {
-                        timerDiv = document.createElement('div');
-                        timerDiv.id = 'matchCountdownTimer';
-                        timerDiv.style.cssText = "background: linear-gradient(145deg, #141419, #101014); border: 1px solid rgba(255,255,255,0.08); padding: 18px; border-radius: 16px; text-align: center; margin-bottom: 20px; backdrop-filter: blur(10px); box-shadow: 0 10px 30px rgba(0,0,0,0.5);";
-                        
-                        const targetArea = document.getElementById('playerContainer');
-                        targetArea.parentNode.insertBefore(timerDiv, targetArea);
-                    }
-                    startCountdown(foundMatch.time, timerDiv);
+                    playerCountdownOverlay.classList.remove('hidden');
+                    document.getElementById('countdownMatchTitle').innerText = foundMatch.title || matchTitle;
+                    document.getElementById('scheduledTimeText').innerText = foundMatch.time;
+                    
+                    startPlayerCountdown(foundMatch.time);
                 } else {
                     isMatchLive = true;
+                    playerCountdownOverlay.classList.add('hidden');
                     loadStream('server1');
                 }
             }
         });
 
-        function startCountdown(timeString, displayElement) {
+        function startPlayerCountdown(timeString) {
+            if (countdownInterval) clearInterval(countdownInterval);
+
             const today = new Date();
             let [time, modifier] = timeString.split(' ');
             let [hours, minutes] = time.split(':');
@@ -467,14 +496,14 @@
             today.setHours(parseInt(hours, 10), parseInt(minutes, 10), 0, 0);
             let targetTime = today.getTime();
 
-            const interval = setInterval(() => {
+            countdownInterval = setInterval(() => {
                 const now = new Date().getTime();
                 const distance = targetTime - now;
 
                 if (distance < 0) {
-                    clearInterval(interval);
+                    clearInterval(countdownInterval);
+                    playerCountdownOverlay.classList.add('hidden');
                     document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
-                    displayElement.innerHTML = `<span style="color: #ef4444; font-weight: bold; font-size: 15px;"><i class="fa-solid fa-circle-dot fa-beat"></i> Match is starting soon / LIVE!</span>`;
                     
                     isMatchLive = true;
                     for (let i = 1; i <= 5; i++) {
@@ -488,17 +517,9 @@
                 const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                 const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
 
-                displayElement.innerHTML = `
-                    <div style="color: #9ca3af; font-size: 13px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;">
-                        <i class="fa-regular fa-clock" style="color: #6366f1;"></i> 
-                        <span>Match Starts In: <strong style="color: #fff;">${timeString}</strong></span>
-                    </div>
-                    <div style="display: flex; justify-content: center; gap: 12px; font-weight: 700; color: #fff; font-size: 18px;">
-                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${hoursLeft}h</span> : 
-                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${minutesLeft}m</span> : 
-                        <span style="background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">${secondsLeft}s</span>
-                    </div>
-                `;
+                document.getElementById('cdHours').innerText = String(hoursLeft).padStart(2, '0') + 'h';
+                document.getElementById('cdMinutes').innerText = String(minutesLeft).padStart(2, '0') + 'm';
+                document.getElementById('cdSeconds').innerText = String(secondsLeft).padStart(2, '0') + 's';
             }, 1000);
         }
 
