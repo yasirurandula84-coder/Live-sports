@@ -48,6 +48,41 @@ app.get('/match', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'match.html'));
 });
 
+// --- Image Proxy Route for Sofascore / Blocked Team Logos ---
+app.get('/img-proxy', async (req, res) => {
+    const rawUrl = req.query.url;
+    if (!rawUrl) {
+        return res.status(400).send('Missing url parameter');
+    }
+
+    const targetUrl = rawUrl.trim().replace(/^http:\/\//i, 'https://');
+
+    try {
+        const response = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Referer': 'https://www.sofascore.com/'
+            }
+        });
+
+        if (!response.ok) {
+            return res.status(response.status).send('Failed to fetch image');
+        }
+
+        const contentType = response.headers.get('content-type') || 'image/png';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+
+        const buffer = await response.arrayBuffer();
+        return res.send(Buffer.from(buffer));
+    } catch (error) {
+        console.error('Image proxy error:', error);
+        return res.status(502).send('Image proxy failed');
+    }
+});
+
 // --- HLS Proxy Route to bypass CORS and restrictions ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
@@ -134,14 +169,13 @@ io.on('connection', (socket) => {
         io.emit('refreshMatchesData');
     });
 
-        socket.on('requestStreamLink', async ({ matchId, serverType }) => {
+    socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
         
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
-                // සර්වර් 1 සිට 5 දක්වා අදාළ ලින්ක් එක ලබා ගැනීම (නැත්නම් Server 1 හි ලින්ක් එක Backup එකක් ලෙස භාවිතා කරයි)
                 if (serverType === 'server5') {
                     directLink = found.streamUrl5 || found.streamUrl1;
                 } else if (serverType === 'server4') {
@@ -151,7 +185,7 @@ io.on('connection', (socket) => {
                 } else if (serverType === 'server2') {
                     directLink = found.streamUrl2 || found.streamUrl1;
                 } else {
-                    directLink = found.streamUrl1; // Default Server 1
+                    directLink = found.streamUrl1;
                 }
                 break;
             }
@@ -164,7 +198,6 @@ io.on('connection', (socket) => {
 
         socket.emit('secureStreamLink', finalLink);
     });
-
 
     socket.on('joinMatch', ({ matchId, username }) => {
         socket.join(matchId);
