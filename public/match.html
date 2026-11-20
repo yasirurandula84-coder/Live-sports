@@ -39,7 +39,7 @@
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: #101014; }
         ::-webkit-scrollbar-thumb { background: #23232b; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
@@ -186,16 +186,29 @@
         .ping-dot.poor { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
         .server-selector {
-            display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 15px 0;
+            max-height: 112px;
+            overflow-y: auto;
+            padding: 4px 2px;
+            align-content: flex-start;
         }
         .server-selector button {
             background: #141419; color: #cbd5e1; border: 1px solid var(--border-color);
-            padding: 10px 18px; border-radius: 10px; cursor: pointer; font-weight: 700;
-            font-size: 13px; transition: all 0.3s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            display: flex; align-items: center; gap: 6px;
+            padding: 8px 13px; border-radius: 10px; cursor: pointer; font-weight: 700;
+            font-size: 12px; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            display: inline-flex; align-items: center; gap: 6px;
+            max-width: 185px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .server-selector button span.srv-label {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .server-selector button:hover {
-            border-color: rgba(99, 102, 241, 0.5); color: #fff; transform: translateY(-2px);
+            border-color: rgba(99, 102, 241, 0.5); color: #fff; transform: translateY(-1px);
         }
         .server-selector button.active-server {
             background: linear-gradient(135deg, var(--primary-color), #4f46e5);
@@ -391,14 +404,8 @@
                     </div>
                 </div>
 
-                <!-- Server Select Buttons (Server 1 to 5) -->
-                <div class="server-selector" id="serverSelector">
-                    <button id="btnServer1" class="active-server" onclick="switchServer('server1')"><i class="fa-solid fa-server"></i> Server 1</button>
-                    <button id="btnServer2" onclick="switchServer('server2')"><i class="fa-solid fa-server"></i> Server 2</button>
-                    <button id="btnServer3" onclick="switchServer('server3')"><i class="fa-solid fa-server"></i> Server 3</button>
-                    <button id="btnServer4" onclick="switchServer('server4')"><i class="fa-solid fa-server"></i> Server 4</button>
-                    <button id="btnServer5" onclick="switchServer('server5')"><i class="fa-solid fa-server"></i> Server 5</button>
-                </div>
+                <!-- Dynamic Server Select Buttons -->
+                <div class="server-selector" id="serverSelector"></div>
 
                 <div class="match-info-bar">
                     <span id="nowPlayingText" style="font-weight: 600; color: #9ca3af; display: flex; align-items: center; gap: 6px;">● Live Stream Broadcast</span>
@@ -552,6 +559,7 @@
         const skipBackBtn = document.getElementById('skipBackwardBtn');
         const skipFwdBtn = document.getElementById('skipForwardBtn');
         const playerContainer = document.getElementById('playerContainer');
+        const serverSelectorEl = document.getElementById('serverSelector');
         
         const qualityWrapper = document.getElementById('qualityWrapper');
         const qualityBtn = document.getElementById('qualityBtn');
@@ -769,6 +777,30 @@
             return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
         }
 
+        function formatChannelLabel(sObj, index) {
+            const rawName = (sObj && (sObj.channel_name || sObj.name || sObj.server_name) || '').trim();
+            if (rawName) {
+                return rawName.replace(/\s+/g, ' ');
+            }
+            return `Server ${index + 1}`;
+        }
+
+        function renderDynamicServerButtons(validStreams, selectedKey) {
+            if (!serverSelectorEl) return;
+            if (!validStreams || validStreams.length === 0) {
+                serverSelectorEl.innerHTML = `<button type="button" id="btnServer1" class="active-server" onclick="switchServer('server1')"><i class="fa-solid fa-server"></i> <span class="srv-label">Server 1</span></button>`;
+                return;
+            }
+
+            serverSelectorEl.innerHTML = validStreams.map((sObj, idx) => {
+                const key = `server${idx + 1}`;
+                const fullLabel = formatChannelLabel(sObj, idx);
+                const safeTitle = fullLabel.replace(/"/g, '&quot;');
+                const isActive = key === selectedKey ? 'active-server' : '';
+                return `<button type="button" id="btnServer${idx + 1}" class="${isActive}" title="${safeTitle}" onclick="switchServer('${key}')"><i class="fa-solid fa-server"></i> <span class="srv-label">${safeTitle}</span></button>`;
+            }).join('');
+        }
+
         async function loadMatchFromFeed() {
             try {
                 const res = await fetch(`${SPORTS_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
@@ -833,17 +865,13 @@
                     : [];
 
                 activeServersMap = {};
-                for (let i = 1; i <= 5; i++) {
-                    const sObj = validStreams[i - 1] || null;
-                    const btn = document.getElementById(`btnServer${i}`);
-                    if (sObj) {
-                        activeServersMap[`server${i}`] = sObj;
-                        btn.style.display = 'inline-flex';
-                        btn.innerHTML = `<i class="fa-solid fa-server"></i> ${sObj.name || `Server ${i}`}`;
-                    } else {
-                        btn.style.display = i === 1 ? 'inline-flex' : 'none';
-                    }
-                }
+                validStreams.forEach((sObj, idx) => {
+                    activeServersMap[`server${idx + 1}`] = sObj;
+                });
+
+                const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
+                const chosenKey = activeServersMap[currentServerKey] ? currentServerKey : firstAvailableKey;
+                renderDynamicServerButtons(validStreams, chosenKey);
 
                 const statusUpper = (matched.raw.status || "").toUpperCase();
                 const startTimeStr = matched.info?.startTime || "";
@@ -859,8 +887,7 @@
                 } else {
                     isMatchLive = true;
                     playerCountdownOverlay.classList.add('hidden');
-                    const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
-                    loadFeedServer(firstAvailableKey);
+                    loadFeedServer(chosenKey);
                 }
             } catch (err) {
                 console.error("Error loading match from Sports_data.json:", err);
@@ -921,14 +948,14 @@
 
         function highlightServerButton(serverKey) {
             currentServerKey = serverKey;
-            for (let i = 1; i <= 5; i++) {
-                const btn = document.getElementById(`btnServer${i}`);
-                if (serverKey === `server${i}`) {
+            const buttons = serverSelectorEl ? serverSelectorEl.querySelectorAll('button') : [];
+            buttons.forEach(btn => {
+                if (btn.id === `btn${serverKey.charAt(0).toUpperCase() + serverKey.slice(1)}`) {
                     btn.classList.add('active-server');
                 } else {
                     btn.classList.remove('active-server');
                 }
-            }
+            });
         }
 
         async function destroyPlayers() {
