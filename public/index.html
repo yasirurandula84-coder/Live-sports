@@ -38,29 +38,29 @@
         ::-webkit-scrollbar-thumb { background: #1f1f28; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
 
-        body {
+        html, body {
             background-color: var(--bg-dark);
             color: #f3f4f6;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding-bottom: 76px;
-            overflow-x: hidden;
-            position: relative;
+            padding: 0;
+            padding-bottom: 84px;
+            overflow-x: clip;
         }
 
         .glow-orb-1 {
-            position: absolute; top: -100px; left: -100px; width: 400px; height: 400px;
+            position: fixed; top: -100px; left: -100px; width: 400px; height: 400px;
             background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, transparent 70%);
-            border-radius: 50%; z-index: -1; pointer-events: none;
+            border-radius: 50%; z-index: 0; pointer-events: none;
         }
         .glow-orb-2 {
-            position: absolute; top: 360px; right: -100px; width: 450px; height: 450px;
+            position: fixed; top: 360px; right: -100px; width: 450px; height: 450px;
             background: radial-gradient(circle, rgba(255, 71, 87, 0.14) 0%, transparent 70%);
-            border-radius: 50%; z-index: -1; pointer-events: none;
+            border-radius: 50%; z-index: 0; pointer-events: none;
         }
 
         .navbar {
-            background: rgba(11, 11, 16, 0.88) !important;
+            background: rgba(11, 11, 16, 0.92) !important;
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
@@ -101,19 +101,27 @@
             .navbar { padding: 12px 16px; }
         }
 
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 16px 18px;
+        }
+
         .hero-box {
             background: linear-gradient(155deg, rgba(20, 26, 44, 0.92), rgba(10, 12, 20, 0.96));
             border: 1px solid rgba(99, 102, 241, 0.25);
             border-radius: 22px;
-            padding: 26px 20px;
+            padding: 24px 20px;
             text-align: center;
-            margin-top: 12px;
+            margin-top: 10px;
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
         }
 
         .hero-box h1 {
-            margin: 0 0 10px 0;
-            font-size: clamp(26px, 5vw, 36px);
+            margin: 0 0 8px 0;
+            font-size: clamp(25px, 5vw, 35px);
             font-weight: 900;
             color: #fff;
         }
@@ -125,9 +133,9 @@
         }
 
         .hero-box p {
-            margin: 0 auto 20px auto;
+            margin: 0 auto 18px auto;
             max-width: 580px;
-            font-size: 14px;
+            font-size: 13.5px;
             line-height: 1.6;
             color: #9ca3af;
         }
@@ -143,12 +151,12 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 20px;
+            padding: 11px 18px;
             border-radius: 12px;
             text-decoration: none;
             color: #fff;
             font-weight: 700;
-            font-size: 13.5px;
+            font-size: 13px;
             background: linear-gradient(135deg, #ef4444, #e11d48);
             box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35);
             transition: transform 0.2s ease;
@@ -158,12 +166,12 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 12px 18px;
+            padding: 11px 18px;
             border-radius: 12px;
             text-decoration: none;
             color: #fff;
             font-weight: 700;
-            font-size: 13.5px;
+            font-size: 13px;
             background: linear-gradient(135deg, #0284c7, #2563eb);
             box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
             transition: transform 0.2s ease;
@@ -171,6 +179,41 @@
 
         .btn-live-cricket:hover, .btn-more-cats:hover { transform: translateY(-2px); }
 
+        /* Categories Section (Above Live Cricket Match Cards) */
+        .categories-section {
+            background: linear-gradient(180deg, rgba(15, 15, 22, 0.72) 0%, rgba(10, 10, 15, 0.95) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.24);
+            border-radius: 20px;
+            padding: 18px 20px;
+            margin: 20px 0 24px 0;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .cat-link-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .cat-link-card:hover {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.12);
+            transform: translateY(-2px);
+        }
+
+        /* Live Cricket Banner (Below Categories) */
         .live-cricket-banner {
             background: linear-gradient(90deg, #ea580c, #ef4444);
             color: #fff;
@@ -179,7 +222,7 @@
             border-radius: 12px;
             font-size: 16px;
             font-weight: 800;
-            margin: 22px 0 14px 0;
+            margin: 8px 0 14px 0;
             box-shadow: 0 8px 24px rgba(239, 68, 68, 0.28);
             display: flex;
             align-items: center;
@@ -309,39 +352,9 @@
             font-size: 12px;
         }
 
-        .categories-section {
-            background: linear-gradient(180deg, rgba(15, 15, 22, 0.65) 0%, rgba(10, 10, 15, 0.92) 100%);
-            border: 1px solid rgba(99, 102, 241, 0.2);
-            border-radius: 20px;
-            padding: 20px;
-            margin-top: 32px;
-        }
-
-        .categories-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 12px;
-            margin-top: 14px;
-        }
-
-        .cat-link-card {
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 14px;
-            padding: 14px 10px;
-            text-align: center;
-            text-decoration: none;
-            color: #fff;
-            font-size: 13px;
-            font-weight: 700;
-            transition: all 0.2s ease;
-        }
-        .cat-link-card:hover {
-            border-color: var(--primary-color);
-            transform: translateY(-2px);
-        }
-
         .site-footer {
+            position: relative;
+            z-index: 1;
             background: linear-gradient(180deg, #0a0a0f 0%, #030305 100%);
             border-top: 1px solid var(--border-color);
             margin-top: 40px;
@@ -351,30 +364,41 @@
             font-size: 12.5px;
         }
 
+        /* Always-visible Fixed Bottom Dock Bar */
         .bottom-nav-bar {
             position: fixed;
-            bottom: 0; left: 0; right: 0;
-            height: 60px;
-            background: rgba(12, 12, 18, 0.95);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-top: 1px solid var(--border-color);
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 62px;
+            background: rgba(10, 10, 16, 0.96);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.75);
             display: flex;
             justify-content: space-around;
             align-items: center;
-            z-index: 1200;
+            z-index: 9999;
+            transform: translate3d(0, 0, 0);
+            will-change: transform;
+            box-sizing: border-box;
         }
 
         .bottom-nav-item {
+            flex: 1;
             display: flex;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
             gap: 3px;
             color: #9ca3af;
             text-decoration: none;
             font-size: 11px;
             font-weight: 700;
-            padding: 6px 10px;
+            padding: 6px 4px;
+            white-space: nowrap;
         }
         .bottom-nav-item i { font-size: 16px; }
         .bottom-nav-item.active, .bottom-nav-item:hover { color: #fff; }
@@ -401,28 +425,18 @@
         </ul>
     </nav>
 
-    <div class="container" style="max-width: 1120px; margin: 0 auto; padding: 16px 18px;">
+    <div class="container">
 
         <section class="hero-box">
             <h1>Watch Sports <span>Anytime, Anywhere</span></h1>
             <p>Live Cricket matches streaming now in HD with fast servers and live fan chat.</p>
             <div class="hero-actions">
-                <a href="#liveCricketSection" class="btn-live-cricket"><i class="fa-solid fa-circle-dot"></i> Live Cricket</a>
                 <a href="#categories" class="btn-more-cats"><i class="fa-solid fa-layer-group"></i> Categories</a>
+                <a href="#liveCricketSection" class="btn-live-cricket"><i class="fa-solid fa-circle-dot"></i> Live Cricket</a>
             </div>
         </section>
 
-        <div id="liveCricketSection" class="live-cricket-banner">
-            <span>🏏 Live Cricket Matches</span>
-            <span class="live-count-pill" id="liveCricketCount">0 Live</span>
-        </div>
-
-        <input type="text" id="cricketSearchInput" class="search-box" placeholder="Search live cricket matches..." oninput="renderLiveCricket()">
-
-        <div class="cricket-live-grid" id="liveCricketGrid">
-            <div class="cricket-match-card" style="text-align: center; color: #9ca3af;">Loading live cricket matches...</div>
-        </div>
-
+        <!-- 1. Categories Section (Above Live Cricket Cards) -->
         <div class="categories-section" id="categories">
             <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;"><i class="fa-solid fa-layer-group" style="color: var(--primary-color);"></i> Categories</h2>
             <div class="categories-grid">
@@ -435,13 +449,25 @@
             </div>
         </div>
 
+        <!-- 2. Live Cricket Matches Section (Below Categories) -->
+        <div id="liveCricketSection" class="live-cricket-banner">
+            <span>🏏 Live Cricket Matches</span>
+            <span class="live-count-pill" id="liveCricketCount">0 Live</span>
+        </div>
+
+        <input type="text" id="cricketSearchInput" class="search-box" placeholder="Search live cricket matches..." oninput="renderLiveCricket()">
+
+        <div class="cricket-live-grid" id="liveCricketGrid">
+            <div class="cricket-match-card" style="text-align: center; color: #9ca3af;">Loading live cricket matches...</div>
+        </div>
+
     </div>
 
     <footer class="site-footer">
-        <p style="margin: 0;">&copy; 2026 StreamX. Built by YR RANDUL. All rights reserved.</p>
+        <p style="margin: 0;">&copy; 2026 StreamX. All rights reserved.</p>
     </footer>
 
-    <nav class="bottom-nav-bar">
+    <nav class="bottom-nav-bar" aria-label="Bottom Navigation">
         <a href="/" class="bottom-nav-item active"><i class="fa-solid fa-house"></i><span>Home</span></a>
         <a href="/category/cricket" class="bottom-nav-item"><i class="fa-solid fa-baseball-bat-ball"></i><span>Cricket</span></a>
         <a href="/category/football" class="bottom-nav-item"><i class="fa-solid fa-futbol"></i><span>Football</span></a>
