@@ -44,40 +44,52 @@ function parseM3uPlaylist(rawText) {
         .filter(Boolean);
 
     const channels = [];
-    let pendingName = '';
-    let pendingLogo = '';
-    let pendingGroup = 'Live TV';
-    let pendingKid = '';
-    let pendingKey = '';
-    let pendingReferer = '';
-    let pendingUserAgent = '';
+    let current = {
+        name: '',
+        logo: '',
+        group: 'Live TV',
+        kid: '',
+        key: '',
+        referer: '',
+        userAgent: ''
+    };
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
         if (line.startsWith('#EXTINF:')) {
+            current = {
+                name: '',
+                logo: '',
+                group: 'Live TV',
+                kid: '',
+                key: '',
+                referer: '',
+                userAgent: ''
+            };
+
             const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
             const groupMatch = line.match(/group-title="([^"]*)"/i);
-            pendingLogo = logoMatch ? logoMatch[1].trim() : '';
-            pendingGroup = groupMatch && groupMatch[1].trim() ? groupMatch[1].trim() : 'Live TV';
+            current.logo = logoMatch ? logoMatch[1].trim() : '';
+            current.group = groupMatch && groupMatch[1].trim() ? groupMatch[1].trim() : 'Live TV';
 
             const commaIdx = line.lastIndexOf(',');
-            pendingName = commaIdx !== -1
+            current.name = commaIdx !== -1
                 ? line.slice(commaIdx + 1).trim()
                 : `Channel ${channels.length + 1}`;
         } else if (line.startsWith('#KODIPROP:')) {
             const keyMatch = line.match(/([0-9a-fA-F]{32}):([0-9a-fA-F]{32})/);
             if (keyMatch) {
-                pendingKid = keyMatch[1].toLowerCase();
-                pendingKey = keyMatch[2].toLowerCase();
+                current.kid = keyMatch[1].toLowerCase();
+                current.key = keyMatch[2].toLowerCase();
             }
         } else if (line.startsWith('#EXTVLCOPT:')) {
             const optContent = line.replace(/^#EXTVLCOPT:/i, '').trim();
             const lowerOpt = optContent.toLowerCase();
             if (lowerOpt.startsWith('http-referrer=')) {
-                pendingReferer = optContent.slice('http-referrer='.length).trim();
+                current.referer = optContent.slice('http-referrer='.length).trim();
             } else if (lowerOpt.startsWith('http-user-agent=')) {
-                pendingUserAgent = optContent.slice('http-user-agent='.length).trim();
+                current.userAgent = optContent.slice('http-user-agent='.length).trim();
             }
         } else if (!line.startsWith('#')) {
             const rawStreamUrl = line.trim();
@@ -88,24 +100,26 @@ function parseM3uPlaylist(rawText) {
 
             channels.push({
                 id: `tv-${channels.length + 1}`,
-                name: pendingName || `Channel ${channels.length + 1}`,
-                logo: pendingLogo,
-                group: pendingGroup,
+                name: current.name || `Channel ${channels.length + 1}`,
+                logo: current.logo,
+                group: current.group,
                 raw_url: rawStreamUrl,
                 stream_url: playableUrl,
-                kid: pendingKid,
-                key: pendingKey,
-                referer: pendingReferer,
-                userAgent: pendingUserAgent
+                kid: current.kid,
+                key: current.key,
+                referer: current.referer,
+                userAgent: current.userAgent
             });
 
-            pendingName = '';
-            pendingLogo = '';
-            pendingGroup = 'Live TV';
-            pendingKid = '';
-            pendingKey = '';
-            pendingReferer = '';
-            pendingUserAgent = '';
+            current = {
+                name: '',
+                logo: '',
+                group: 'Live TV',
+                kid: '',
+                key: '',
+                referer: '',
+                userAgent: ''
+            };
         }
     }
 
@@ -167,7 +181,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
     }
 });
 
-// --- Tapmad / M3U Playlist API Route ---
+// --- Tapmad / M3U Playlist API Route (Tapmad Live Only) ---
 app.get('/api/tapmad-playlist', async (req, res) => {
     const now = Date.now();
     if (tapmadCache.data && now < tapmadCache.expiresAt) {
@@ -191,11 +205,23 @@ app.get('/api/tapmad-playlist', async (req, res) => {
         }
 
         const rawM3u = await response.text();
-        const channels = parseM3uPlaylist(rawM3u);
+        const allChannels = parseM3uPlaylist(rawM3u);
+
+        const matchedTapmad = allChannels.find(ch =>
+            String(ch.name || '').toLowerCase().includes('tapmad') ||
+            String(ch.raw_url || '').toLowerCase().includes('tapmad') ||
+            String(ch.logo || '').toLowerCase().includes('tapmad') ||
+            String(ch.group || '').toLowerCase().includes('tapmad')
+        ) || allChannels[0] || null;
+
+        const singleChannel = matchedTapmad
+            ? [{ ...matchedTapmad, id: 'tapmad-live', name: 'Tapmad Live' }]
+            : [];
+
         const payload = {
             ok: true,
-            count: channels.length,
-            channels
+            count: singleChannel.length,
+            channels: singleChannel
         };
 
         tapmadCache = {
