@@ -95,6 +95,155 @@
             padding: 16px 18px;
         }
 
+        /* Top Live Scores Horizontal Section (Cricket Only) */
+        .top-live-scores-section {
+            display: none;
+            margin: 8px 0 20px 0;
+        }
+        .top-live-scores-section.visible {
+            display: block;
+        }
+
+        .top-scores-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            gap: 10px;
+        }
+
+        .top-scores-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: #f8fafc;
+            letter-spacing: 0.2px;
+            margin: 0;
+        }
+
+        .live-scores-scroll-row {
+            display: flex;
+            flex-direction: row;
+            gap: 14px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .cb-score-card {
+            position: relative;
+            min-width: 278px;
+            max-width: 292px;
+            flex-shrink: 0;
+            background: linear-gradient(160deg, rgba(22, 27, 42, 0.96), rgba(13, 16, 26, 0.98));
+            border: 1px solid rgba(148, 163, 184, 0.24);
+            border-radius: 14px;
+            padding: 13px 15px 16px 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+            transition: transform 0.2s ease, border-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .cb-score-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(251, 146, 60, 0.65);
+        }
+
+        .cb-card-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 8px;
+            margin-bottom: 11px;
+        }
+
+        .cb-series-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 175px;
+        }
+
+        .cb-match-desc {
+            font-size: 11px;
+            font-weight: 800;
+            color: #cbd5e1;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            flex-shrink: 0;
+        }
+
+        .cb-match-desc.result-tag {
+            color: #60a5fa;
+        }
+
+        .cb-team-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .cb-team-left {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            min-width: 0;
+        }
+
+        .cb-team-flag {
+            width: 24px;
+            height: 16px;
+            border-radius: 3px;
+            object-fit: cover;
+            background: #1e293b;
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            flex-shrink: 0;
+        }
+
+        .cb-team-code {
+            font-size: 13.5px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+
+        .cb-team-score {
+            font-size: 13px;
+            font-weight: 800;
+            color: #f8fafc;
+            white-space: nowrap;
+            text-align: right;
+        }
+
+        .cb-status-text {
+            margin-top: 8px;
+            font-size: 11.5px;
+            font-weight: 600;
+            color: #cbd5e1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .cb-bottom-bar {
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 3.5px;
+            background: linear-gradient(90deg, #f97316, #fb923c);
+        }
+
+        .cb-bottom-bar.completed-bar {
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+        }
+
         .category-hero-banner {
             background: linear-gradient(90deg, #ea580c, #ef4444);
             color: #fff;
@@ -456,6 +605,15 @@
 
     <div class="container">
 
+        <!-- Top Live Scores Horizontal Row (Cricket Category Only) -->
+        <section class="top-live-scores-section" id="topLiveScoresSection">
+            <div class="top-scores-header">
+                <h2 class="top-scores-title">Live Scores</h2>
+                <span style="font-size: 11.5px; color: #94a3b8; font-weight: 600;" id="topLiveScoresCount"></span>
+            </div>
+            <div class="live-scores-scroll-row" id="liveScoresRow"></div>
+        </section>
+
         <div class="category-hero-banner" id="categoryTitle">MATCHES</div>
 
         <div class="controls-panel">
@@ -509,17 +667,37 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
+        const CRICBUZZ_LIVE_API = "/api/cricbuzz-live";
+        const CRICBUZZ_DIRECT_FALLBACK = "https://cricbuzz-scraper-kkkw.onrender.com/matches/live";
         const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         const TEAM_COUNTRY_CODES = {
-            "india": "in", "new zealand": "nz", "sri lanka": "lk", "australia": "au",
-            "england": "gb-eng", "pakistan": "pk", "south africa": "za", "bangladesh": "bd",
-            "afghanistan": "af", "west indies": "jm", "ireland": "ie", "zimbabwe": "zw",
-            "netherlands": "nl", "scotland": "gb-sct", "nepal": "np", "uae": "ae",
-            "united arab emirates": "ae", "oman": "om", "usa": "us", "united states": "us",
-            "canada": "ca", "namibia": "na", "kenya": "ke", "argentina": "ar",
-            "brazil": "br", "france": "fr", "germany": "de", "spain": "es",
-            "portugal": "pt", "italy": "it", "japan": "jp", "south korea": "kr", "china": "cn"
+            "india": "in", "ind": "in",
+            "new zealand": "nz", "nz": "nz",
+            "sri lanka": "lk", "sl": "lk",
+            "australia": "au", "aus": "au",
+            "england": "gb-eng", "eng": "gb-eng",
+            "pakistan": "pk", "pak": "pk",
+            "south africa": "za", "sa": "za", "rsa": "za",
+            "bangladesh": "bd", "ban": "bd",
+            "afghanistan": "af", "afg": "af",
+            "west indies": "jm", "wi": "jm",
+            "ireland": "ie", "ire": "ie",
+            "zimbabwe": "zw", "zim": "zw",
+            "netherlands": "nl", "ned": "nl",
+            "scotland": "gb-sct", "sco": "gb-sct",
+            "nepal": "np", "nep": "np",
+            "uae": "ae", "united arab emirates": "ae",
+            "oman": "om",
+            "usa": "us", "united states": "us",
+            "canada": "ca", "can": "ca",
+            "namibia": "na", "nam": "na",
+            "kenya": "ke",
+            "haryana": "in", "har": "in",
+            "railways": "in", "rlys": "in",
+            "argentina": "ar", "brazil": "br", "france": "fr", "germany": "de",
+            "spain": "es", "portugal": "pt", "italy": "it", "japan": "jp",
+            "south korea": "kr", "china": "cn"
         };
 
         function escapeAttr(val) {
@@ -538,7 +716,7 @@
                 return `https://flagcdn.com/w80/${TEAM_COUNTRY_CODES[normalized]}.png`;
             }
             for (const [key, code] of Object.entries(TEAM_COUNTRY_CODES)) {
-                if (normalized.includes(key)) {
+                if (normalized === key || normalized.includes(key)) {
                     return `https://flagcdn.com/w80/${code}.png`;
                 }
             }
@@ -552,7 +730,7 @@
 
             if (rawUrl && rawUrl.trim() !== "") {
                 const cleanRaw = rawUrl.trim().replace(/^http:\/\//i, 'https://');
-                if (cleanRaw.includes('img.sofascore.com')) {
+                if (cleanRaw.includes('img.sofascore.com') || cleanRaw.includes('static.cricbuzz.com')) {
                     candidates.push(`/img-proxy?url=${encodeURIComponent(cleanRaw)}`);
                     candidates.push(`https://wsrv.nl/?url=${encodeURIComponent(cleanRaw)}&w=80&h=80&fit=cover`);
                 }
@@ -587,11 +765,11 @@
             }
         }
 
-        function renderTeamFlagImg(rawUrl, teamName, altText) {
+        function renderTeamFlagImg(rawUrl, teamName, altText, className = 'team-flag-avatar') {
             const candidates = getFlagCandidateList(rawUrl, teamName);
             const primarySrc = candidates[0] || FALLBACK_FLAG;
             const encodedList = encodeURIComponent(JSON.stringify(candidates));
-            return `<img src="${primarySrc}" alt="${escapeAttr(altText)}" class="team-flag-avatar" referrerpolicy="no-referrer" data-candidates="${encodedList}" data-cand-idx="0" onerror="handleFlagError(this)">`;
+            return `<img src="${primarySrc}" alt="${escapeAttr(altText)}" class="${className}" referrerpolicy="no-referrer" data-candidates="${encodedList}" data-cand-idx="0" onerror="handleFlagError(this)">`;
         }
 
         let socket = null;
@@ -624,6 +802,159 @@
 
         let categoryMatchesData = [];
         let activeStatusView = 'ALL';
+        let cricbuzzMatchesFlat = [];
+
+        function normalizeTeamKey(str) {
+            return String(str || '')
+                .toLowerCase()
+                .replace(/\b(xi|women|u19|a|team)\b/g, '')
+                .replace(/[^a-z0-9]+/g, ' ')
+                .trim();
+        }
+
+        function formatCbTeamScore(teamObj) {
+            const inns = Array.isArray(teamObj && teamObj.innings) ? teamObj.innings : [];
+            if (inns.length === 0) return '';
+            return inns
+                .map(inn => {
+                    const r = inn.runs ?? 0;
+                    const w = inn.wickets ?? 0;
+                    const o = inn.overs !== undefined && inn.overs !== null ? ` (${inn.overs})` : '';
+                    const dec = inn.is_declared ? 'd' : '';
+                    return `${r}/${w}${dec}${o}`;
+                })
+                .join(' & ');
+        }
+
+        function findMatchingStreamMatchForCb(cbMatch) {
+            const t1Name = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.name);
+            const t1Short = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.short_name);
+            const t2Name = normalizeTeamKey(cbMatch.team2 && cbMatch.team2.name);
+            const t2Short = normalizeTeamKey(cbMatch.team2 && cbMatch.team2.short_name);
+
+            return categoryMatchesData.find(m => {
+                const aKey = normalizeTeamKey(m.team1);
+                const bKey = normalizeTeamKey(m.team2);
+                if (!aKey || !bKey) return false;
+                const f = (t1Name.includes(aKey) || aKey.includes(t1Name) || (t1Short && t1Short === aKey)) &&
+                          (t2Name.includes(bKey) || bKey.includes(t2Name) || (t2Short && t2Short === bKey));
+                const r = (t1Name.includes(bKey) || bKey.includes(t1Name) || (t1Short && t1Short === bKey)) &&
+                          (t2Name.includes(aKey) || aKey.includes(t2Name) || (t2Short && t2Short === aKey));
+                return f || r;
+            }) || null;
+        }
+
+        function renderTopLiveScoresRow() {
+            const sectionEl = document.getElementById('topLiveScoresSection');
+            const rowEl = document.getElementById('liveScoresRow');
+            const countEl = document.getElementById('topLiveScoresCount');
+
+            if (cat !== 'cricket') {
+                sectionEl.classList.remove('visible');
+                return;
+            }
+
+            sectionEl.classList.add('visible');
+
+            if (!Array.isArray(cricbuzzMatchesFlat) || cricbuzzMatchesFlat.length === 0) {
+                if (countEl) countEl.innerText = '';
+                rowEl.innerHTML = `
+                    <div class="cb-score-card" style="min-width: 260px; color: #94a3b8; font-size: 12.5px;">
+                        Loading live cricket scores...
+                        <div class="cb-bottom-bar"></div>
+                    </div>
+                `;
+                return;
+            }
+
+            if (countEl) countEl.innerText = `${cricbuzzMatchesFlat.length} Matches`;
+
+            rowEl.innerHTML = cricbuzzMatchesFlat.map(mt => {
+                const seriesTitle = (mt.series && mt.series.name) || mt.description || 'Cricket';
+                const isCompleted = String(mt.status_category || '').toLowerCase() === 'completed' ||
+                                    String(mt.state || '').toLowerCase() === 'complete';
+                const rightBadge = isCompleted ? 'RESULT' : (mt.description || mt.format || 'LIVE');
+
+                const t1 = mt.team1 || {};
+                const t2 = mt.team2 || {};
+                const t1Code = t1.short_name || t1.name || 'T1';
+                const t2Code = t2.short_name || t2.name || 'T2';
+                const t1Score = formatCbTeamScore(t1);
+                const t2Score = formatCbTeamScore(t2);
+                const statusLine = mt.status || mt.state || '';
+                const matchedStream = findMatchingStreamMatchForCb(mt);
+
+                return `
+                    <div class="cb-score-card"
+                         data-cb-id="${escapeAttr(mt.id || '')}"
+                         data-stream-id="${escapeAttr(matchedStream ? matchedStream.id : '')}"
+                         data-stream-title="${escapeAttr(matchedStream ? matchedStream.title : '')}">
+                        <div class="cb-card-top">
+                            <span class="cb-series-name" title="${escapeAttr(seriesTitle)}">${escapeAttr(seriesTitle)}</span>
+                            <span class="cb-match-desc ${isCompleted ? 'result-tag' : ''}">${escapeAttr(rightBadge)}</span>
+                        </div>
+
+                        <div class="cb-team-row">
+                            <div class="cb-team-left">
+                                ${renderTeamFlagImg(t1.flag, t1.name || t1Code, t1Code, 'cb-team-flag')}
+                                <span class="cb-team-code">${escapeAttr(t1Code)}</span>
+                            </div>
+                            <span class="cb-team-score">${escapeAttr(t1Score)}</span>
+                        </div>
+
+                        <div class="cb-team-row">
+                            <div class="cb-team-left">
+                                ${renderTeamFlagImg(t2.flag, t2.name || t2Code, t2Code, 'cb-team-flag')}
+                                <span class="cb-team-code">${escapeAttr(t2Code)}</span>
+                            </div>
+                            <span class="cb-team-score">${escapeAttr(t2Score)}</span>
+                        </div>
+
+                        ${statusLine ? `<div class="cb-status-text" title="${escapeAttr(statusLine)}">${escapeAttr(statusLine)}</div>` : ''}
+
+                        <div class="cb-bottom-bar ${isCompleted ? 'completed-bar' : ''}"></div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadCricbuzzLiveScores() {
+            if (cat !== 'cricket') return;
+            try {
+                let payload = null;
+                try {
+                    const res = await fetch(`${CRICBUZZ_LIVE_API}?t=${Date.now()}`, { cache: 'no-store' });
+                    if (res.ok) {
+                        const json = await res.json();
+                        payload = json && json.data ? json.data : json;
+                    }
+                } catch (_) {}
+
+                if (!payload || !Array.isArray(payload.groups)) {
+                    const directRes = await fetch(`${CRICBUZZ_DIRECT_FALLBACK}?t=${Date.now()}`, { cache: 'no-store' });
+                    if (!directRes.ok) return;
+                    payload = await directRes.json();
+                }
+
+                const list = [];
+                const groups = Array.isArray(payload.groups) ? payload.groups : [];
+                groups.forEach(grp => {
+                    const seriesArr = Array.isArray(grp.series) ? grp.series : [];
+                    seriesArr.forEach(ser => {
+                        const matchesArr = Array.isArray(ser.matches) ? ser.matches : [];
+                        matchesArr.forEach(m => {
+                            if (!m.series && ser.name) m.series = { name: ser.name };
+                            list.push(m);
+                        });
+                    });
+                });
+
+                cricbuzzMatchesFlat = list;
+                renderTopLiveScoresRow();
+            } catch (err) {
+                console.error('Cricbuzz live scores error:', err);
+            }
+        }
 
         function setStatusView(view) {
             activeStatusView = view;
@@ -675,6 +1006,7 @@
                     });
 
                 renderMatches();
+                renderTopLiveScoresRow();
             } catch (err) {
                 console.error("Sports feed load error:", err);
                 document.getElementById('liveMatchesGrid').innerHTML = `
@@ -689,7 +1021,10 @@
         }
 
         if (socket) {
-            socket.on('refreshMatchesData', () => loadSportsFeed());
+            socket.on('refreshMatchesData', () => {
+                loadSportsFeed();
+                loadCricbuzzLiveScores();
+            });
         }
 
         function renderMatches() {
@@ -823,6 +1158,16 @@
                 return;
             }
 
+            const cbCard = e.target.closest('.cb-score-card');
+            if (cbCard) {
+                const streamId = cbCard.getAttribute('data-stream-id') || '';
+                const streamTitle = cbCard.getAttribute('data-stream-title') || '';
+                if (streamId) {
+                    openMatch(streamId, streamTitle);
+                }
+                return;
+            }
+
             const card = e.target.closest('[data-match-id]');
             if (!card) return;
             const rawId = card.getAttribute('data-match-id') || '';
@@ -867,7 +1212,9 @@
         }
 
         loadSportsFeed();
+        loadCricbuzzLiveScores();
         setInterval(loadSportsFeed, 120000);
+        setInterval(loadCricbuzzLiveScores, 15000);
     </script>
 </body>
 </html>
