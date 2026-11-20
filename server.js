@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const crypto = require('crypto');
 
 const app = express();
 const server = http.createServer(app);
@@ -24,6 +25,46 @@ const UPSTREAM_STREAM_HEADERS = {
     'Accept-Encoding': 'identity',
     'Connection': 'keep-alive'
 };
+
+// Short-Lived Stream Token Store (TTL: 90s)
+const STREAM_TOKEN_SECRET = process.env.STREAM_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
+const STREAM_TOKEN_TTL_MS = 90 * 1000;
+const streamTokenRegistry = new Map(); // token -> { url, expiresAt }
+
+function createStreamToken(targetUrl) {
+    const cleanUrl = String(targetUrl || '').trim();
+    if (!cleanUrl) return null;
+
+    const now = Date.now();
+    for (const [key, entry] of streamTokenRegistry.entries()) {
+        if (entry.expiresAt <= now) {
+            streamTokenRegistry.delete(key);
+        }
+    }
+
+    const randomPart = crypto.randomBytes(16).toString('hex');
+    const sigPart = crypto
+        .createHmac('sha256', STREAM_TOKEN_SECRET)
+        .update(`${randomPart}:${cleanUrl}`)
+        .digest('hex')
+        .slice(0, 16);
+
+    const token = `${randomPart}.${sigPart}`;
+    const expiresAt = now + STREAM_TOKEN_TTL_MS;
+    streamTokenRegistry.set(token, { url: cleanUrl, expiresAt });
+    return token;
+}
+
+function resolveStreamToken(token) {
+    if (!token || typeof token !== 'string') return null;
+    const entry = streamTokenRegistry.get(token);
+    if (!entry) return null;
+    if (Date.now() > entry.expiresAt) {
+        streamTokenRegistry.delete(token);
+        return null;
+    }
+    return entry.url;
+}
 
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
@@ -89,6 +130,7 @@ function parseM3uPlaylist(rawText) {
         } else if (!line.startsWith('#')) {
             const rawStreamUrl = line.trim();
             const titleName = pendingName || `Channel ${channels.length + 1}`;
+            const streamToken = createStreamToken(rawStreamUrl);
 
             channels.push({
                 id: `tv-${channels.length + 1}`,
@@ -96,8 +138,7 @@ function parseM3uPlaylist(rawText) {
                 title: titleName,
                 logo: pendingLogo,
                 group: pendingGroup,
-                raw_url: rawStreamUrl,
-                stream_url: `/hls-proxy?url=${encodeURIComponent(rawStreamUrl)}`,
+                stream_url: `/hls-proxy?token=${encodeURIComponent(streamToken)}`,
                 kid: pendingKid,
                 key: pendingKey,
                 referer: pendingReferer,
@@ -248,11 +289,14 @@ app.get('/img-proxy', async (req, res) => {
         return res.status(502).send('Image proxy failed');
     }
 });
-// --- HLS / TS Stream Proxy Route (Safe Single-Read Buffer + Chunked Output) ---
+
+// --- HLS / TS Stream Proxy Route (Short-Lived Token Protected + Low-Lag Chunk Streaming) ---
 app.get('/hls-proxy', async (req, res) => {
-    const targetUrl = req.query.url;
+    const token = req.query.token;
+    const targetUrl = resolveStreamToken(token);
+
     if (!targetUrl) {
-        return res.status(400).send('Missing url parameter');
+        return res.status(403).send('Stream token expired or invalid');
     }
 
     try {
@@ -294,7 +338,8 @@ app.get('/hls-proxy', async (req, res) => {
                             const absoluteUri = uri.startsWith('http')
                                 ? uri
                                 : new URL(uri, baseUrl).toString();
-                            return `URI="/hls-proxy?url=${encodeURIComponent(absoluteUri)}"`;
+                            const childToken = createStreamToken(absoluteUri);
+                            return `URI="/hls-proxy?token=${encodeURIComponent(childToken)}"`;
                         });
                     }
                     return line;
@@ -302,7 +347,8 @@ app.get('/hls-proxy', async (req, res) => {
                     const absoluteUrl = trimmed.startsWith('http')
                         ? trimmed
                         : new URL(trimmed, baseUrl).toString();
-                    return `/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`;
+                    const segToken = createStreamToken(absoluteUrl);
+                    return `/hls-proxy?token=${encodeURIComponent(segToken)}`;
                 }
             });
 
@@ -313,7 +359,6 @@ app.get('/hls-proxy', async (req, res) => {
                 : 'video/mp2t';
             res.setHeader('Content-Type', safeCt);
 
-            // Send in 64KB slices so client starts receiving data progressively without locking ReadableStream
             const chunkSize = 65536;
             for (let offset = 0; offset < rawBuffer.length; offset += chunkSize) {
                 const slice = rawBuffer.subarray(offset, offset + chunkSize);
@@ -333,7 +378,6 @@ app.get('/hls-proxy', async (req, res) => {
         }
     }
 });
-
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
@@ -384,7 +428,8 @@ io.on('connection', (socket) => {
 
         let finalLink = directLink;
         if (directLink && directLink.includes('.m3u8')) {
-            finalLink = `/hls-proxy?url=${encodeURIComponent(directLink)}`;
+            const streamToken = createStreamToken(directLink);
+            finalLink = `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
         }
 
         socket.emit('secureStreamLink', finalLink);
