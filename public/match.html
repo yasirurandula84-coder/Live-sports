@@ -641,7 +641,7 @@
                                 <span>Buffering Live</span>
                                 <span class="warmup-dots"><span>.</span><span>.</span><span>.</span></span>
                             </div>
-                            <div class="stream-warmup-sub">This may take around 10 seconds, please wait</div>
+                            <div class="stream-warmup-sub">Preparing smooth playback, please wait</div>
                         </div>
                     </div>
 
@@ -945,9 +945,10 @@
             if (streamWarmupBlur) {
                 streamWarmupBlur.classList.add('active');
             }
+            // Wait up to 9s for initial buffer / steady frame progression before revealing video
             warmupFallbackTimer = setTimeout(() => {
                 hideWarmupBlur();
-            }, 12000);
+            }, 9000);
         }
 
         function clearStreamFailWatchdog() {
@@ -1010,7 +1011,7 @@
                         );
                     }
                 }
-            }, 14000);
+            }, 15000);
         }
 
         if (nextServerErrBtn) {
@@ -1177,20 +1178,15 @@
             }
         }
 
+        // Smooth load recovery without manual currentTime seeking/chopping
         function nudgeStalledFrame() {
             if (video.style.display === 'none') return;
             try {
-                if (video.buffered && video.buffered.length > 0) {
-                    const bufEnd = video.buffered.end(video.buffered.length - 1);
-                    if (bufEnd > video.currentTime + 0.12) {
-                        video.currentTime = Math.min(bufEnd - 0.08, video.currentTime + 0.06);
-                    }
-                }
                 if (currentHls && currentHls.startLoad) {
                     currentHls.startLoad(-1);
                 }
             } catch (e) {}
-            if (!video.paused) {
+            if (video.paused && video.readyState >= 3) {
                 video.play().catch(() => {});
             }
         }
@@ -1198,9 +1194,11 @@
         setInterval(() => {
             if (!warmupActive || video.style.display === 'none') return;
             if (!video.paused && video.readyState >= 3) {
-                if (lastSmoothVideoTime >= 0 && (video.currentTime - lastSmoothVideoTime) >= 0.45) {
+                const delta = lastSmoothVideoTime >= 0 ? (video.currentTime - lastSmoothVideoTime) : 0;
+                if (delta >= 0.55) {
                     smoothAdvanceTicks += 1;
-                    if (smoothAdvanceTicks >= 2) {
+                    // Reveal once video has progressed steadily across ~2.4s of smooth intervals
+                    if (smoothAdvanceTicks >= 3) {
                         hideWarmupBlur();
                     }
                 } else {
@@ -1208,7 +1206,7 @@
                 }
                 lastSmoothVideoTime = video.currentTime;
             }
-        }, 700);
+        }, 800);
 
         video.addEventListener('playing', () => {
             clearStreamFailWatchdog();
@@ -1250,17 +1248,17 @@
                 stuckTicks = 0;
                 return;
             }
-            const timeMoved = Math.abs(video.currentTime - lastWatchTime) >= 0.02;
-            if (!timeMoved && video.readyState >= 2) {
+            const timeMoved = Math.abs(video.currentTime - lastWatchTime) >= 0.05;
+            if (!timeMoved && video.readyState >= 2 && !video.paused) {
                 stuckTicks += 1;
-                if (stuckTicks >= 1) {
+                if (stuckTicks >= 3) {
                     nudgeStalledFrame();
                 }
             } else {
                 stuckTicks = 0;
             }
             lastWatchTime = video.currentTime;
-        }, 1000);
+        }, 1200);
 
         function buildSlugId(cat, idx, title) {
             return `${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
@@ -1282,110 +1280,6 @@
                 url.includes('kick.com') ||
                 url.includes('<iframe')
             );
-        }
-
-        function probeSingleStream(streamObj, timeoutMs = 3500) {
-            return new Promise((resolve) => {
-                if (!streamObj || !streamObj.stream_url || !streamObj.stream_url.trim()) {
-                    resolve(false);
-                    return;
-                }
-                const directLink = streamObj.stream_url.trim();
-                const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
-                const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
-
-                let settled = false;
-                const finish = (ok) => {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    resolve(Boolean(ok));
-                };
-
-                const timer = setTimeout(() => finish(false), timeoutMs);
-
-                if (isEmbedUrl(directLink)) {
-                    finish(true);
-                    return;
-                }
-
-                const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
-
-                if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
-                    const probeVid = document.createElement('video');
-                    probeVid.muted = true;
-                    probeVid.playsInline = true;
-                    const p = new shaka.Player();
-                    p.attach(probeVid).then(() => {
-                        const cfg = {
-                            streaming: {
-                                retryParameters: { timeout: 1500, maxAttempts: 1, baseDelay: 100 }
-                            }
-                        };
-                        if (kid && key) {
-                            cfg.drm = { clearKeys: { [kid]: key } };
-                        }
-                        p.configure(cfg);
-                        return p.load(directLink);
-                    }).then(async () => {
-                        try { await p.unload(); await p.destroy(); } catch (e) {}
-                        finish(true);
-                    }).catch(async () => {
-                        try { await p.unload(); await p.destroy(); } catch (e) {}
-                        finish(false);
-                    });
-                    return;
-                }
-
-                if (window.Hls && Hls.isSupported() && directLink.toLowerCase().includes('.m3u8')) {
-                    const h = new Hls({
-                        manifestLoadingTimeOut: 2200,
-                        levelLoadingTimeOut: 2200,
-                        fragLoadingTimeOut: 2500,
-                        enableWorker: false
-                    });
-                    h.on(Hls.Events.MANIFEST_PARSED, () => {
-                        try { h.destroy(); } catch (e) {}
-                        finish(true);
-                    });
-                    h.on(Hls.Events.ERROR, (ev, data) => {
-                        if (data && data.fatal) {
-                            try { h.destroy(); } catch (e) {}
-                            finish(false);
-                        }
-                    });
-                    h.loadSource(directLink);
-                    return;
-                }
-
-                fetch(directLink, { method: 'GET', mode: 'cors', cache: 'no-store' })
-                    .then((resp) => {
-                        finish(resp && resp.ok);
-                    })
-                    .catch(() => {
-                        const vCheck = document.createElement('video');
-                        vCheck.muted = true;
-                        vCheck.preload = 'metadata';
-                        vCheck.onloadedmetadata = () => finish(true);
-                        vCheck.onerror = () => finish(false);
-                        vCheck.src = directLink;
-                    });
-            });
-        }
-
-        async function sortWorkingStreamsFirst(streams) {
-            if (!Array.isArray(streams) || streams.length <= 1) return streams || [];
-            const results = await Promise.all(
-                streams.map(async (sObj, originalIndex) => {
-                    const ok = await probeSingleStream(sObj, 3500);
-                    return { sObj, originalIndex, ok };
-                })
-            );
-            results.sort((a, b) => {
-                if (a.ok === b.ok) return a.originalIndex - b.originalIndex;
-                return a.ok ? -1 : 1;
-            });
-            return results.map(r => r.sObj);
         }
 
         function renderDynamicServerButtons(validStreams, selectedKey) {
@@ -1431,7 +1325,6 @@
                     return;
                 }
 
-                // Match strictly by id first, then by exact title, otherwise fallback to first channel
                 const matchedCh =
                     channels.find(c => String(c.id || '') === matchId) ||
                     (queryTitle
@@ -1526,21 +1419,20 @@
                     document.getElementById('bannerTeamB').innerText = matched.teamB;
                 }
 
-                const rawValidStreams = Array.isArray(matched.raw.streams)
+                const validStreams = Array.isArray(matched.raw.streams)
                     ? matched.raw.streams.filter(s => s && s.stream_url && s.stream_url.trim() !== "")
                     : [];
 
-                const orderedStreams = await sortWorkingStreamsFirst(rawValidStreams);
-
+                // Avoid background probing requests that compete with initial playback startup
                 activeServersMap = {};
-                orderedStreams.forEach((sObj, idx) => {
+                validStreams.forEach((sObj, idx) => {
                     activeServersMap[`server${idx + 1}`] = sObj;
                 });
 
                 const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
-                const chosenKey = firstAvailableKey;
+                const chosenKey = activeServersMap[currentServerKey] ? currentServerKey : firstAvailableKey;
                 currentServerKey = chosenKey;
-                renderDynamicServerButtons(orderedStreams, chosenKey);
+                renderDynamicServerButtons(validStreams, chosenKey);
 
                 const statusUpper = (matched.raw.status || "").toUpperCase();
                 const startTimeStr = matched.info?.startTime || "";
@@ -1556,9 +1448,18 @@
                         startPlayerCountdown(startTimeStr);
                     }
                 } else {
+                    const alreadyPlayingThisServer =
+                        isMatchLive &&
+                        currentServerKey === chosenKey &&
+                        video.style.display !== 'none' &&
+                        !video.paused &&
+                        video.readyState >= 3;
+
                     isMatchLive = true;
                     playerCountdownOverlay.classList.add('hidden');
-                    loadFeedServer(chosenKey);
+                    if (!alreadyPlayingThisServer) {
+                        loadFeedServer(chosenKey);
+                    }
                 }
             } catch (err) {
                 console.error("Error loading match from Sports_data.json:", err);
@@ -1740,15 +1641,16 @@
 
                     const shakaConfig = {
                         streaming: {
-                            bufferingGoal: 1.2,
-                            rebufferingGoal: 0.4,
+                            bufferingGoal: 12,
+                            rebufferingGoal: 4,
+                            bufferBehind: 8,
                             startAtSegmentBoundary: false,
                             jumpLargeGaps: true,
                             inaccurateManifestTolerance: 2.5,
                             retryParameters: {
-                                timeout: 2000,
-                                maxAttempts: 2,
-                                baseDelay: 150
+                                timeout: 4000,
+                                maxAttempts: 3,
+                                baseDelay: 250
                             }
                         },
                         abr: {
@@ -1802,17 +1704,18 @@
                 let hlsNetworkRetries = 0;
                 let hlsMediaRetries = 0;
                 const hls = new Hls({
-                    lowLatencyMode: true,
+                    lowLatencyMode: false,
                     startLevel: 0,
-                    maxBufferLength: 2,
-                    maxMaxBufferLength: 4,
-                    liveSyncDurationCount: 1,
-                    liveMaxLatencyDurationCount: 2,
-                    abrBandWidthFactor: 0.85,
-                    abrBandWidthUpFactor: 0.75,
-                    manifestLoadingTimeOut: 2500,
-                    levelLoadingTimeOut: 2500,
-                    fragLoadingTimeOut: 3000,
+                    maxBufferLength: 14,
+                    maxMaxBufferLength: 24,
+                    backBufferLength: 8,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 6,
+                    abrBandWidthFactor: 0.8,
+                    abrBandWidthUpFactor: 0.7,
+                    manifestLoadingTimeOut: 6000,
+                    levelLoadingTimeOut: 6000,
+                    fragLoadingTimeOut: 8000,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -1848,10 +1751,10 @@
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (myToken !== streamAttemptToken) return;
                     if (data.fatal) {
-                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 2) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 3) {
                             hlsNetworkRetries += 1;
                             hls.startLoad();
-                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 1) {
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 2) {
                             hlsMediaRetries += 1;
                             hls.recoverMediaError();
                         } else {
