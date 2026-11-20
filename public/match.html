@@ -842,6 +842,11 @@
         }
 
         const urlParams = new URLSearchParams(window.location.search);
+        const isLiveTvMode = urlParams.get('tv') === '1';
+        const tvStreamUrlParam = safeDecodeValue(urlParams.get('url') || '');
+        const tvKidParam = safeDecodeValue(urlParams.get('kid') || '');
+        const tvKeyParam = safeDecodeValue(urlParams.get('key') || '');
+
         const rawMatchIdParam = urlParams.get('id') || 'default-match';
         const rawQueryTitleParam = urlParams.get('title') || '';
         const matchId = safeDecodeValue(rawMatchIdParam);
@@ -1021,7 +1026,11 @@
         if (retryServerErrBtn) {
             retryServerErrBtn.addEventListener('click', () => {
                 if (!isMatchLive) return;
-                loadFeedServer(currentServerKey);
+                if (isLiveTvMode) {
+                    initLiveTvStream();
+                } else {
+                    loadFeedServer(currentServerKey);
+                }
             });
         }
 
@@ -1396,7 +1405,38 @@
             }).join('');
         }
 
+        function initLiveTvStream() {
+            isMatchLive = true;
+            playerCountdownOverlay.classList.add('hidden');
+            document.getElementById('matchTeamsBanner').style.display = 'none';
+            if (queryTitle) {
+                document.getElementById('matchTitle').innerText = queryTitle;
+            }
+
+            if (!tvStreamUrlParam) {
+                showStreamError('Stream Not Working', 'Live TV stream URL is missing.');
+                return;
+            }
+
+            const tvObj = {
+                name: queryTitle || 'Live TV',
+                stream_url: tvStreamUrlParam,
+                kid: tvKidParam,
+                key: tvKeyParam
+            };
+
+            activeServersMap = { server1: tvObj };
+            currentServerKey = 'server1';
+            renderDynamicServerButtons([tvObj], 'server1');
+            playStreamItem(tvObj);
+        }
+
         async function loadMatchFromFeed() {
+            if (isLiveTvMode) {
+                initLiveTvStream();
+                return;
+            }
+
             try {
                 const res = await fetch(`${SPORTS_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
                 if (!res.ok) return;
@@ -1826,7 +1866,9 @@
 
         if (socket) {
             socket.on('refreshMatchesData', () => {
-                loadMatchFromFeed();
+                if (!isLiveTvMode) {
+                    loadMatchFromFeed();
+                }
             });
 
             socket.on('secureStreamLink', async (directLink) => {
