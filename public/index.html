@@ -487,6 +487,15 @@
             "oman": "om", "usa": "us", "canada": "ca", "namibia": "na", "kenya": "ke"
         };
 
+        function escapeAttr(val) {
+            return String(val || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function getFlagUrlByTeamName(teamName) {
             if (!teamName) return null;
             const n = teamName.trim().toLowerCase();
@@ -532,7 +541,7 @@
         function logoHtml(rawUrl, teamName) {
             const cands = buildTeamLogoCandidates(rawUrl, teamName);
             const enc = encodeURIComponent(JSON.stringify(cands));
-            return `<img src="${cands[0]}" alt="${teamName}" class="team-logo" referrerpolicy="no-referrer" data-cands="${enc}" data-idx="0" onerror="handleLogoError(this)">`;
+            return `<img src="${cands[0]}" alt="${escapeAttr(teamName)}" class="team-logo" referrerpolicy="no-referrer" data-cands="${enc}" data-idx="0" onerror="handleLogoError(this)">`;
         }
 
         let liveCricketMatches = [];
@@ -558,20 +567,20 @@
             }
 
             grid.innerHTML = list.map(m => `
-                <div class="cricket-match-card" onclick="location.href='/match?id=${m.id}&title=${encodeURIComponent(m.title)}'">
+                <div class="cricket-match-card" data-match-id="${escapeAttr(m.id)}" data-match-title="${escapeAttr(m.title)}">
                     <div class="card-top">
                         <span class="live-badge"><span class="live-dot"></span> LIVE NOW</span>
-                        <span style="font-size: 11px; color: #9ca3af; font-weight: 600;">${m.eventName}</span>
+                        <span style="font-size: 11px; color: #9ca3af; font-weight: 600;">${escapeAttr(m.eventName)}</span>
                     </div>
                     <div class="teams-row">
                         <div class="team-col">
                             ${logoHtml(m.flagA, m.teamA)}
-                            <span class="team-name">${m.teamA}</span>
+                            <span class="team-name">${escapeAttr(m.teamA)}</span>
                         </div>
                         <span class="vs-tag">VS</span>
                         <div class="team-col">
                             ${logoHtml(m.flagB, m.teamB)}
-                            <span class="team-name">${m.teamB}</span>
+                            <span class="team-name">${escapeAttr(m.teamB)}</span>
                         </div>
                     </div>
                     <div class="card-foot">
@@ -581,6 +590,16 @@
                 </div>
             `).join('');
         }
+
+        document.addEventListener('click', (e) => {
+            const card = e.target.closest('.cricket-match-card[data-match-id]');
+            if (!card) return;
+            const rawId = card.getAttribute('data-match-id') || '';
+            const rawTitle = card.getAttribute('data-match-title') || '';
+            const safeId = encodeURIComponent(rawId);
+            const safeTitle = encodeURIComponent(rawTitle);
+            window.location.href = `/match?id=${safeId}&title=${safeTitle}`;
+        });
 
         async function loadLiveCricketMatches() {
             try {
@@ -601,9 +620,9 @@
                         const teamA = info.teamA || m.event_name || 'Team A';
                         const teamB = info.teamB || 'Team B';
                         const title = m.event_name || `${teamA} Vs ${teamB}`;
-                        const id = encodeURIComponent(`cricket-${idx}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+                        const rawSlug = `cricket-${idx}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                         return {
-                            id,
+                            id: rawSlug,
                             title,
                             teamA,
                             teamB,
