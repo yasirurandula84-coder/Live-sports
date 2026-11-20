@@ -432,32 +432,93 @@
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
         const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
+        const TEAM_COUNTRY_CODES = {
+            "india": "in",
+            "new zealand": "nz",
+            "sri lanka": "lk",
+            "australia": "au",
+            "england": "gb-eng",
+            "pakistan": "pk",
+            "south africa": "za",
+            "bangladesh": "bd",
+            "afghanistan": "af",
+            "west indies": "jm",
+            "ireland": "ie",
+            "zimbabwe": "zw",
+            "netherlands": "nl",
+            "scotland": "gb-sct",
+            "nepal": "np",
+            "uae": "ae",
+            "united arab emirates": "ae",
+            "oman": "om",
+            "usa": "us",
+            "united states": "us",
+            "canada": "ca",
+            "namibia": "na",
+            "kenya": "ke",
+            "argentina": "ar",
+            "brazil": "br",
+            "france": "fr",
+            "germany": "de",
+            "spain": "es",
+            "portugal": "pt",
+            "italy": "it",
+            "japan": "jp",
+            "south korea": "kr",
+            "china": "cn"
+        };
+
+        function getFlagUrlByTeamName(teamName) {
+            if (!teamName) return null;
+            const normalized = teamName.trim().toLowerCase();
+            if (TEAM_COUNTRY_CODES[normalized]) {
+                return `https://flagcdn.com/w80/${TEAM_COUNTRY_CODES[normalized]}.png`;
+            }
+            for (const [key, code] of Object.entries(TEAM_COUNTRY_CODES)) {
+                if (normalized.includes(key)) {
+                    return `https://flagcdn.com/w80/${code}.png`;
+                }
+            }
+            return null;
+        }
+
+        function applyFlagImage(imgEl, rawUrl, teamName) {
+            if (!imgEl) return;
+            const candidates = [];
+
+            const countryFlag = getFlagUrlByTeamName(teamName);
+            if (countryFlag) candidates.push(countryFlag);
+
+            if (rawUrl && rawUrl.trim() !== "") {
+                const cleanRaw = rawUrl.trim().replace(/^http:\/\//i, 'https://');
+                if (cleanRaw.includes('img.sofascore.com')) {
+                    candidates.push(`/img-proxy?url=${encodeURIComponent(cleanRaw)}`);
+                }
+                candidates.push(cleanRaw);
+            }
+
+            candidates.push(FALLBACK_FLAG);
+
+            let idx = 0;
+            imgEl.referrerPolicy = "no-referrer";
+            imgEl.onerror = function () {
+                idx += 1;
+                if (idx < candidates.length) {
+                    this.src = candidates[idx];
+                } else {
+                    this.onerror = null;
+                    this.src = FALLBACK_FLAG;
+                }
+            };
+            imgEl.src = candidates[0];
+        }
+
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
             if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73) || (e.ctrlKey && e.keyCode == 85)) {
                 return false;
             }
         };
-
-        function getProxiedFlagUrl(url) {
-            if (!url) return FALLBACK_FLAG;
-            const cleanUrl = url.trim().replace(/^http:\/\//i, 'https://');
-            if (cleanUrl.includes('img.sofascore.com')) {
-                return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=64&h=64&fit=cover&default=${encodeURIComponent(FALLBACK_FLAG)}`;
-            }
-            return cleanUrl;
-        }
-
-        function applyFlagImage(imgEl, rawUrl, teamName) {
-            if (!imgEl) return;
-            const primarySrc = getProxiedFlagUrl(rawUrl);
-            imgEl.onerror = function () {
-                this.onerror = null;
-                this.src = FALLBACK_FLAG;
-                this.title = teamName || '';
-            };
-            imgEl.src = primarySrc;
-        }
 
         function getUsernameColor(username) {
             let hash = 0;
@@ -759,7 +820,7 @@
                     document.getElementById('matchTitle').innerText = matched.title;
                 }
 
-                if (matched.flagA || matched.flagB) {
+                if (matched.teamA || matched.teamB || matched.flagA || matched.flagB) {
                     document.getElementById('matchTeamsBanner').style.display = 'inline-flex';
                     applyFlagImage(document.getElementById('bannerFlagA'), matched.flagA, matched.teamA);
                     applyFlagImage(document.getElementById('bannerFlagB'), matched.flagB, matched.teamB);
