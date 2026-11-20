@@ -26,6 +26,15 @@ const UPSTREAM_STREAM_HEADERS = {
     'Connection': 'keep-alive'
 };
 
+const ALLOWED_STREAM_HOSTS = ['localhost', '127.0.0.1', 'streamx.website', 'www.streamx.website'];
+
+function hasAllowedReferer(req) {
+    const referer = req.get('referer') || '';
+    if (!referer) return false;
+    const lowerRef = referer.toLowerCase();
+    return ALLOWED_STREAM_HOSTS.some(host => lowerRef.includes(host));
+}
+
 // Short-Lived Stream Token Store (TTL: 90s)
 const STREAM_TOKEN_SECRET = process.env.STREAM_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 const STREAM_TOKEN_TTL_MS = 90 * 1000;
@@ -290,8 +299,12 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
-// --- HLS / TS Stream Proxy Route (Short-Lived Token Protected + Low-Lag Chunk Streaming) ---
+// --- HLS / TS Stream Proxy Route (Referer Guard + Short-Lived Token + Low-Lag Chunk Streaming) ---
 app.get('/hls-proxy', async (req, res) => {
+    if (!hasAllowedReferer(req)) {
+        return res.status(403).send('Forbidden');
+    }
+
     const token = req.query.token;
     const targetUrl = resolveStreamToken(token);
 
