@@ -18,6 +18,13 @@ let tapmadCache = { data: null, expiresAt: 0 };
 const CRICBUZZ_API_URL = (process.env.CRICBUZZ_API_URL || 'https://cricbuzz-scraper-kkkw.onrender.com').replace(/\/+$/, '');
 let cricbuzzLiveCache = { data: null, expiresAt: 0 };
 
+const UPSTREAM_STREAM_HEADERS = {
+    'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+    'Accept': '*/*',
+    'Accept-Encoding': 'identity',
+    'Connection': 'keep-alive'
+};
+
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
@@ -27,7 +34,7 @@ async function getMatchesDataFromGitHub() {
                 'Accept': 'application/vnd.github.v3.raw'
             }
         });
-        
+
         if (!response.ok) throw new Error('Failed to fetch from GitHub');
         const data = await response.json();
         return data;
@@ -112,6 +119,26 @@ function parseM3uPlaylist(rawText) {
     return channels;
 }
 
+function extractTapmadChannel(channels) {
+    if (!Array.isArray(channels) || channels.length === 0) return null;
+
+    // 1. Tapmad හෝ ProdPK_export match වෙන stream එකක් තියෙනවද බලනවා
+    const tapmadExact = channels.find(ch => {
+        const hay = `${ch.name || ''} ${ch.raw_url || ''} ${ch.logo || ''} ${ch.group || ''}`.toLowerCase();
+        return hay.includes('tapmad') || hay.includes('prodpk');
+    });
+    if (tapmadExact) return tapmadExact;
+
+    // 2. .m3u8 stream එකක් තියෙනවද බලනවා
+    const hlsStream = channels.find(ch =>
+        String(ch.raw_url || '').toLowerCase().includes('.m3u8')
+    );
+    if (hlsStream) return hlsStream;
+
+    // 3. Fallback: පළවෙනි channel එක
+    return channels[0];
+}
+
 // --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
 
 // 1. Home Page (ස්වයංක්‍රීයව index.html පෙන්වයි)
@@ -167,7 +194,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
     }
 });
 
-// --- Tapmad / M3U Playlist API Route ---
+// --- Tapmad / M3U Playlist API Route (Auto-Extract Tapmad Live) ---
 app.get('/api/tapmad-playlist', async (req, res) => {
     const now = Date.now();
     if (tapmadCache.data && now < tapmadCache.expiresAt) {
@@ -176,10 +203,7 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
     try {
         const response = await fetch(TAPMAD_PLAYLIST_URL, {
-            headers: {
-                'User-Agent': 'OTT Navigator/1.6.8 (Linux; Android 13)',
-                'Accept': '*/*'
-            }
+            headers: UPSTREAM_STREAM_HEADERS
         });
 
         if (!response.ok) {
@@ -191,16 +215,29 @@ app.get('/api/tapmad-playlist', async (req, res) => {
         }
 
         const rawM3u = await response.text();
-        const channels = parseM3uPlaylist(rawM3u);
+        const allChannels = parseM3uPlaylist(rawM3u);
+        const picked = extractTapmadChannel(allChannels);
+
+        const singleChannel = picked
+            ? [{
+                ...picked,
+                id: 'tapmad-live',
+                name: 'Tapmad Live',
+                stream_url: picked.raw_url
+                    ? `/hls-proxy?url=${encodeURIComponent(picked.raw_url)}`
+                    : picked.stream_url
+            }]
+            : [];
+
         const payload = {
             ok: true,
-            count: channels.length,
-            channels
+            count: singleChannel.length,
+            channels: singleChannel
         };
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 60 * 1000 // 1 minute cache
+            expiresAt: now + 30 * 1000 // 30 seconds cache
         };
 
         return res.json(payload);
@@ -258,11 +295,7 @@ app.get('/hls-proxy', async (req, res) => {
 
     try {
         const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
-                'Accept': '*/*',
-                'Referer': 'https://www.fancode.com/'
-            }
+            headers: UPSTREAM_STREAM_HEADERS
         });
 
         if (!response.ok) {
@@ -270,37 +303,49 @@ app.get('/hls-proxy', async (req, res) => {
         }
 
         const contentType = response.headers.get('content-type') || '';
-        
+        const lowerUrl = targetUrl.toLowerCase();
+        const lowerCt = contentType.toLowerCase();
+
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
 
-        if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/vnd.apple.mpegurl')) {
-            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-            let bodyText = await response.text();
+        const isPlaylistByHeaderOrUrl =
+            lowerUrl.includes('.m3u8') ||
+            lowerCt.includes('mpegurl') ||
+            lowerCt.includes('application/vnd.apple.mpegurl');
 
+        if (isPlaylistByHeaderOrUrl) {
+            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+            const bodyText = await response.text();
             const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-            const lines = bodyText.split('\n');
-            
+            const lines = bodyText.split(/\r?\n/);
+
             const rewrittenLines = lines.map(line => {
                 const trimmed = line.trim();
-                if (!trimmed || trimmed.startsWith('#')) {
+                if (!trimmed) return '';
+                if (trimmed.startsWith('#')) {
                     if (trimmed.includes('URI="')) {
-                        return trimmed.replace(/URI="([^"]+)"/, (match, uri) => {
-                            let absoluteUri = uri.startsWith('http') ? uri : new URL(uri, baseUrl).toString();
+                        return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
+                            const absoluteUri = uri.startsWith('http')
+                                ? uri
+                                : new URL(uri, baseUrl).toString();
                             return `URI="/hls-proxy?url=${encodeURIComponent(absoluteUri)}"`;
                         });
                     }
                     return line;
                 } else {
-                    let absoluteUrl = trimmed.startsWith('http') ? trimmed : new URL(trimmed, baseUrl).toString();
+                    const absoluteUrl = trimmed.startsWith('http')
+                        ? trimmed
+                        : new URL(trimmed, baseUrl).toString();
                     return `/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`;
                 }
             });
 
             return res.send(rewrittenLines.join('\n'));
         } else {
-            res.setHeader('Content-Type', contentType);
+            const safeCt = contentType || (lowerUrl.includes('.ts') ? 'video/mp2t' : 'application/octet-stream');
+            res.setHeader('Content-Type', safeCt);
             const buffer = await response.arrayBuffer();
             return res.send(Buffer.from(buffer));
         }
@@ -338,7 +383,7 @@ io.on('connection', (socket) => {
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
-        
+
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
@@ -404,7 +449,7 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId] = [];
         }
         matchChatHistories[matchId].push(messageData);
-        
+
         if (matchChatHistories[matchId].length > 150) {
             matchChatHistories[matchId].shift();
         }
@@ -416,7 +461,7 @@ io.on('connection', (socket) => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
             if (matchViewers[socket.currentMatch] < 0) matchViewers[socket.currentMatch] = 0;
-            
+
             io.to(socket.currentMatch).emit('viewerCount', matchViewers[socket.currentMatch]);
         }
         console.log('User disconnected: ' + socket.id);
