@@ -88,18 +88,16 @@ function parseM3uPlaylist(rawText) {
             }
         } else if (!line.startsWith('#')) {
             const rawStreamUrl = line.trim();
-            const isM3u8 = rawStreamUrl.toLowerCase().includes('.m3u8');
-            const playableUrl = isM3u8
-                ? `/hls-proxy?url=${encodeURIComponent(rawStreamUrl)}`
-                : rawStreamUrl;
+            const titleName = pendingName || `Channel ${channels.length + 1}`;
 
             channels.push({
                 id: `tv-${channels.length + 1}`,
-                name: pendingName || `Channel ${channels.length + 1}`,
+                name: titleName,
+                title: titleName,
                 logo: pendingLogo,
                 group: pendingGroup,
                 raw_url: rawStreamUrl,
-                stream_url: playableUrl,
+                stream_url: `/hls-proxy?url=${encodeURIComponent(rawStreamUrl)}`,
                 kid: pendingKid,
                 key: pendingKey,
                 referer: pendingReferer,
@@ -117,26 +115,6 @@ function parseM3uPlaylist(rawText) {
     }
 
     return channels;
-}
-
-function extractTapmadChannel(channels) {
-    if (!Array.isArray(channels) || channels.length === 0) return null;
-
-    // 1. Tapmad හෝ ProdPK_export match වෙන stream එකක් තියෙනවද බලනවා
-    const tapmadExact = channels.find(ch => {
-        const hay = `${ch.name || ''} ${ch.raw_url || ''} ${ch.logo || ''} ${ch.group || ''}`.toLowerCase();
-        return hay.includes('tapmad') || hay.includes('prodpk');
-    });
-    if (tapmadExact) return tapmadExact;
-
-    // 2. .m3u8 stream එකක් තියෙනවද බලනවා
-    const hlsStream = channels.find(ch =>
-        String(ch.raw_url || '').toLowerCase().includes('.m3u8')
-    );
-    if (hlsStream) return hlsStream;
-
-    // 3. Fallback: පළවෙනි channel එක
-    return channels[0];
 }
 
 // --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
@@ -194,7 +172,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
     }
 });
 
-// --- Tapmad / M3U Playlist API Route (Auto-Extract Tapmad Live) ---
+// --- Tapmad / M3U Playlist API Route ---
 app.get('/api/tapmad-playlist', async (req, res) => {
     const now = Date.now();
     if (tapmadCache.data && now < tapmadCache.expiresAt) {
@@ -215,24 +193,12 @@ app.get('/api/tapmad-playlist', async (req, res) => {
         }
 
         const rawM3u = await response.text();
-        const allChannels = parseM3uPlaylist(rawM3u);
-        const picked = extractTapmadChannel(allChannels);
-
-        const singleChannel = picked
-            ? [{
-                ...picked,
-                id: 'tapmad-live',
-                name: 'Tapmad Live',
-                stream_url: picked.raw_url
-                    ? `/hls-proxy?url=${encodeURIComponent(picked.raw_url)}`
-                    : picked.stream_url
-            }]
-            : [];
+        const channels = parseM3uPlaylist(rawM3u);
 
         const payload = {
             ok: true,
-            count: singleChannel.length,
-            channels: singleChannel
+            count: channels.length,
+            channels
         };
 
         tapmadCache = {
@@ -286,7 +252,7 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
-// --- HLS Proxy Route to bypass CORS and restrictions ---
+// --- HLS Proxy Route with Upstream Headers ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
