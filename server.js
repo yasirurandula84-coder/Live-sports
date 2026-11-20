@@ -119,17 +119,14 @@ function parseM3uPlaylist(rawText) {
 
 // --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
 
-// 1. Home Page (ස්වයංක්‍රීයව index.html පෙන්වයි)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// 2. Category Page (උදා: /category/cricket)
 app.get('/category/:name', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'category.html'));
 });
 
-// 3. Match Player Page (උදා: /match?id=xxx&title=xxx හෝ /watch/xxx)
 app.get('/match', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'match.html'));
 });
@@ -159,7 +156,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
         const data = await response.json();
         cricbuzzLiveCache = {
             data,
-            expiresAt: now + 15 * 1000 // 15 seconds cache
+            expiresAt: now + 15 * 1000
         };
 
         return res.json({ ok: true, data });
@@ -203,7 +200,7 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 30 * 1000 // 30 seconds cache
+            expiresAt: now + 30 * 1000
         };
 
         return res.json(payload);
@@ -217,7 +214,7 @@ app.get('/api/tapmad-playlist', async (req, res) => {
     }
 });
 
-// --- Image Proxy Route for Sofascore / Blocked Team Logos ---
+// --- Image Proxy Route ---
 app.get('/img-proxy', async (req, res) => {
     const rawUrl = req.query.url;
     if (!rawUrl) {
@@ -252,7 +249,7 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
-// --- HLS Proxy Route with Upstream Headers ---
+// --- HLS Proxy Route with Debug Logs ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -260,16 +257,23 @@ app.get('/hls-proxy', async (req, res) => {
     }
 
     try {
+        console.log('[HLS-PROXY] Fetching:', targetUrl);
+
         const response = await fetch(targetUrl, {
-            headers: UPSTREAM_STREAM_HEADERS
+            headers: UPSTREAM_STREAM_HEADERS,
+            redirect: 'follow'
         });
 
+        const contentType = response.headers.get('content-type') || '';
+        console.log('[HLS-PROXY] Status:', response.status, '| Final URL:', response.url, '| CT:', contentType);
+
         if (!response.ok) {
-            return res.status(response.status).send('Failed to fetch upstream stream');
+            const errSnippet = (await response.text().catch(() => '')).slice(0, 200);
+            console.error('[HLS-PROXY] Upstream error body:', errSnippet);
+            return res.status(response.status).send(`Upstream error ${response.status}: ${errSnippet}`);
         }
 
-        const contentType = response.headers.get('content-type') || '';
-        const lowerUrl = targetUrl.toLowerCase();
+        const lowerUrl = String(response.url || targetUrl).toLowerCase();
         const lowerCt = contentType.toLowerCase();
 
         res.setHeader('Access-Control-Allow-Origin', '*');
@@ -284,7 +288,10 @@ app.get('/hls-proxy', async (req, res) => {
         if (isPlaylistByHeaderOrUrl) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
             const bodyText = await response.text();
-            const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+            console.log('[HLS-PROXY] M3U8 sample:', bodyText.split('\n').slice(0, 8).join(' | '));
+
+            const effectiveBase = response.url || targetUrl;
+            const baseUrl = effectiveBase.substring(0, effectiveBase.lastIndexOf('/') + 1);
             const lines = bodyText.split(/\r?\n/);
 
             const rewrittenLines = lines.map(line => {
@@ -316,7 +323,7 @@ app.get('/hls-proxy', async (req, res) => {
             return res.send(Buffer.from(buffer));
         }
     } catch (error) {
-        console.error('Proxy error:', error);
+        console.error('[HLS-PROXY] Catch error:', error);
         res.status(500).send('Proxy error: ' + error.message);
     }
 });
