@@ -146,7 +146,7 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .player-loader.hidden { display: none; }
 
-        /* Blur Overlay while initial stream lag settles */
+        /* Blur Overlay with animated loading indicator */
         .stream-warmup-blur-overlay {
             position: absolute;
             inset: 0;
@@ -158,7 +158,7 @@
             padding: 20px;
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            background: rgba(10, 10, 16, 0.42);
+            background: rgba(10, 10, 16, 0.45);
             opacity: 0;
             visibility: hidden;
             pointer-events: none;
@@ -169,29 +169,134 @@
             visibility: visible;
         }
         .stream-warmup-card {
-            background: rgba(15, 16, 24, 0.78);
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            border-radius: 16px;
-            padding: 18px 24px;
+            background: rgba(15, 16, 24, 0.84);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 22px 26px;
             max-width: 340px;
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+            width: 90%;
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .warmup-ring-spinner {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid rgba(99, 102, 241, 0.22);
+            border-top-color: #6366f1;
+            border-right-color: #ff4757;
+            animation: spin 0.8s linear infinite;
         }
         .stream-warmup-title {
             font-size: 16px;
             font-weight: 800;
             color: #fff;
             letter-spacing: 0.3px;
-            margin-bottom: 6px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 4px;
+        }
+        .warmup-dots span {
+            display: inline-block;
+            animation: warmupDotBounce 1.2s infinite ease-in-out;
+            color: #a5b4fc;
+            font-weight: 900;
+        }
+        .warmup-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .warmup-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes warmupDotBounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-4px); opacity: 1; }
         }
         .stream-warmup-sub {
             font-size: 12.5px;
             font-weight: 500;
             color: #cbd5e1;
-            line-height: 1.4;
+            line-height: 1.45;
+        }
+
+        /* Stream Failure / Error Overlay */
+        .stream-error-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 22;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            background: rgba(10, 10, 15, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+        .stream-error-overlay.active {
+            display: flex;
+        }
+        .stream-error-card {
+            background: linear-gradient(145deg, #1b1720, #121218);
+            border: 1px solid rgba(255, 71, 87, 0.35);
+            border-radius: 18px;
+            padding: 22px 24px;
+            max-width: 370px;
+            width: 92%;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .stream-error-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: rgba(255, 71, 87, 0.14);
+            color: #ff6b78;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        .stream-error-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+        }
+        .stream-error-desc {
+            font-size: 12.5px;
+            color: #cbd5e1;
+            line-height: 1.45;
+        }
+        .stream-error-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 6px;
+        }
+        .stream-err-btn {
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .stream-err-btn:hover {
+            background: rgba(255, 255, 255, 0.16);
+        }
+        .stream-err-btn.primary {
+            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+            border-color: rgba(165, 180, 252, 0.45);
         }
 
         .video-controls-overlay {
@@ -233,36 +338,65 @@
         .ping-dot.fair { background: #eab308; box-shadow: 0 0 8px #eab308; }
         .ping-dot.poor { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
+        /* Clean, neat server buttons */
         .server-selector {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
             margin: 15px 0;
-            max-height: 112px;
+            max-height: 142px;
             overflow-y: auto;
-            padding: 4px 2px;
-            align-content: flex-start;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
         }
         .server-selector button {
-            background: #141419; color: #cbd5e1; border: 1px solid var(--border-color);
-            padding: 8px 13px; border-radius: 10px; cursor: pointer; font-weight: 700;
-            font-size: 12px; transition: all 0.25s ease; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-            display: inline-flex; align-items: center; gap: 6px;
-            max-width: 185px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            background: linear-gradient(145deg, #171720, #121218);
+            color: #e2e8f0;
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            padding: 10px 12px;
+            border-radius: 11px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 12px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            text-align: left;
+        }
+        .server-selector button .srv-badge {
+            flex-shrink: 0;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.07);
+            color: #a5b4fc;
         }
         .server-selector button span.srv-label {
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            flex: 1;
         }
         .server-selector button:hover {
-            border-color: rgba(99, 102, 241, 0.5); color: #fff; transform: translateY(-1px);
+            border-color: rgba(99, 102, 241, 0.6);
+            color: #fff;
+            background: linear-gradient(145deg, #1e1e2b, #161620);
         }
         .server-selector button.active-server {
             background: linear-gradient(135deg, var(--primary-color), #4f46e5);
-            border-color: var(--primary-color);
+            border-color: rgba(165, 180, 252, 0.55);
             color: #fff;
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.42);
+        }
+        .server-selector button.active-server .srv-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
         }
 
         .match-info-bar {
@@ -421,15 +555,34 @@
 
                     <div id="streamWarmupBlur" class="stream-warmup-blur-overlay" aria-live="polite">
                         <div class="stream-warmup-card">
+                            <div class="warmup-ring-spinner"></div>
                             <div class="stream-warmup-title">
-                                <i class="fa-solid fa-satellite-dish" style="color: #ff6b78;"></i>
                                 <span>Buffering Live</span>
+                                <span class="warmup-dots"><span>.</span><span>.</span><span>.</span></span>
                             </div>
                             <div class="stream-warmup-sub">This may take around 10 seconds, please wait</div>
                         </div>
                     </div>
+
+                    <div id="streamErrorOverlay" class="stream-error-overlay" role="alert">
+                        <div class="stream-error-card">
+                            <div class="stream-error-icon">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div class="stream-error-title" id="streamErrorTitle">Stream Not Working</div>
+                            <div class="stream-error-desc" id="streamErrorDesc">This server is currently unavailable or failing to play. Please try another server.</div>
+                            <div class="stream-error-actions">
+                                <button type="button" class="stream-err-btn primary" id="nextServerErrBtn" style="display: none;">
+                                    <i class="fa-solid fa-forward-step"></i> Next Server
+                                </button>
+                                <button type="button" class="stream-err-btn" id="retryServerErrBtn">
+                                    <i class="fa-solid fa-rotate-right"></i> Retry
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                     
-                    <video id="hlsPlayer" playsinline autoplay muted></video>
+                    <video id="hlsPlayer" playsinline autoplay></video>
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
                     
                     <div class="video-controls-overlay" id="controlsOverlay">
@@ -444,8 +597,8 @@
                                 <button class="control-btn" id="skipForwardBtn"><i class="fa-solid fa-rotate-right"></i> 10s</button>
                                 
                                 <div class="volume-box" style="display: flex; gap: 8px; align-items: center;">
-                                    <button class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-xmark"></i></button>
-                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0">
+                                    <button class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-high"></i></button>
+                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                                 </div>
                             </div>
 
@@ -612,6 +765,11 @@
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
         const streamWarmupBlur = document.getElementById('streamWarmupBlur');
+        const streamErrorOverlay = document.getElementById('streamErrorOverlay');
+        const streamErrorTitle = document.getElementById('streamErrorTitle');
+        const streamErrorDesc = document.getElementById('streamErrorDesc');
+        const nextServerErrBtn = document.getElementById('nextServerErrBtn');
+        const retryServerErrBtn = document.getElementById('retryServerErrBtn');
         const playerCountdownOverlay = document.getElementById('playerCountdownOverlay');
         const progressContainer = document.getElementById('progressContainer');
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -619,6 +777,10 @@
         const skipFwdBtn = document.getElementById('skipForwardBtn');
         const playerContainer = document.getElementById('playerContainer');
         const serverSelectorEl = document.getElementById('serverSelector');
+        const muteBtn = document.getElementById('muteBtn');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const progressBar = document.getElementById('progressBar');
         
         const qualityWrapper = document.getElementById('qualityWrapper');
         const qualityBtn = document.getElementById('qualityBtn');
@@ -638,24 +800,31 @@
         let activeMatchFeedItem = null;
         let activeServersMap = {};
         let currentServerKey = 'server1';
+        let streamAttemptToken = 0;
+        let streamFailWatchdog = null;
 
         let username = localStorage.getItem('chat_username') || '';
         let replyingTo = null;
         let countdownInterval = null;
         let pendingMessage = null;
 
-        // Warmup blur state for initial stream lag
-        let warmupTimer = null;
         let warmupFallbackTimer = null;
         let warmupActive = false;
         let lastSmoothVideoTime = -1;
         let smoothAdvanceTicks = 0;
 
-        function clearWarmupTimers() {
-            if (warmupTimer) {
-                clearTimeout(warmupTimer);
-                warmupTimer = null;
+        function syncAudioUiState() {
+            if (!video) return;
+            if (video.muted || video.volume === 0) {
+                if (muteBtn) muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                if (volumeSlider) volumeSlider.value = 0;
+            } else {
+                if (muteBtn) muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+                if (volumeSlider) volumeSlider.value = video.volume;
             }
+        }
+
+        function clearWarmupTimers() {
             if (warmupFallbackTimer) {
                 clearTimeout(warmupFallbackTimer);
                 warmupFallbackTimer = null;
@@ -680,10 +849,88 @@
             if (streamWarmupBlur) {
                 streamWarmupBlur.classList.add('active');
             }
-            // Safety cap: remove blur after 12s even if stream metadata behaves oddly
             warmupFallbackTimer = setTimeout(() => {
                 hideWarmupBlur();
             }, 12000);
+        }
+
+        function clearStreamFailWatchdog() {
+            if (streamFailWatchdog) {
+                clearTimeout(streamFailWatchdog);
+                streamFailWatchdog = null;
+            }
+        }
+
+        function hideStreamError() {
+            clearStreamFailWatchdog();
+            if (streamErrorOverlay) {
+                streamErrorOverlay.classList.remove('active');
+            }
+        }
+
+        function getNextServerKey() {
+            const keys = Object.keys(activeServersMap);
+            if (keys.length <= 1) return null;
+            const idx = keys.indexOf(currentServerKey);
+            if (idx === -1) return keys[0];
+            return keys[(idx + 1) % keys.length];
+        }
+
+        function showStreamError(titleText, descText, token) {
+            if (token !== undefined && token !== streamAttemptToken) return;
+            clearStreamFailWatchdog();
+            hideWarmupBlur();
+            if (playerLoader) playerLoader.classList.add('hidden');
+            if (playerThumbnail) {
+                playerThumbnail.classList.add('hidden');
+                playerThumbnail.style.display = 'none';
+            }
+            if (streamErrorTitle) {
+                streamErrorTitle.innerText = titleText || 'Stream Not Working';
+            }
+            if (streamErrorDesc) {
+                streamErrorDesc.innerText = descText || 'This server is currently unavailable or failing to play. Please switch to another server.';
+            }
+            const nextKey = getNextServerKey();
+            if (nextServerErrBtn) {
+                nextServerErrBtn.style.display = nextKey ? 'inline-flex' : 'none';
+            }
+            if (streamErrorOverlay) {
+                streamErrorOverlay.classList.add('active');
+            }
+        }
+
+        function armStreamFailWatchdog(token) {
+            clearStreamFailWatchdog();
+            streamFailWatchdog = setTimeout(() => {
+                if (token !== streamAttemptToken || !isMatchLive) return;
+                if (video.style.display !== 'none') {
+                    const hasProgress = (video.currentTime > 0) || (video.readyState >= 3 && !video.paused);
+                    if (!hasProgress) {
+                        showStreamError(
+                            'Stream Not Working',
+                            'No video feed received from this server. Try another server or retry.',
+                            token
+                        );
+                    }
+                }
+            }, 14000);
+        }
+
+        if (nextServerErrBtn) {
+            nextServerErrBtn.addEventListener('click', () => {
+                const nextKey = getNextServerKey();
+                if (nextKey) {
+                    switchServer(nextKey);
+                }
+            });
+        }
+
+        if (retryServerErrBtn) {
+            retryServerErrBtn.addEventListener('click', () => {
+                if (!isMatchLive) return;
+                loadFeedServer(currentServerKey);
+            });
         }
 
         function setQualityLabelText(text) {
@@ -808,12 +1055,26 @@
         async function kickPlayNow() {
             if (video.style.display === 'none') return;
             try {
-                video.muted = true;
-                const p = video.play();
-                if (p !== undefined) {
-                    await p;
-                }
-            } catch (e) {}
+                video.volume = 1;
+                video.muted = false;
+                await video.play();
+                syncAudioUiState();
+            } catch (e) {
+                try {
+                    video.muted = true;
+                    await video.play();
+                    syncAudioUiState();
+                    const unlockAudioOnce = () => {
+                        video.muted = false;
+                        video.volume = 1;
+                        syncAudioUiState();
+                        document.removeEventListener('click', unlockAudioOnce);
+                        document.removeEventListener('touchstart', unlockAudioOnce);
+                    };
+                    document.addEventListener('click', unlockAudioOnce, { once: true });
+                    document.addEventListener('touchstart', unlockAudioOnce, { once: true });
+                } catch (err2) {}
+            }
         }
 
         function nudgeStalledFrame() {
@@ -829,10 +1090,11 @@
                     currentHls.startLoad(-1);
                 }
             } catch (e) {}
-            kickPlayNow();
+            if (!video.paused) {
+                video.play().catch(() => {});
+            }
         }
 
-        // Monitor consecutive smooth playback ticks before clearing blur overlay
         setInterval(() => {
             if (!warmupActive || video.style.display === 'none') return;
             if (!video.paused && video.readyState >= 3) {
@@ -849,12 +1111,22 @@
         }, 700);
 
         video.addEventListener('playing', () => {
+            clearStreamFailWatchdog();
             hideOverlaysSafely();
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
         });
 
         video.addEventListener('pause', () => {
             if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
+        });
+
+        video.addEventListener('error', () => {
+            if (!isMatchLive || video.style.display === 'none' || !video.src) return;
+            showStreamError(
+                'Stream Not Working',
+                'This video source failed to play. Please try another server.',
+                streamAttemptToken
+            );
         });
 
         video.addEventListener('loadedmetadata', () => {
@@ -905,7 +1177,7 @@
         function renderDynamicServerButtons(validStreams, selectedKey) {
             if (!serverSelectorEl) return;
             if (!validStreams || validStreams.length === 0) {
-                serverSelectorEl.innerHTML = `<button type="button" id="btnServer1" class="active-server" onclick="switchServer('server1')"><i class="fa-solid fa-server"></i> <span class="srv-label">Server 1</span></button>`;
+                serverSelectorEl.innerHTML = `<button type="button" id="btnServer1" class="active-server" onclick="switchServer('server1')"><span class="srv-badge">S1</span><span class="srv-label">Server 1</span></button>`;
                 return;
             }
 
@@ -914,7 +1186,7 @@
                 const fullLabel = formatChannelLabel(sObj, idx);
                 const safeTitle = fullLabel.replace(/"/g, '&quot;');
                 const isActive = key === selectedKey ? 'active-server' : '';
-                return `<button type="button" id="btnServer${idx + 1}" class="${isActive}" title="${safeTitle}" onclick="switchServer('${key}')"><i class="fa-solid fa-server"></i> <span class="srv-label">${safeTitle}</span></button>`;
+                return `<button type="button" id="btnServer${idx + 1}" class="${isActive}" title="${safeTitle}" onclick="switchServer('${key}')"><span class="srv-badge">S${idx + 1}</span><span class="srv-label">${safeTitle}</span></button>`;
             }).join('');
         }
 
@@ -996,6 +1268,7 @@
                 if (statusUpper === "UPCOMING") {
                     isMatchLive = false;
                     hideWarmupBlur();
+                    hideStreamError();
                     playerCountdownOverlay.classList.remove('hidden');
                     document.getElementById('countdownMatchTitle').innerText = matched.title;
                     document.getElementById('scheduledTimeText').innerText = startTimeStr || "Scheduled Soon";
@@ -1078,6 +1351,7 @@
 
         async function destroyPlayers() {
             hideWarmupBlur();
+            clearStreamFailWatchdog();
             if (currentHls) {
                 try { currentHls.destroy(); } catch (e) {}
                 currentHls = null;
@@ -1097,7 +1371,14 @@
         }
 
         async function playStreamItem(streamObj) {
-            if (!streamObj || !streamObj.stream_url) return;
+            streamAttemptToken += 1;
+            const myToken = streamAttemptToken;
+            hideStreamError();
+
+            if (!streamObj || !streamObj.stream_url) {
+                showStreamError('Stream Not Working', 'Stream URL is missing for this server.', myToken);
+                return;
+            }
             const directLink = streamObj.stream_url.trim();
             const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
             const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
@@ -1107,8 +1388,11 @@
 
             if (playerLoader) playerLoader.classList.remove('hidden');
             await destroyPlayers();
+            if (myToken !== streamAttemptToken) return;
+
             qualityWrapper.style.display = 'none';
             setQualityLabelText('Auto');
+            armStreamFailWatchdog(myToken);
 
             const isEmbed =
                 directLink.includes('youtube.com') ||
@@ -1127,13 +1411,13 @@
                 let embedUrl = directLink;
                 if (directLink.includes('watch?v=')) {
                     const videoId = directLink.split('watch?v=')[1].split('&')[0];
-                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`;
                 } else if (directLink.includes('youtu.be/')) {
                     const videoId = directLink.split('youtu.be/')[1].split('?')[0];
-                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`;
                 } else if (directLink.includes('/live/')) {
                     const videoId = directLink.split('/live/')[1].split('?')[0];
-                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&playsinline=1`;
+                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`;
                 } else if (directLink.includes('<iframe')) {
                     const matchSrc = directLink.match(/src="([^"]+)"/);
                     if (matchSrc && matchSrc[1]) embedUrl = matchSrc[1];
@@ -1143,8 +1427,10 @@
                 ytIframe.style.display = 'block';
 
                 setTimeout(() => {
+                    if (myToken !== streamAttemptToken) return;
+                    clearStreamFailWatchdog();
                     hideOverlaysSafely();
-                }, 400);
+                }, 500);
                 return;
             }
 
@@ -1161,10 +1447,20 @@
                 try {
                     const shakaPlayer = new shaka.Player();
                     await shakaPlayer.attach(video);
+                    if (myToken !== streamAttemptToken) {
+                        await shakaPlayer.destroy();
+                        return;
+                    }
                     currentShakaPlayer = shakaPlayer;
 
                     shakaPlayer.addEventListener('error', (event) => {
                         console.error('Shaka Player Error:', event.detail);
+                        if (myToken !== streamAttemptToken) return;
+                        showStreamError(
+                            'Stream Not Working',
+                            'Unable to load or decrypt this stream. Please try another server.',
+                            myToken
+                        );
                     });
 
                     const shakaConfig = {
@@ -1176,7 +1472,7 @@
                             inaccurateManifestTolerance: 2.5,
                             retryParameters: {
                                 timeout: 2000,
-                                maxAttempts: 3,
+                                maxAttempts: 2,
                                 baseDelay: 150
                             }
                         },
@@ -1195,6 +1491,7 @@
                     shakaPlayer.configure(shakaConfig);
 
                     await shakaPlayer.load(directLink);
+                    if (myToken !== streamAttemptToken) return;
 
                     const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
                     let lowestTrack = null;
@@ -1210,16 +1507,25 @@
 
                     setupShakaQualityMenu(shakaPlayer, lowestTrack);
                     await kickPlayNow();
+                    if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
                     startWarmupBlurAfterConnect();
                     return;
                 } catch (err) {
                     console.error("Shaka load failed:", err);
-                    if (playerLoader) playerLoader.classList.add('hidden');
+                    if (myToken !== streamAttemptToken) return;
+                    showStreamError(
+                        'Stream Not Working',
+                        'This server failed to start playback. Please switch to another server.',
+                        myToken
+                    );
+                    return;
                 }
             }
 
             if (window.Hls && Hls.isSupported()) {
+                let hlsNetworkRetries = 0;
+                let hlsMediaRetries = 0;
                 const hls = new Hls({
                     lowLatencyMode: true,
                     startLevel: 0,
@@ -1229,9 +1535,9 @@
                     liveMaxLatencyDurationCount: 2,
                     abrBandWidthFactor: 0.85,
                     abrBandWidthUpFactor: 0.75,
-                    manifestLoadingTimeOut: 2000,
-                    levelLoadingTimeOut: 2000,
-                    fragLoadingTimeOut: 2500,
+                    manifestLoadingTimeOut: 2500,
+                    levelLoadingTimeOut: 2500,
+                    fragLoadingTimeOut: 3000,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -1239,6 +1545,7 @@
                 hls.attachMedia(video);
 
                 hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
+                    if (myToken !== streamAttemptToken) return;
                     const levels = data.levels || hls.levels || [];
                     let minIdx = null;
                     if (levels.length > 0) {
@@ -1258,26 +1565,44 @@
                     }
                     setupHlsQualityMenu(hls, levels, minIdx);
                     await kickPlayNow();
+                    if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
                     startWarmupBlurAfterConnect();
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (myToken !== streamAttemptToken) return;
                     if (data.fatal) {
-                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 2) {
+                            hlsNetworkRetries += 1;
                             hls.startLoad();
-                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR) {
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 1) {
+                            hlsMediaRetries += 1;
                             hls.recoverMediaError();
+                        } else {
+                            showStreamError(
+                                'Stream Not Working',
+                                'This server is offline or blocked. Please try another server.',
+                                myToken
+                            );
                         }
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', async function () {
+                    if (myToken !== streamAttemptToken) return;
                     await kickPlayNow();
+                    if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
                     startWarmupBlurAfterConnect();
                 }, { once: true });
+            } else {
+                showStreamError(
+                    'Stream Not Working',
+                    'Unsupported stream format on this device. Please try another server.',
+                    myToken
+                );
             }
         }
 
@@ -1287,7 +1612,11 @@
             if (streamObj && streamObj.stream_url) {
                 playStreamItem(streamObj);
             } else if (socket) {
+                hideStreamError();
+                if (playerLoader) playerLoader.classList.remove('hidden');
                 socket.emit('requestStreamLink', { matchId, serverType: serverKey });
+            } else {
+                showStreamError('Stream Not Working', 'No stream link available for this server.');
             }
         }
 
@@ -1297,7 +1626,11 @@
             });
 
             socket.on('secureStreamLink', async (directLink) => {
-                if (!isMatchLive || !directLink) return;
+                if (!isMatchLive) return;
+                if (!directLink) {
+                    showStreamError('Stream Not Working', 'Server did not return a playable stream link.');
+                    return;
+                }
                 await playStreamItem({ stream_url: directLink });
             });
         }
@@ -1307,6 +1640,7 @@
                 alert('Match has not started yet!');
                 return;
             }
+            hideStreamError();
             playerThumbnail.style.display = 'block';
             playerThumbnail.classList.remove('hidden');
             loadFeedServer(serverType);
@@ -1317,11 +1651,6 @@
             qualityMenu.classList.toggle('active');
         });
         window.addEventListener('click', () => { qualityMenu.classList.remove('active'); });
-
-        const muteBtn = document.getElementById('muteBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const progressBar = document.getElementById('progressBar');
 
         playPauseBtn.addEventListener('click', () => {
             if (video.paused) {
@@ -1337,21 +1666,20 @@
         skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration || 0, video.currentTime + 10); });
 
         volumeSlider.addEventListener('input', (e) => {
-            video.volume = e.target.value;
-            video.muted = false;
-            muteBtn.innerHTML = (video.volume == 0) ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>';
+            const val = parseFloat(e.target.value);
+            video.volume = val;
+            video.muted = (val === 0);
+            syncAudioUiState();
         });
 
         muteBtn.addEventListener('click', () => {
-            if (video.muted) {
+            if (video.muted || video.volume === 0) {
                 video.muted = false;
-                muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-                volumeSlider.value = video.volume;
+                if (video.volume === 0) video.volume = 1;
             } else {
                 video.muted = true;
-                muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-                volumeSlider.value = 0;
             }
+            syncAudioUiState();
         });
 
         fullscreenBtn.addEventListener('click', () => {
@@ -1604,6 +1932,7 @@
                 });
         }
 
+        syncAudioUiState();
         loadMatchFromFeed();
         setInterval(loadMatchFromFeed, 120000);
         checkConnectionPing();
