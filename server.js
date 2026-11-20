@@ -249,7 +249,7 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
-// --- HLS Proxy Route with Debug Logs ---
+// --- HLS / TS Stream Proxy Route (Smart Playlist vs Binary Detection) ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -257,39 +257,29 @@ app.get('/hls-proxy', async (req, res) => {
     }
 
     try {
-        console.log('[HLS-PROXY] Fetching:', targetUrl);
-
         const response = await fetch(targetUrl, {
             headers: UPSTREAM_STREAM_HEADERS,
             redirect: 'follow'
         });
 
         const contentType = response.headers.get('content-type') || '';
-        console.log('[HLS-PROXY] Status:', response.status, '| Final URL:', response.url, '| CT:', contentType);
 
         if (!response.ok) {
             const errSnippet = (await response.text().catch(() => '')).slice(0, 200);
-            console.error('[HLS-PROXY] Upstream error body:', errSnippet);
             return res.status(response.status).send(`Upstream error ${response.status}: ${errSnippet}`);
         }
 
-        const lowerUrl = String(response.url || targetUrl).toLowerCase();
-        const lowerCt = contentType.toLowerCase();
+        const rawBuffer = Buffer.from(await response.arrayBuffer());
+        const headText = rawBuffer.slice(0, 64).toString('utf8').trimStart();
+        const isActualM3u8Text = headText.startsWith('#EXTM3U') || headText.startsWith('#EXT-X-');
 
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
 
-        const isPlaylistByHeaderOrUrl =
-            lowerUrl.includes('.m3u8') ||
-            lowerCt.includes('mpegurl') ||
-            lowerCt.includes('application/vnd.apple.mpegurl');
-
-        if (isPlaylistByHeaderOrUrl) {
+        if (isActualM3u8Text) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-            const bodyText = await response.text();
-            console.log('[HLS-PROXY] M3U8 sample:', bodyText.split('\n').slice(0, 8).join(' | '));
-
+            const bodyText = rawBuffer.toString('utf8');
             const effectiveBase = response.url || targetUrl;
             const baseUrl = effectiveBase.substring(0, effectiveBase.lastIndexOf('/') + 1);
             const lines = bodyText.split(/\r?\n/);
@@ -317,16 +307,20 @@ app.get('/hls-proxy', async (req, res) => {
 
             return res.send(rewrittenLines.join('\n'));
         } else {
-            const safeCt = contentType || (lowerUrl.includes('.ts') ? 'video/mp2t' : 'application/octet-stream');
+            // Binary MPEG-TS / video payload: send raw bytes untouched so HLS.js / video element can decode
+            const safeCt = (contentType && !contentType.toLowerCase().includes('mpegurl'))
+                ? contentType
+                : 'video/mp2t';
             res.setHeader('Content-Type', safeCt);
-            const buffer = await response.arrayBuffer();
-            return res.send(Buffer.from(buffer));
+            res.setHeader('Content-Length', rawBuffer.length);
+            return res.end(rawBuffer);
         }
     } catch (error) {
         console.error('[HLS-PROXY] Catch error:', error);
         res.status(500).send('Proxy error: ' + error.message);
     }
 });
+
 
 io.on('connection', (socket) => {
     console.log('A user connected: ' + socket.id);
