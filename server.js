@@ -285,9 +285,8 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
-                'Accept': '*/*',
-                'Referer': 'https://www.fancode.com/'
+                'User-Agent': 'OTT Navigator/1.6.8 (Linux; Android 13)',
+                'Accept': '*/*'
             }
         });
 
@@ -296,37 +295,49 @@ app.get('/hls-proxy', async (req, res) => {
         }
 
         const contentType = response.headers.get('content-type') || '';
-        
+        const lowerUrl = targetUrl.toLowerCase();
+        const lowerCt = contentType.toLowerCase();
+
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
 
-        if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/vnd.apple.mpegurl')) {
-            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-            let bodyText = await response.text();
+        const isPlaylist =
+            lowerUrl.includes('.m3u8') ||
+            lowerCt.includes('mpegurl') ||
+            lowerCt.includes('application/vnd.apple.mpegurl');
 
+        if (isPlaylist) {
+            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+            const bodyText = await response.text();
             const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-            const lines = bodyText.split('\n');
-            
+            const lines = bodyText.split(/\r?\n/);
+
             const rewrittenLines = lines.map(line => {
                 const trimmed = line.trim();
-                if (!trimmed || trimmed.startsWith('#')) {
+                if (!trimmed) return '';
+                if (trimmed.startsWith('#')) {
                     if (trimmed.includes('URI="')) {
-                        return trimmed.replace(/URI="([^"]+)"/, (match, uri) => {
-                            let absoluteUri = uri.startsWith('http') ? uri : new URL(uri, baseUrl).toString();
+                        return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
+                            const absoluteUri = uri.startsWith('http')
+                                ? uri
+                                : new URL(uri, baseUrl).toString();
                             return `URI="/hls-proxy?url=${encodeURIComponent(absoluteUri)}"`;
                         });
                     }
                     return line;
                 } else {
-                    let absoluteUrl = trimmed.startsWith('http') ? trimmed : new URL(trimmed, baseUrl).toString();
+                    const absoluteUrl = trimmed.startsWith('http')
+                        ? trimmed
+                        : new URL(trimmed, baseUrl).toString();
                     return `/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`;
                 }
             });
 
             return res.send(rewrittenLines.join('\n'));
         } else {
-            res.setHeader('Content-Type', contentType);
+            const safeCt = contentType || (lowerUrl.includes('.ts') ? 'video/mp2t' : 'application/octet-stream');
+            res.setHeader('Content-Type', safeCt);
             const buffer = await response.arrayBuffer();
             return res.send(Buffer.from(buffer));
         }
