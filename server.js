@@ -15,6 +15,9 @@ const matchChatHistories = {}; // මැච් අනුව චැට් හි�
 const TAPMAD_PLAYLIST_URL = 'http://2nd.sm-monirul.top/@sm_iptv_bd/exp.php?tapmad=getPlaylist&sm=.m3u';
 let tapmadCache = { data: null, expiresAt: 0 };
 
+const CRICBUZZ_API_URL = (process.env.CRICBUZZ_API_URL || 'https://cricbuzz-scraper-kkkw.onrender.com').replace(/\/+$/, '');
+let cricbuzzLiveCache = { data: null, expiresAt: 0 };
+
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
@@ -124,6 +127,44 @@ app.get('/category/:name', (req, res) => {
 // 3. Match Player Page (උදා: /match?id=xxx&title=xxx හෝ /watch/xxx)
 app.get('/match', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'match.html'));
+});
+
+// --- Cricbuzz Live Scores API Route ---
+app.get('/api/cricbuzz-live', async (req, res) => {
+    const now = Date.now();
+    if (cricbuzzLiveCache.data && now < cricbuzzLiveCache.expiresAt) {
+        return res.json({ ok: true, data: cricbuzzLiveCache.data });
+    }
+
+    try {
+        const response = await fetch(`${CRICBUZZ_API_URL}/matches/live`, {
+            headers: {
+                'Accept': 'application/json'
+            },
+            signal: AbortSignal.timeout(20000)
+        });
+
+        if (!response.ok) {
+            return res.status(502).json({
+                ok: false,
+                error: `Upstream Cricbuzz API returned ${response.status}`
+            });
+        }
+
+        const data = await response.json();
+        cricbuzzLiveCache = {
+            data,
+            expiresAt: now + 15 * 1000 // 15 seconds cache
+        };
+
+        return res.json({ ok: true, data });
+    } catch (error) {
+        console.error('Cricbuzz live proxy error:', error.message);
+        return res.status(502).json({
+            ok: false,
+            error: 'Failed to reach Cricbuzz scraper'
+        });
+    }
 });
 
 // --- Tapmad / M3U Playlist API Route ---
