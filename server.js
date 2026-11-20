@@ -191,8 +191,10 @@ app.get('/api/tapmad-playlist', async (req, res) => {
     try {
         const response = await fetch(TAPMAD_PLAYLIST_URL, {
             headers: {
-                'User-Agent': 'OTT Navigator/1.6.8 (Linux; Android 13)',
-                'Accept': '*/*'
+                'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+                'Accept': '*/*',
+                'Accept-Encoding': 'identity',
+                'Connection': 'keep-alive'
             }
         });
 
@@ -285,8 +287,10 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'OTT Navigator/1.6.8 (Linux; Android 13)',
-                'Accept': '*/*'
+                'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+                'Accept': '*/*',
+                'Accept-Encoding': 'identity',
+                'Connection': 'keep-alive'
             }
         });
 
@@ -302,12 +306,12 @@ app.get('/hls-proxy', async (req, res) => {
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
 
-        const isPlaylist =
+        const isPlaylistByHeaderOrUrl =
             lowerUrl.includes('.m3u8') ||
             lowerCt.includes('mpegurl') ||
             lowerCt.includes('application/vnd.apple.mpegurl');
 
-        if (isPlaylist) {
+        if (isPlaylistByHeaderOrUrl) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
             const bodyText = await response.text();
             const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
