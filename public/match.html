@@ -720,8 +720,8 @@
             try {
                 if (video.buffered && video.buffered.length > 0) {
                     const bufEnd = video.buffered.end(video.buffered.length - 1);
-                    if (bufEnd > video.currentTime + 0.15) {
-                        video.currentTime = Math.min(bufEnd - 0.1, video.currentTime + 0.08);
+                    if (bufEnd > video.currentTime + 0.12) {
+                        video.currentTime = Math.min(bufEnd - 0.08, video.currentTime + 0.06);
                     }
                 }
                 if (currentHls && currentHls.startLoad) {
@@ -771,7 +771,7 @@
                 stuckTicks = 0;
             }
             lastWatchTime = video.currentTime;
-        }, 1200);
+        }, 1000);
 
         function buildSlugId(cat, idx, title) {
             return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
@@ -960,7 +960,7 @@
 
         async function destroyPlayers() {
             if (currentHls) {
-                currentHls.destroy();
+                try { currentHls.destroy(); } catch (e) {}
                 currentHls = null;
             }
             if (currentShakaPlayer) {
@@ -970,6 +970,11 @@
                 } catch (e) {}
                 currentShakaPlayer = null;
             }
+            try {
+                video.pause();
+                video.removeAttribute('src');
+                video.load();
+            } catch (e) {}
         }
 
         async function playStreamItem(streamObj) {
@@ -1020,7 +1025,7 @@
 
                 setTimeout(() => {
                     hideOverlaysSafely();
-                }, 500);
+                }, 400);
                 return;
             }
 
@@ -1045,21 +1050,20 @@
 
                     const shakaConfig = {
                         streaming: {
-                            bufferingGoal: 2.5,
-                            rebufferingGoal: 0.8,
+                            bufferingGoal: 1.2,
+                            rebufferingGoal: 0.4,
                             startAtSegmentBoundary: false,
                             jumpLargeGaps: true,
                             inaccurateManifestTolerance: 2.5,
                             retryParameters: {
-                                timeout: 3000,
+                                timeout: 2000,
                                 maxAttempts: 3,
-                                baseDelay: 250
+                                baseDelay: 150
                             }
                         },
                         abr: {
-                            enabled: true,
-                            defaultBandwidthEstimate: 1600000,
-                            switchInterval: 1.5
+                            enabled: false,
+                            defaultBandwidthEstimate: 1200000
                         }
                     };
                     if (kid && key) {
@@ -1097,16 +1101,17 @@
 
             if (window.Hls && Hls.isSupported()) {
                 const hls = new Hls({
+                    lowLatencyMode: true,
                     startLevel: 0,
-                    maxBufferLength: 3,
-                    maxMaxBufferLength: 6,
+                    maxBufferLength: 2,
+                    maxMaxBufferLength: 4,
                     liveSyncDurationCount: 1,
-                    liveMaxLatencyDurationCount: 3,
-                    abrBandWidthFactor: 0.78,
+                    liveMaxLatencyDurationCount: 2,
+                    abrBandWidthFactor: 0.85,
                     abrBandWidthUpFactor: 0.75,
-                    manifestLoadingTimeOut: 2500,
-                    levelLoadingTimeOut: 2500,
-                    fragLoadingTimeOut: 3500,
+                    manifestLoadingTimeOut: 2000,
+                    levelLoadingTimeOut: 2000,
+                    fragLoadingTimeOut: 2500,
                     enableWorker: true
                 });
                 currentHls = hls;
