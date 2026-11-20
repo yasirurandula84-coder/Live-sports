@@ -397,7 +397,106 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
-        const FALLBACK_FLAG = "https://via.placeholder.com/64x64/161622/a5b4fc?text=VS";
+        const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+
+        const TEAM_COUNTRY_CODES = {
+            "india": "in",
+            "new zealand": "nz",
+            "sri lanka": "lk",
+            "australia": "au",
+            "england": "gb-eng",
+            "pakistan": "pk",
+            "south africa": "za",
+            "bangladesh": "bd",
+            "afghanistan": "af",
+            "west indies": "jm",
+            "ireland": "ie",
+            "zimbabwe": "zw",
+            "netherlands": "nl",
+            "scotland": "gb-sct",
+            "nepal": "np",
+            "uae": "ae",
+            "united arab emirates": "ae",
+            "oman": "om",
+            "usa": "us",
+            "united states": "us",
+            "canada": "ca",
+            "namibia": "na",
+            "kenya": "ke",
+            "argentina": "ar",
+            "brazil": "br",
+            "france": "fr",
+            "germany": "de",
+            "spain": "es",
+            "portugal": "pt",
+            "italy": "it",
+            "japan": "jp",
+            "south korea": "kr",
+            "china": "cn"
+        };
+
+        function getFlagUrlByTeamName(teamName) {
+            if (!teamName) return null;
+            const normalized = teamName.trim().toLowerCase();
+            if (TEAM_COUNTRY_CODES[normalized]) {
+                return `https://flagcdn.com/w80/${TEAM_COUNTRY_CODES[normalized]}.png`;
+            }
+            for (const [key, code] of Object.entries(TEAM_COUNTRY_CODES)) {
+                if (normalized.includes(key)) {
+                    return `https://flagcdn.com/w80/${code}.png`;
+                }
+            }
+            return null;
+        }
+
+        function getFlagCandidateList(rawUrl, teamName) {
+            const candidates = [];
+            const countryFlag = getFlagUrlByTeamName(teamName);
+            if (countryFlag) candidates.push(countryFlag);
+
+            if (rawUrl && rawUrl.trim() !== "") {
+                const cleanRaw = rawUrl.trim().replace(/^http:\/\//i, 'https://');
+                if (cleanRaw.includes('img.sofascore.com')) {
+                    candidates.push(`/img-proxy?url=${encodeURIComponent(cleanRaw)}`);
+                    candidates.push(`https://wsrv.nl/?url=${encodeURIComponent(cleanRaw)}&w=80&h=80&fit=cover`);
+                }
+                candidates.push(cleanRaw);
+            }
+
+            candidates.push(FALLBACK_FLAG);
+            return candidates;
+        }
+
+        function handleFlagError(imgEl) {
+            const listAttr = imgEl.getAttribute('data-candidates');
+            let idx = parseInt(imgEl.getAttribute('data-cand-idx') || '0', 10);
+            if (!listAttr) {
+                imgEl.onerror = null;
+                imgEl.src = FALLBACK_FLAG;
+                return;
+            }
+            try {
+                const list = JSON.parse(decodeURIComponent(listAttr));
+                idx += 1;
+                if (idx < list.length) {
+                    imgEl.setAttribute('data-cand-idx', String(idx));
+                    imgEl.src = list[idx];
+                } else {
+                    imgEl.onerror = null;
+                    imgEl.src = FALLBACK_FLAG;
+                }
+            } catch (e) {
+                imgEl.onerror = null;
+                imgEl.src = FALLBACK_FLAG;
+            }
+        }
+
+        function renderTeamFlagImg(rawUrl, teamName, altText) {
+            const candidates = getFlagCandidateList(rawUrl, teamName);
+            const primarySrc = candidates[0] || FALLBACK_FLAG;
+            const encodedList = encodeURIComponent(JSON.stringify(candidates));
+            return `<img src="${primarySrc}" alt="${altText}" class="team-flag-avatar" referrerpolicy="no-referrer" data-candidates="${encodedList}" data-cand-idx="0" onerror="handleFlagError(this)">`;
+        }
 
         let socket = null;
         try {
@@ -439,8 +538,8 @@
                             title,
                             team1,
                             team2,
-                            team1Flag: info.teamAFlag || FALLBACK_FLAG,
-                            team2Flag: info.teamBFlag || FALLBACK_FLAG,
+                            team1Flag: info.teamAFlag || "",
+                            team2Flag: info.teamBFlag || "",
                             eventName: info.eventName || m.Category || "Sports Event",
                             startTime: info.startTime || "Scheduled Soon",
                             status: (m.status || "").trim().toUpperCase(),
@@ -528,12 +627,12 @@
 
                     <div class="teams-flag-stage">
                         <div class="flag-team-col">
-                            <img src="${match.team1Flag}" alt="${match.team1}" class="team-flag-avatar" onerror="this.src='${FALLBACK_FLAG}'">
+                            ${renderTeamFlagImg(match.team1Flag, match.team1, match.team1)}
                             <span class="team-flag-name">${match.team1}</span>
                         </div>
                         <span class="vs-badge">VS</span>
                         <div class="flag-team-col">
-                            <img src="${match.team2Flag}" alt="${match.team2}" class="team-flag-avatar" onerror="this.src='${FALLBACK_FLAG}'">
+                            ${renderTeamFlagImg(match.team2Flag, match.team2, match.team2)}
                             <span class="team-flag-name">${match.team2}</span>
                         </div>
                     </div>
@@ -561,12 +660,12 @@
 
                     <div class="teams-flag-stage">
                         <div class="flag-team-col">
-                            <img src="${match.team1Flag}" alt="${match.team1}" class="team-flag-avatar" onerror="this.src='${FALLBACK_FLAG}'">
+                            ${renderTeamFlagImg(match.team1Flag, match.team1, match.team1)}
                             <span class="team-flag-name">${match.team1}</span>
                         </div>
                         <span class="vs-badge">VS</span>
                         <div class="flag-team-col">
-                            <img src="${match.team2Flag}" alt="${match.team2}" class="team-flag-avatar" onerror="this.src='${FALLBACK_FLAG}'">
+                            ${renderTeamFlagImg(match.team2Flag, match.team2, match.team2)}
                             <span class="team-flag-name">${match.team2}</span>
                         </div>
                     </div>
