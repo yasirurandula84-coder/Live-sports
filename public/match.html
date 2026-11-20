@@ -1174,6 +1174,121 @@
             return `Server ${index + 1}`;
         }
 
+        function isEmbedUrl(url) {
+            return (
+                url.includes('youtube.com') ||
+                url.includes('youtu.be') ||
+                url.includes('rumble.com') ||
+                url.includes('kick.com') ||
+                url.includes('<iframe')
+            );
+        }
+
+        function probeSingleStream(streamObj, timeoutMs = 3500) {
+            return new Promise((resolve) => {
+                if (!streamObj || !streamObj.stream_url || !streamObj.stream_url.trim()) {
+                    resolve(false);
+                    return;
+                }
+                const directLink = streamObj.stream_url.trim();
+                const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
+                const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
+
+                let settled = false;
+                const finish = (ok) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    resolve(Boolean(ok));
+                };
+
+                const timer = setTimeout(() => finish(false), timeoutMs);
+
+                if (isEmbedUrl(directLink)) {
+                    finish(true);
+                    return;
+                }
+
+                const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
+
+                if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
+                    const probeVid = document.createElement('video');
+                    probeVid.muted = true;
+                    probeVid.playsInline = true;
+                    const p = new shaka.Player();
+                    p.attach(probeVid).then(() => {
+                        const cfg = {
+                            streaming: {
+                                retryParameters: { timeout: 1500, maxAttempts: 1, baseDelay: 100 }
+                            }
+                        };
+                        if (kid && key) {
+                            cfg.drm = { clearKeys: { [kid]: key } };
+                        }
+                        p.configure(cfg);
+                        return p.load(directLink);
+                    }).then(async () => {
+                        try { await p.unload(); await p.destroy(); } catch (e) {}
+                        finish(true);
+                    }).catch(async () => {
+                        try { await p.unload(); await p.destroy(); } catch (e) {}
+                        finish(false);
+                    });
+                    return;
+                }
+
+                if (window.Hls && Hls.isSupported() && directLink.toLowerCase().includes('.m3u8')) {
+                    const h = new Hls({
+                        manifestLoadingTimeOut: 2200,
+                        levelLoadingTimeOut: 2200,
+                        fragLoadingTimeOut: 2500,
+                        enableWorker: false
+                    });
+                    h.on(Hls.Events.MANIFEST_PARSED, () => {
+                        try { h.destroy(); } catch (e) {}
+                        finish(true);
+                    });
+                    h.on(Hls.Events.ERROR, (ev, data) => {
+                        if (data && data.fatal) {
+                            try { h.destroy(); } catch (e) {}
+                            finish(false);
+                        }
+                    });
+                    h.loadSource(directLink);
+                    return;
+                }
+
+                fetch(directLink, { method: 'GET', mode: 'cors', cache: 'no-store' })
+                    .then((resp) => {
+                        finish(resp && resp.ok);
+                    })
+                    .catch(() => {
+                        // Fallback check for opaque/direct media links
+                        const vCheck = document.createElement('video');
+                        vCheck.muted = true;
+                        vCheck.preload = 'metadata';
+                        vCheck.onloadedmetadata = () => finish(true);
+                        vCheck.onerror = () => finish(false);
+                        vCheck.src = directLink;
+                    });
+            });
+        }
+
+        async function sortWorkingStreamsFirst(streams) {
+            if (!Array.isArray(streams) || streams.length <= 1) return streams || [];
+            const results = await Promise.all(
+                streams.map(async (sObj, originalIndex) => {
+                    const ok = await probeSingleStream(sObj, 3500);
+                    return { sObj, originalIndex, ok };
+                })
+            );
+            results.sort((a, b) => {
+                if (a.ok === b.ok) return a.originalIndex - b.originalIndex;
+                return a.ok ? -1 : 1;
+            });
+            return results.map(r => r.sObj);
+        }
+
         function renderDynamicServerButtons(validStreams, selectedKey) {
             if (!serverSelectorEl) return;
             if (!validStreams || validStreams.length === 0) {
@@ -1249,18 +1364,21 @@
                     document.getElementById('bannerTeamB').innerText = matched.teamB;
                 }
 
-                const validStreams = Array.isArray(matched.raw.streams)
+                const rawValidStreams = Array.isArray(matched.raw.streams)
                     ? matched.raw.streams.filter(s => s && s.stream_url && s.stream_url.trim() !== "")
                     : [];
 
+                const orderedStreams = await sortWorkingStreamsFirst(rawValidStreams);
+
                 activeServersMap = {};
-                validStreams.forEach((sObj, idx) => {
+                orderedStreams.forEach((sObj, idx) => {
                     activeServersMap[`server${idx + 1}`] = sObj;
                 });
 
                 const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
-                const chosenKey = activeServersMap[currentServerKey] ? currentServerKey : firstAvailableKey;
-                renderDynamicServerButtons(validStreams, chosenKey);
+                const chosenKey = firstAvailableKey;
+                currentServerKey = chosenKey;
+                renderDynamicServerButtons(orderedStreams, chosenKey);
 
                 const statusUpper = (matched.raw.status || "").toUpperCase();
                 const startTimeStr = matched.info?.startTime || "";
@@ -1394,12 +1512,7 @@
             setQualityLabelText('Auto');
             armStreamFailWatchdog(myToken);
 
-            const isEmbed =
-                directLink.includes('youtube.com') ||
-                directLink.includes('youtu.be') ||
-                directLink.includes('rumble.com') ||
-                directLink.includes('kick.com') ||
-                directLink.includes('<iframe');
+            const isEmbed = isEmbedUrl(directLink);
 
             if (isEmbed) {
                 video.style.display = 'none';
