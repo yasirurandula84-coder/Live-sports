@@ -686,6 +686,15 @@
             "china": "cn"
         };
 
+        function safeDecodeValue(val) {
+            if (!val) return '';
+            try {
+                return decodeURIComponent(val);
+            } catch (e) {
+                return String(val);
+            }
+        }
+
         function getFlagUrlByTeamName(teamName) {
             if (!teamName) return null;
             const normalized = teamName.trim().toLowerCase();
@@ -752,11 +761,13 @@
         }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const matchId = urlParams.get('id') || 'default-match';
-        const queryTitle = urlParams.get('title') || '';
+        const rawMatchIdParam = urlParams.get('id') || 'default-match';
+        const rawQueryTitleParam = urlParams.get('title') || '';
+        const matchId = safeDecodeValue(rawMatchIdParam);
+        const queryTitle = safeDecodeValue(rawQueryTitleParam);
 
         if (queryTitle) {
-            document.getElementById('matchTitle').innerText = decodeURIComponent(queryTitle);
+            document.getElementById('matchTitle').innerText = queryTitle;
         }
 
         const video = document.getElementById('hlsPlayer');
@@ -1163,7 +1174,7 @@
         }, 1000);
 
         function buildSlugId(cat, idx, title) {
-            return encodeURIComponent(`${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+            return `${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
         }
 
         function formatChannelLabel(sObj, index) {
@@ -1263,7 +1274,6 @@
                         finish(resp && resp.ok);
                     })
                     .catch(() => {
-                        // Fallback check for opaque/direct media links
                         const vCheck = document.createElement('video');
                         vCheck.muted = true;
                         vCheck.preload = 'metadata';
@@ -1322,8 +1332,8 @@
 
                     if (
                         slugId === matchId ||
-                        decodeURIComponent(slugId) === decodeURIComponent(matchId) ||
-                        (queryTitle && title.toLowerCase() === decodeURIComponent(queryTitle).toLowerCase())
+                        safeDecodeValue(slugId) === matchId ||
+                        (queryTitle && title.toLowerCase() === queryTitle.toLowerCase())
                     ) {
                         matched = { raw: m, title, teamA: tA, teamB: tB, flagA: info.teamAFlag, flagB: info.teamBFlag, info };
                     }
