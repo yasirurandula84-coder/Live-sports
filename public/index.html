@@ -218,17 +218,27 @@
             transform: translateY(-2px);
         }
 
-        .tapmad-green-btn {
-            background: linear-gradient(135deg, #15803d, #22c55e) !important;
-            border: 1px solid rgba(74, 222, 128, 0.55) !important;
-            color: #ffffff !important;
-            box-shadow: 0 6px 18px rgba(34, 197, 94, 0.3) !important;
+        .tapmad-green-trigger {
+            width: 100%;
+            margin-top: 14px;
+            background: linear-gradient(135deg, #15803d, #22c55e);
+            border: 1px solid rgba(74, 222, 128, 0.55);
+            color: #ffffff;
+            box-shadow: 0 8px 22px rgba(34, 197, 94, 0.3);
+            border-radius: 14px;
+            padding: 14px 18px;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            transition: transform 0.2s ease, filter 0.2s ease;
         }
-        .tapmad-green-btn:hover {
-            background: linear-gradient(135deg, #16a34a, #4ade80) !important;
-            border-color: #86efac !important;
-            color: #052e16 !important;
+        .tapmad-green-trigger:hover {
             transform: translateY(-2px);
+            filter: brightness(1.06);
         }
 
         .live-tv-header {
@@ -237,6 +247,109 @@
             align-items: center;
             gap: 10px;
             flex-wrap: wrap;
+        }
+
+        /* Tapmad Match Selection Overlay Modal */
+        .tapmad-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: rgba(5, 6, 10, 0.84);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+        .tapmad-overlay.active {
+            display: flex;
+        }
+        .tapmad-modal {
+            width: 100%;
+            max-width: 520px;
+            max-height: 82vh;
+            background: linear-gradient(155deg, #161824, #0d0e15);
+            border: 1px solid rgba(74, 222, 128, 0.35);
+            border-radius: 20px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .tapmad-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(34, 197, 94, 0.08);
+        }
+        .tapmad-modal-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tapmad-close-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #f3f4f6;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+        }
+        .tapmad-close-btn:hover {
+            background: rgba(239, 68, 68, 0.25);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        .tapmad-modal-list {
+            padding: 14px 16px 18px 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .tapmad-match-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 14px;
+            padding: 13px 15px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 13.5px;
+            font-weight: 700;
+            transition: all 0.2s ease;
+        }
+        .tapmad-match-item:hover {
+            background: rgba(34, 197, 94, 0.16);
+            border-color: #4ade80;
+            transform: translateX(2px);
+        }
+        .tapmad-play-badge {
+            flex-shrink: 0;
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            color: #fff;
+            font-size: 11.5px;
+            font-weight: 800;
+            padding: 6px 12px;
+            border-radius: 9px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
         }
 
         /* Live Cricket Banner (Below Categories & Live TV) */
@@ -476,16 +589,36 @@
             </div>
         </div>
 
-        <!-- 2. Live TV Section (Below Categories) -->
+        <!-- 2. Live TV Section (Single Green Tapmad Live Button -> Opens Overlay) -->
         <div class="categories-section" id="liveTvSection">
             <div class="live-tv-header">
                 <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;">
-                    <i class="fa-solid fa-tv" style="color: #38bdf8;"></i> Live TV Channels
+                    <i class="fa-solid fa-tv" style="color: #4ade80;"></i> Live TV
                 </h2>
                 <span class="live-count-pill" id="liveTvCount">Loading...</span>
             </div>
-            <div class="categories-grid" id="liveTvGrid">
-                <div class="cat-link-card" style="color: #9ca3af;">Loading channels...</div>
+            <button type="button" id="openTapmadOverlayBtn" class="tapmad-green-trigger" onclick="openTapmadOverlay()">
+                <span><i class="fa-solid fa-satellite-dish"></i> Tapmad Live</span>
+                <span style="font-size: 12px; background: rgba(0, 0, 0, 0.25); padding: 4px 10px; border-radius: 999px;">
+                    Select Match <i class="fa-solid fa-chevron-right"></i>
+                </span>
+            </button>
+        </div>
+
+        <!-- Tapmad Match Selector Overlay -->
+        <div class="tapmad-overlay" id="tapmadOverlay" role="dialog" aria-modal="true" aria-labelledby="tapmadOverlayTitle">
+            <div class="tapmad-modal">
+                <div class="tapmad-modal-head">
+                    <h3 class="tapmad-modal-title" id="tapmadOverlayTitle">
+                        <i class="fa-solid fa-tv" style="color: #4ade80;"></i> Tapmad Live Matches
+                    </h3>
+                    <button type="button" class="tapmad-close-btn" onclick="closeTapmadOverlay()" aria-label="Close">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <div class="tapmad-modal-list" id="tapmadOverlayList">
+                    <div style="text-align: center; color: #9ca3af; padding: 18px;">Loading Tapmad matches...</div>
+                </div>
             </div>
         </div>
 
@@ -584,35 +717,73 @@
             return `<img src="${cands[0]}" alt="${escapeAttr(teamName)}" class="team-logo" referrerpolicy="no-referrer" data-cands="${enc}" data-idx="0" onerror="handleLogoError(this)">`;
         }
 
-        async function loadLiveTvChannels() {
-            const grid = document.getElementById('liveTvGrid');
-            const countEl = document.getElementById('liveTvCount');
-            if (!grid) return;
+        let tapmadChannelsCache = [];
 
+        function renderTapmadOverlayList(list) {
+            const listEl = document.getElementById('tapmadOverlayList');
+            if (!listEl) return;
+
+            if (!Array.isArray(list) || list.length === 0) {
+                listEl.innerHTML = `<div style="text-align: center; color: #9ca3af; padding: 18px;">No Tapmad matches available right now.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = list.map(ch => {
+                const title = ch.name || 'Tapmad Match';
+                const params = new URLSearchParams({
+                    tv: '1',
+                    id: ch.id || 'tv-channel',
+                    title
+                });
+                return `
+                    <a href="/match?${params.toString()}" class="tapmad-match-item">
+                        <span>📺 ${escapeAttr(title)}</span>
+                        <span class="tapmad-play-badge"><i class="fa-solid fa-play"></i> Watch</span>
+                    </a>
+                `;
+            }).join('');
+        }
+
+        function openTapmadOverlay() {
+            const overlay = document.getElementById('tapmadOverlay');
+            if (!overlay) return;
+            overlay.classList.add('active');
+            renderTapmadOverlayList(tapmadChannelsCache);
+            loadLiveTvChannels(true);
+        }
+
+        function closeTapmadOverlay() {
+            const overlay = document.getElementById('tapmadOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        document.addEventListener('click', (e) => {
+            const overlay = document.getElementById('tapmadOverlay');
+            if (overlay && overlay.classList.contains('active') && e.target === overlay) {
+                closeTapmadOverlay();
+            }
+        });
+
+        async function loadLiveTvChannels(refreshOverlay = false) {
+            const countEl = document.getElementById('liveTvCount');
             try {
                 const res = await fetch(`/api/tapmad-playlist?t=${Date.now()}`, { cache: 'no-store' });
                 const data = await res.json();
                 const list = Array.isArray(data.channels) ? data.channels : [];
+                tapmadChannelsCache = list;
 
-                if (countEl) countEl.innerText = `${list.length} Channels`;
-
-                if (list.length === 0) {
-                    grid.innerHTML = `<div class="cat-link-card" style="grid-column: 1/-1; color: #9ca3af;">No Live TV channels available right now.</div>`;
-                    return;
+                if (countEl) {
+                    countEl.innerText = list.length > 0 ? `${list.length} Live` : '0 Live';
                 }
 
-                grid.innerHTML = list.map(ch => {
-                    const playlistTitle = ch.name || 'Tapmad Live';
-                    const params = new URLSearchParams({
-                        tv: '1',
-                        id: ch.id || 'tv-channel',
-                        title: playlistTitle
-                    });
-                    return `<a href="/match?${params.toString()}" class="cat-link-card tapmad-green-btn">📺 Tapmad Live</a>`;
-                }).join('');
+                if (refreshOverlay) {
+                    renderTapmadOverlayList(list);
+                }
             } catch (e) {
-                if (countEl) countEl.innerText = '0 Channels';
-                grid.innerHTML = `<div class="cat-link-card" style="grid-column: 1/-1; color: #9ca3af;">Unable to load Live TV channels right now.</div>`;
+                if (countEl) countEl.innerText = '0 Live';
+                if (refreshOverlay) {
+                    renderTapmadOverlayList([]);
+                }
             }
         }
 
