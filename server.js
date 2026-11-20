@@ -12,6 +12,9 @@ app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] })
 const matchViewers = {};
 const matchChatHistories = {}; // මැච් අනුව චැට් හිස්ට්‍රි ගබඩා කරගැනීමට
 
+const TAPMAD_PLAYLIST_URL = 'http://2nd.sm-monirul.top/@sm_iptv_bd/exp.php?tapmad=getPlaylist&sm=.m3u';
+let tapmadCache = { data: null, expiresAt: 0 };
+
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
@@ -31,6 +34,81 @@ async function getMatchesDataFromGitHub() {
     }
 }
 
+function parseM3uPlaylist(rawText) {
+    const lines = String(rawText || '')
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(Boolean);
+
+    const channels = [];
+    let pendingName = '';
+    let pendingLogo = '';
+    let pendingGroup = 'Live TV';
+    let pendingKid = '';
+    let pendingKey = '';
+    let pendingReferer = '';
+    let pendingUserAgent = '';
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.startsWith('#EXTINF:')) {
+            const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
+            const groupMatch = line.match(/group-title="([^"]*)"/i);
+            pendingLogo = logoMatch ? logoMatch[1].trim() : '';
+            pendingGroup = groupMatch && groupMatch[1].trim() ? groupMatch[1].trim() : 'Live TV';
+
+            const commaIdx = line.lastIndexOf(',');
+            pendingName = commaIdx !== -1
+                ? line.slice(commaIdx + 1).trim()
+                : `Channel ${channels.length + 1}`;
+        } else if (line.startsWith('#KODIPROP:')) {
+            const keyMatch = line.match(/([0-9a-fA-F]{32}):([0-9a-fA-F]{32})/);
+            if (keyMatch) {
+                pendingKid = keyMatch[1].toLowerCase();
+                pendingKey = keyMatch[2].toLowerCase();
+            }
+        } else if (line.startsWith('#EXTVLCOPT:')) {
+            const optContent = line.replace(/^#EXTVLCOPT:/i, '').trim();
+            const lowerOpt = optContent.toLowerCase();
+            if (lowerOpt.startsWith('http-referrer=')) {
+                pendingReferer = optContent.slice('http-referrer='.length).trim();
+            } else if (lowerOpt.startsWith('http-user-agent=')) {
+                pendingUserAgent = optContent.slice('http-user-agent='.length).trim();
+            }
+        } else if (!line.startsWith('#')) {
+            const rawStreamUrl = line.trim();
+            const isM3u8 = rawStreamUrl.toLowerCase().includes('.m3u8');
+            const playableUrl = isM3u8
+                ? `/hls-proxy?url=${encodeURIComponent(rawStreamUrl)}`
+                : rawStreamUrl;
+
+            channels.push({
+                id: `tv-${channels.length + 1}`,
+                name: pendingName || `Channel ${channels.length + 1}`,
+                logo: pendingLogo,
+                group: pendingGroup,
+                raw_url: rawStreamUrl,
+                stream_url: playableUrl,
+                kid: pendingKid,
+                key: pendingKey,
+                referer: pendingReferer,
+                userAgent: pendingUserAgent
+            });
+
+            pendingName = '';
+            pendingLogo = '';
+            pendingGroup = 'Live TV';
+            pendingKid = '';
+            pendingKey = '';
+            pendingReferer = '';
+            pendingUserAgent = '';
+        }
+    }
+
+    return channels;
+}
+
 // --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
 
 // 1. Home Page (ස්වයංක්‍රීයව index.html පෙන්වයි)
@@ -46,6 +124,53 @@ app.get('/category/:name', (req, res) => {
 // 3. Match Player Page (උදා: /match?id=xxx&title=xxx හෝ /watch/xxx)
 app.get('/match', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'match.html'));
+});
+
+// --- Tapmad / M3U Playlist API Route ---
+app.get('/api/tapmad-playlist', async (req, res) => {
+    const now = Date.now();
+    if (tapmadCache.data && now < tapmadCache.expiresAt) {
+        return res.json(tapmadCache.data);
+    }
+
+    try {
+        const response = await fetch(TAPMAD_PLAYLIST_URL, {
+            headers: {
+                'User-Agent': 'OTT Navigator/1.6.8 (Linux; Android 13)',
+                'Accept': '*/*'
+            }
+        });
+
+        if (!response.ok) {
+            return res.status(502).json({
+                ok: false,
+                error: `Upstream playlist returned ${response.status}`,
+                channels: []
+            });
+        }
+
+        const rawM3u = await response.text();
+        const channels = parseM3uPlaylist(rawM3u);
+        const payload = {
+            ok: true,
+            count: channels.length,
+            channels
+        };
+
+        tapmadCache = {
+            data: payload,
+            expiresAt: now + 60 * 1000 // 1 minute cache
+        };
+
+        return res.json(payload);
+    } catch (error) {
+        console.error('Tapmad playlist error:', error);
+        return res.status(500).json({
+            ok: false,
+            error: 'Failed to fetch playlist',
+            channels: []
+        });
+    }
 });
 
 // --- Image Proxy Route for Sofascore / Blocked Team Logos ---
