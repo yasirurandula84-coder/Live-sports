@@ -179,7 +179,7 @@
 
         .btn-live-cricket:hover, .btn-more-cats:hover { transform: translateY(-2px); }
 
-        /* Categories Section (Above Live Cricket Match Cards) */
+        /* Categories & Live TV Sections */
         .categories-section {
             background: linear-gradient(180deg, rgba(15, 15, 22, 0.72) 0%, rgba(10, 10, 15, 0.95) 100%);
             border: 1px solid rgba(99, 102, 241, 0.24);
@@ -206,6 +206,11 @@
             font-size: 13px;
             font-weight: 700;
             transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            word-break: break-word;
         }
         .cat-link-card:hover {
             border-color: var(--primary-color);
@@ -213,7 +218,15 @@
             transform: translateY(-2px);
         }
 
-        /* Live Cricket Banner (Below Categories) */
+        .live-tv-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        /* Live Cricket Banner (Below Categories & Live TV) */
         .live-cricket-banner {
             background: linear-gradient(90deg, #ea580c, #ef4444);
             color: #fff;
@@ -432,11 +445,12 @@
             <p>Live Cricket matches streaming now in HD with fast servers and live fan chat.</p>
             <div class="hero-actions">
                 <a href="#categories" class="btn-more-cats"><i class="fa-solid fa-layer-group"></i> Categories</a>
+                <a href="#liveTvSection" class="btn-more-cats"><i class="fa-solid fa-tv"></i> Live TV</a>
                 <a href="#liveCricketSection" class="btn-live-cricket"><i class="fa-solid fa-circle-dot"></i> Live Cricket</a>
             </div>
         </section>
 
-        <!-- 1. Categories Section (Above Live Cricket Cards) -->
+        <!-- 1. Categories Section -->
         <div class="categories-section" id="categories">
             <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;"><i class="fa-solid fa-layer-group" style="color: var(--primary-color);"></i> Categories</h2>
             <div class="categories-grid">
@@ -449,7 +463,20 @@
             </div>
         </div>
 
-        <!-- 2. Live Cricket Matches Section (Below Categories) -->
+        <!-- 2. Live TV Section (Below Categories) -->
+        <div class="categories-section" id="liveTvSection">
+            <div class="live-tv-header">
+                <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;">
+                    <i class="fa-solid fa-tv" style="color: #38bdf8;"></i> Live TV Channels
+                </h2>
+                <span class="live-count-pill" id="liveTvCount">Loading...</span>
+            </div>
+            <div class="categories-grid" id="liveTvGrid">
+                <div class="cat-link-card" style="color: #9ca3af;">Loading channels...</div>
+            </div>
+        </div>
+
+        <!-- 3. Live Cricket Matches Section -->
         <div id="liveCricketSection" class="live-cricket-banner">
             <span>🏏 Live Cricket Matches</span>
             <span class="live-count-pill" id="liveCricketCount">0 Live</span>
@@ -542,6 +569,40 @@
             const cands = buildTeamLogoCandidates(rawUrl, teamName);
             const enc = encodeURIComponent(JSON.stringify(cands));
             return `<img src="${cands[0]}" alt="${escapeAttr(teamName)}" class="team-logo" referrerpolicy="no-referrer" data-cands="${enc}" data-idx="0" onerror="handleLogoError(this)">`;
+        }
+
+        async function loadLiveTvChannels() {
+            const grid = document.getElementById('liveTvGrid');
+            const countEl = document.getElementById('liveTvCount');
+            if (!grid) return;
+
+            try {
+                const res = await fetch(`/api/tapmad-playlist?t=${Date.now()}`, { cache: 'no-store' });
+                const data = await res.json();
+                const list = Array.isArray(data.channels) ? data.channels : [];
+
+                if (countEl) countEl.innerText = `${list.length} Channels`;
+
+                if (list.length === 0) {
+                    grid.innerHTML = `<div class="cat-link-card" style="grid-column: 1/-1; color: #9ca3af;">No Live TV channels available right now.</div>`;
+                    return;
+                }
+
+                grid.innerHTML = list.map(ch => {
+                    const params = new URLSearchParams({
+                        tv: '1',
+                        id: ch.id || 'tv-channel',
+                        title: ch.name || 'Live TV',
+                        url: ch.stream_url || '',
+                        kid: ch.kid || '',
+                        key: ch.key || ''
+                    });
+                    return `<a href="/match?${params.toString()}" class="cat-link-card">📺 ${escapeAttr(ch.name)}</a>`;
+                }).join('');
+            } catch (e) {
+                if (countEl) countEl.innerText = '0 Channels';
+                grid.innerHTML = `<div class="cat-link-card" style="grid-column: 1/-1; color: #9ca3af;">Unable to load Live TV channels right now.</div>`;
+            }
         }
 
         let liveCricketMatches = [];
@@ -639,7 +700,9 @@
             }
         }
 
+        loadLiveTvChannels();
         loadLiveCricketMatches();
+        setInterval(loadLiveTvChannels, 120000);
         setInterval(loadLiveCricketMatches, 120000);
     </script>
 </body>
