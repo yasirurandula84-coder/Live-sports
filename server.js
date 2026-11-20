@@ -250,6 +250,7 @@ app.get('/img-proxy', async (req, res) => {
 });
 
 // --- HLS / TS Stream Proxy Route (Smart Playlist vs Binary Detection) ---
+// --- HLS / TS Stream Proxy Route (Low-Lag Chunk Streaming) ---
 app.get('/hls-proxy', async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
@@ -259,7 +260,8 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: UPSTREAM_STREAM_HEADERS,
-            redirect: 'follow'
+            redirect: 'follow',
+            signal: AbortSignal.timeout(15000)
         });
 
         const contentType = response.headers.get('content-type') || '';
@@ -269,57 +271,89 @@ app.get('/hls-proxy', async (req, res) => {
             return res.status(response.status).send(`Upstream error ${response.status}: ${errSnippet}`);
         }
 
-        const rawBuffer = Buffer.from(await response.arrayBuffer());
-        const headText = rawBuffer.slice(0, 64).toString('utf8').trimStart();
-        const isActualM3u8Text = headText.startsWith('#EXTM3U') || headText.startsWith('#EXT-X-');
-
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
 
-        if (isActualM3u8Text) {
-            res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-            const bodyText = rawBuffer.toString('utf8');
-            const effectiveBase = response.url || targetUrl;
-            const baseUrl = effectiveBase.substring(0, effectiveBase.lastIndexOf('/') + 1);
-            const lines = bodyText.split(/\r?\n/);
+        const lowerUrl = String(response.url || targetUrl).toLowerCase();
+        const lowerCt = contentType.toLowerCase();
+        const looksLikeManifest =
+            lowerUrl.includes('.m3u8') ||
+            lowerCt.includes('mpegurl') ||
+            lowerCt.includes('application/vnd.apple.mpegurl');
 
-            const rewrittenLines = lines.map(line => {
-                const trimmed = line.trim();
-                if (!trimmed) return '';
-                if (trimmed.startsWith('#')) {
-                    if (trimmed.includes('URI="')) {
-                        return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
-                            const absoluteUri = uri.startsWith('http')
-                                ? uri
-                                : new URL(uri, baseUrl).toString();
-                            return `URI="/hls-proxy?url=${encodeURIComponent(absoluteUri)}"`;
-                        });
+        if (looksLikeManifest) {
+            const bodyText = await response.text();
+            const trimmedHead = bodyText.trimStart();
+
+            if (trimmedHead.startsWith('#EXTM3U') || trimmedHead.startsWith('#EXT-X-')) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                const effectiveBase = response.url || targetUrl;
+                const baseUrl = effectiveBase.substring(0, effectiveBase.lastIndexOf('/') + 1);
+                const lines = bodyText.split(/\r?\n/);
+
+                const rewrittenLines = lines.map(line => {
+                    const trimmed = line.trim();
+                    if (!trimmed) return '';
+                    if (trimmed.startsWith('#')) {
+                        if (trimmed.includes('URI="')) {
+                            return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
+                                const absoluteUri = uri.startsWith('http')
+                                    ? uri
+                                    : new URL(uri, baseUrl).toString();
+                                return `URI="/hls-proxy?url=${encodeURIComponent(absoluteUri)}"`;
+                            });
+                        }
+                        return line;
+                    } else {
+                        const absoluteUrl = trimmed.startsWith('http')
+                            ? trimmed
+                            : new URL(trimmed, baseUrl).toString();
+                        return `/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`;
                     }
-                    return line;
-                } else {
-                    const absoluteUrl = trimmed.startsWith('http')
-                        ? trimmed
-                        : new URL(trimmed, baseUrl).toString();
-                    return `/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`;
-                }
+                });
+
+                return res.send(rewrittenLines.join('\n'));
+            }
+        }
+
+        // Stream binary MPEG-TS chunks directly without waiting for full buffer
+        const safeCt = (contentType && !lowerCt.includes('mpegurl'))
+            ? contentType
+            : 'video/mp2t';
+        res.setHeader('Content-Type', safeCt);
+
+        if (response.body && typeof response.body.getReader === 'function') {
+            const reader = response.body.getReader();
+            req.on('close', () => {
+                reader.cancel().catch(() => {});
             });
 
-            return res.send(rewrittenLines.join('\n'));
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                if (value && value.length > 0) {
+                    const canContinue = res.write(Buffer.from(value));
+                    if (!canContinue) {
+                        await new Promise(resolve => res.once('drain', resolve));
+                    }
+                }
+            }
+            return res.end();
         } else {
-            // Binary MPEG-TS / video payload: send raw bytes untouched so HLS.js / video element can decode
-            const safeCt = (contentType && !contentType.toLowerCase().includes('mpegurl'))
-                ? contentType
-                : 'video/mp2t';
-            res.setHeader('Content-Type', safeCt);
-            res.setHeader('Content-Length', rawBuffer.length);
+            const rawBuffer = Buffer.from(await response.arrayBuffer());
             return res.end(rawBuffer);
         }
     } catch (error) {
-        console.error('[HLS-PROXY] Catch error:', error);
-        res.status(500).send('Proxy error: ' + error.message);
+        if (!res.headersSent) {
+            res.status(500).send('Proxy error: ' + error.message);
+        } else {
+            res.end();
+        }
     }
 });
+
 
 
 io.on('connection', (socket) => {
