@@ -133,8 +133,8 @@
 
         .player-loader {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 16; display: flex; flex-direction: column; align-items: center; gap: 10px;
-            color: #fff; font-size: 14px; font-weight: 600; background: rgba(0, 0, 0, 0.6);
+            z-index: 18; display: flex; flex-direction: column; align-items: center; gap: 10px;
+            color: #fff; font-size: 14px; font-weight: 600; background: rgba(0, 0, 0, 0.65);
             padding: 15px 25px; border-radius: 12px; backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -145,6 +145,54 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .player-loader.hidden { display: none; }
+
+        /* Blur Overlay while initial stream lag settles */
+        .stream-warmup-blur-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 17;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            background: rgba(10, 10, 16, 0.42);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .stream-warmup-blur-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .stream-warmup-card {
+            background: rgba(15, 16, 24, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 16px;
+            padding: 18px 24px;
+            max-width: 340px;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.6);
+        }
+        .stream-warmup-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.3px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .stream-warmup-sub {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #cbd5e1;
+            line-height: 1.4;
+        }
 
         .video-controls-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%;
@@ -370,6 +418,16 @@
                         <div class="spinner"></div>
                         <span>Connecting Live Stream...</span>
                     </div>
+
+                    <div id="streamWarmupBlur" class="stream-warmup-blur-overlay" aria-live="polite">
+                        <div class="stream-warmup-card">
+                            <div class="stream-warmup-title">
+                                <i class="fa-solid fa-satellite-dish" style="color: #ff6b78;"></i>
+                                <span>Buffering Live</span>
+                            </div>
+                            <div class="stream-warmup-sub">This may take around 10 seconds, please wait</div>
+                        </div>
+                    </div>
                     
                     <video id="hlsPlayer" playsinline autoplay muted></video>
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
@@ -553,6 +611,7 @@
         const controlsOverlay = document.getElementById('controlsOverlay');
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
+        const streamWarmupBlur = document.getElementById('streamWarmupBlur');
         const playerCountdownOverlay = document.getElementById('playerCountdownOverlay');
         const progressContainer = document.getElementById('progressContainer');
         const playPauseBtn = document.getElementById('playPauseBtn');
@@ -584,6 +643,48 @@
         let replyingTo = null;
         let countdownInterval = null;
         let pendingMessage = null;
+
+        // Warmup blur state for initial stream lag
+        let warmupTimer = null;
+        let warmupFallbackTimer = null;
+        let warmupActive = false;
+        let lastSmoothVideoTime = -1;
+        let smoothAdvanceTicks = 0;
+
+        function clearWarmupTimers() {
+            if (warmupTimer) {
+                clearTimeout(warmupTimer);
+                warmupTimer = null;
+            }
+            if (warmupFallbackTimer) {
+                clearTimeout(warmupFallbackTimer);
+                warmupFallbackTimer = null;
+            }
+        }
+
+        function hideWarmupBlur() {
+            clearWarmupTimers();
+            warmupActive = false;
+            smoothAdvanceTicks = 0;
+            lastSmoothVideoTime = -1;
+            if (streamWarmupBlur) {
+                streamWarmupBlur.classList.remove('active');
+            }
+        }
+
+        function startWarmupBlurAfterConnect() {
+            clearWarmupTimers();
+            warmupActive = true;
+            smoothAdvanceTicks = 0;
+            lastSmoothVideoTime = video ? video.currentTime : -1;
+            if (streamWarmupBlur) {
+                streamWarmupBlur.classList.add('active');
+            }
+            // Safety cap: remove blur after 12s even if stream metadata behaves oddly
+            warmupFallbackTimer = setTimeout(() => {
+                hideWarmupBlur();
+            }, 12000);
+        }
 
         function setQualityLabelText(text) {
             if (currentQualityLabel) currentQualityLabel.innerText = text;
@@ -730,6 +831,22 @@
             } catch (e) {}
             kickPlayNow();
         }
+
+        // Monitor consecutive smooth playback ticks before clearing blur overlay
+        setInterval(() => {
+            if (!warmupActive || video.style.display === 'none') return;
+            if (!video.paused && video.readyState >= 3) {
+                if (lastSmoothVideoTime >= 0 && (video.currentTime - lastSmoothVideoTime) >= 0.45) {
+                    smoothAdvanceTicks += 1;
+                    if (smoothAdvanceTicks >= 2) {
+                        hideWarmupBlur();
+                    }
+                } else {
+                    smoothAdvanceTicks = 0;
+                }
+                lastSmoothVideoTime = video.currentTime;
+            }
+        }, 700);
 
         video.addEventListener('playing', () => {
             hideOverlaysSafely();
@@ -878,6 +995,7 @@
 
                 if (statusUpper === "UPCOMING") {
                     isMatchLive = false;
+                    hideWarmupBlur();
                     playerCountdownOverlay.classList.remove('hidden');
                     document.getElementById('countdownMatchTitle').innerText = matched.title;
                     document.getElementById('scheduledTimeText').innerText = startTimeStr || "Scheduled Soon";
@@ -959,6 +1077,7 @@
         }
 
         async function destroyPlayers() {
+            hideWarmupBlur();
             if (currentHls) {
                 try { currentHls.destroy(); } catch (e) {}
                 currentHls = null;
@@ -1092,6 +1211,7 @@
                     setupShakaQualityMenu(shakaPlayer, lowestTrack);
                     await kickPlayNow();
                     hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
                     return;
                 } catch (err) {
                     console.error("Shaka load failed:", err);
@@ -1139,6 +1259,7 @@
                     setupHlsQualityMenu(hls, levels, minIdx);
                     await kickPlayNow();
                     hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
@@ -1155,6 +1276,7 @@
                 video.addEventListener('loadedmetadata', async function () {
                     await kickPlayNow();
                     hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
                 }, { once: true });
             }
         }
