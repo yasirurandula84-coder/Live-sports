@@ -3,11 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Watch Live Match - StreamX</title>
-
+    <title>StreamX - Live Cricket Streaming</title>
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="StreamX - Ultimate Live Sports Experience">
-    <meta property="og:description" content="Stream your favorite cricket and football matches in high definition with live interactive chats and real-time community engagement.">
+    <meta property="og:description" content="Stream live cricket matches in high definition with live interactive chats and real-time community engagement.">
     <meta property="og:image" content="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     <meta property="og:url" content="https://www.streamx.website/">
     <meta property="og:type" content="website">
@@ -15,2140 +14,633 @@
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="StreamX - Ultimate Live Sports Experience">
-    <meta name="twitter:description" content="Stream your favorite cricket and football matches in high definition with live interactive chats.">
+    <meta name="twitter:description" content="Stream live cricket matches in high definition with live interactive chats.">
     <meta name="twitter:image" content="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
 
     <!-- Website Favicon / Google Search Logo -->
     <link rel="icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     <link rel="shortcut icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     <link rel="apple-touch-icon" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
-    
-    <link rel="stylesheet" href="style.css">
+
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- HLS.js Library for .m3u8 Playback -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <!-- Shaka Player Library for DASH (.mpd) and DRM Playback -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.3.5/shaka-player.compiled.js"></script>
     <style>
         :root {
             --primary-color: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.4);
             --accent-color: #ff4757;
-            --bg-dark: #0b0b0e;
-            --card-bg: linear-gradient(145deg, #141419, #101014);
+            --bg-dark: #07070a;
             --border-color: rgba(255, 255, 255, 0.08);
         }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: #101014; }
-        ::-webkit-scrollbar-thumb { background: #23232b; border-radius: 4px; }
+        ::-webkit-scrollbar { width: 8px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #1f1f28; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
 
-        *, *::before, *::after {
-            box-sizing: border-box;
-        }
-
-        body {
+        html, body {
             background-color: var(--bg-dark);
             color: #f3f4f6;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding-bottom: 50px;
-            overflow-x: hidden;
+            padding: 0;
+            padding-bottom: 84px;
+            overflow-x: clip;
+        }
+
+        .glow-orb-1 {
+            position: fixed; top: -100px; left: -100px; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, transparent 70%);
+            border-radius: 50%; z-index: 0; pointer-events: none;
+        }
+        .glow-orb-2 {
+            position: fixed; top: 360px; right: -100px; width: 450px; height: 450px;
+            background: radial-gradient(circle, rgba(255, 71, 87, 0.14) 0%, transparent 70%);
+            border-radius: 50%; z-index: 0; pointer-events: none;
         }
 
         .navbar {
-            background: rgba(11, 11, 14, 0.85) !important;
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
+            background: rgba(11, 11, 16, 0.92) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid var(--border-color);
             position: sticky; top: 0; z-index: 1000;
             display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 30px;
+            padding: 14px 24px; gap: 12px;
+        }
+
+        .navbar .logo {
+            letter-spacing: 1.5px; font-weight: 900; font-size: 21px;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-decoration: none; display: flex; align-items: center; gap: 8px;
+        }
+
+        .nav-links {
+            list-style: none; display: flex; gap: 20px; margin: 0; padding: 0; align-items: center;
+        }
+
+        .nav-links a {
+            color: #9ca3af; text-decoration: none; font-weight: 600; font-size: 14px;
+            display: flex; align-items: center; gap: 6px; transition: all 0.3s ease;
+        }
+        .nav-links a:hover, .nav-links a.active { color: #fff; }
+
+        .tg-nav-btn {
+            background: rgba(34, 158, 217, 0.14) !important; color: #38bdf8 !important;
+            padding: 8px 16px; border-radius: 25px; border: 1px solid rgba(56, 189, 248, 0.35);
+            transition: all 0.3s ease !important; white-space: nowrap;
+        }
+        .tg-nav-btn:hover {
+            background: #229ed9 !important; color: #fff !important;
+            box-shadow: 0 0 18px rgba(34, 158, 217, 0.55);
+        }
+
+        @media (max-width: 640px) {
+            .nav-links .hide-mobile { display: none; }
+            .navbar { padding: 12px 16px; }
         }
 
         .container {
-            max-width: 1200px;
+            position: relative;
+            z-index: 1;
+            max-width: 1120px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 16px 18px;
         }
 
-        .match-teams-banner {
-            display: inline-flex;
-            align-items: center;
-            gap: 12px;
-            background: rgba(255, 255, 255, 0.04);
-            border: 1px solid var(--border-color);
-            padding: 8px 16px;
-            border-radius: 14px;
-            margin-bottom: 16px;
-            max-width: 100%;
-            flex-wrap: wrap;
+        .hero-box {
+            background: linear-gradient(155deg, rgba(20, 26, 44, 0.92), rgba(10, 12, 20, 0.96));
+            border: 1px solid rgba(99, 102, 241, 0.25);
+            border-radius: 22px;
+            padding: 24px 20px;
+            text-align: center;
+            margin-top: 10px;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
         }
 
-        .match-team-chip {
+        .hero-box h1 {
+            margin: 0 0 8px 0;
+            font-size: clamp(25px, 5vw, 35px);
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .hero-box h1 span {
+            background: linear-gradient(135deg, #38bdf8, #a5b4fc, #ff6b78);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero-box p {
+            margin: 0 auto 18px auto;
+            max-width: 580px;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: #9ca3af;
+        }
+
+        .hero-actions {
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-live-cricket {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
+            padding: 11px 18px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 700;
             font-size: 13px;
-            font-weight: 700;
-            color: #fff;
+            background: linear-gradient(135deg, #ef4444, #e11d48);
+            box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35);
+            transition: transform 0.2s ease;
         }
 
-        .match-team-chip img {
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            object-fit: cover;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            background: #181822;
-        }
-
-        .custom-video-container {
-            position: relative; width: 100%; aspect-ratio: 16 / 9; max-height: 480px;
-            background: #000; display: flex; align-items: center; justify-content: center;
-            overflow: hidden; border-radius: 18px; border: 1px solid var(--border-color);
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
-        }
-        .custom-video-container video {
-            width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0; z-index: 2;
-        }
-
-        #youtubePlayer {
-            width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; z-index: 2;
-        }
-
-        .player-thumb-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.2s ease;
-        }
-        .player-thumb-overlay.hidden {
-            opacity: 0; visibility: hidden; pointer-events: none;
-        }
-
-        .player-countdown-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(11, 11, 14, 0.85); backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px); z-index: 30; display: flex;
-            flex-direction: column; align-items: center; justify-content: center; text-align: center;
-            padding: 20px; transition: opacity 0.4s ease;
-        }
-        .player-countdown-overlay.hidden {
-            opacity: 0; visibility: hidden; pointer-events: none;
-        }
-
-        .player-loader {
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 18; display: flex; flex-direction: column; align-items: center; gap: 10px;
-            color: #fff; font-size: 14px; font-weight: 600; background: rgba(0, 0, 0, 0.65);
-            padding: 15px 25px; border-radius: 12px; backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .spinner {
-            width: 35px; height: 35px; border: 3px solid rgba(255, 255, 255, 0.2);
-            border-top: 3px solid var(--primary-color); border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-        }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .player-loader.hidden { display: none; }
-
-        /* Blur Overlay with animated loading indicator */
-        .stream-warmup-blur-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 17;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px;
-            backdrop-filter: blur(14px);
-            -webkit-backdrop-filter: blur(14px);
-            background: rgba(10, 10, 16, 0.45);
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-            transition: opacity 0.35s ease, visibility 0.35s ease;
-        }
-        .stream-warmup-blur-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-        .stream-warmup-card {
-            background: rgba(15, 16, 24, 0.84);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            border-radius: 18px;
-            padding: 22px 26px;
-            max-width: 340px;
-            width: 90%;
-            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-        .warmup-ring-spinner {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: 3px solid rgba(99, 102, 241, 0.22);
-            border-top-color: #6366f1;
-            border-right-color: #ff4757;
-            animation: spin 0.8s linear infinite;
-        }
-        .stream-warmup-title {
-            font-size: 16px;
-            font-weight: 800;
-            color: #fff;
-            letter-spacing: 0.3px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 4px;
-        }
-        .warmup-dots span {
-            display: inline-block;
-            animation: warmupDotBounce 1.2s infinite ease-in-out;
-            color: #a5b4fc;
-            font-weight: 900;
-        }
-        .warmup-dots span:nth-child(2) { animation-delay: 0.2s; }
-        .warmup-dots span:nth-child(3) { animation-delay: 0.4s; }
-        @keyframes warmupDotBounce {
-            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
-            40% { transform: translateY(-4px); opacity: 1; }
-        }
-        .stream-warmup-sub {
-            font-size: 12.5px;
-            font-weight: 500;
-            color: #cbd5e1;
-            line-height: 1.45;
-        }
-
-        /* Stream Failure / Error Overlay */
-        .stream-error-overlay {
-            position: absolute;
-            inset: 0;
-            z-index: 22;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 20px;
-            background: rgba(10, 10, 15, 0.92);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-        }
-        .stream-error-overlay.active {
-            display: flex;
-        }
-        .stream-error-card {
-            background: linear-gradient(145deg, #1b1720, #121218);
-            border: 1px solid rgba(255, 71, 87, 0.35);
-            border-radius: 18px;
-            padding: 22px 24px;
-            max-width: 370px;
-            width: 92%;
-            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.75);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 10px;
-        }
-        .stream-error-icon {
-            width: 44px;
-            height: 44px;
-            border-radius: 50%;
-            background: rgba(255, 71, 87, 0.14);
-            color: #ff6b78;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
-        }
-        .stream-error-title {
-            font-size: 16px;
-            font-weight: 800;
-            color: #fff;
-        }
-        .stream-error-desc {
-            font-size: 12.5px;
-            color: #cbd5e1;
-            line-height: 1.45;
-        }
-        .stream-error-actions {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            margin-top: 6px;
-        }
-        .stream-err-btn {
-            border: 1px solid rgba(255, 255, 255, 0.14);
-            background: rgba(255, 255, 255, 0.08);
-            color: #fff;
-            padding: 8px 14px;
-            border-radius: 10px;
-            font-size: 12px;
-            font-weight: 700;
-            cursor: pointer;
+        .btn-more-cats {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
+            padding: 11px 18px;
+            border-radius: 12px;
+            text-decoration: none;
+            color: #fff;
+            font-weight: 700;
+            font-size: 13px;
+            background: linear-gradient(135deg, #0284c7, #2563eb);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+            transition: transform 0.2s ease;
+        }
+
+        .btn-live-cricket:hover, .btn-more-cats:hover { transform: translateY(-2px); }
+
+        /* Categories Section (Above Live Cricket Match Cards) */
+        .categories-section {
+            background: linear-gradient(180deg, rgba(15, 15, 22, 0.72) 0%, rgba(10, 10, 15, 0.95) 100%);
+            border: 1px solid rgba(99, 102, 241, 0.24);
+            border-radius: 20px;
+            padding: 18px 20px;
+            margin: 20px 0 24px 0;
+        }
+
+        .categories-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .cat-link-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 14px 10px;
+            text-align: center;
+            text-decoration: none;
+            color: #fff;
+            font-size: 13px;
+            font-weight: 700;
             transition: all 0.2s ease;
         }
-        .stream-err-btn:hover {
-            background: rgba(255, 255, 255, 0.16);
-        }
-        .stream-err-btn.primary {
-            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
-            border-color: rgba(165, 180, 252, 0.45);
+        .cat-link-card:hover {
+            border-color: var(--primary-color);
+            background: rgba(99, 102, 241, 0.12);
+            transform: translateY(-2px);
         }
 
-        .video-controls-overlay {
-            position: absolute; bottom: 0; left: 0; width: 100%; max-width: 100%;
-            background: linear-gradient(to top, rgba(0,0,0,0.88), transparent);
-            padding: 12px 16px; z-index: 20; display: flex; flex-direction: column; gap: 8px;
-            transition: opacity 0.3s ease;
+        /* Live Cricket Banner (Below Categories) */
+        .live-cricket-banner {
+            background: linear-gradient(90deg, #ea580c, #ef4444);
+            color: #fff;
+            text-align: center;
+            padding: 13px 16px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            margin: 8px 0 14px 0;
+            box-shadow: 0 8px 24px rgba(239, 68, 68, 0.28);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
-        .video-controls-overlay.hidden { opacity: 0; pointer-events: none; }
 
-        .progress-bar-container {
-            width: 100%; height: 5px; background: rgba(255,255,255,0.2);
-            border-radius: 999px; cursor: pointer; overflow: hidden;
-        }
-        .progress-bar {
-            height: 100%; width: 0%; background: var(--primary-color); transition: width 0.1s linear;
+        .live-count-pill {
+            background: rgba(0, 0, 0, 0.28);
+            padding: 3px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 800;
         }
 
-        .controls-row {
+        .search-box {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 11px 14px;
+            color: #fff;
+            font-size: 13.5px;
+            outline: none;
+            margin-bottom: 16px;
+        }
+        .search-box:focus { border-color: var(--primary-color); }
+
+        .cricket-live-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(295px, 1fr));
+            gap: 16px;
+        }
+
+        .cricket-match-card {
+            background: linear-gradient(145deg, rgba(26, 22, 34, 0.92), rgba(13, 13, 20, 0.98));
+            border: 1px solid rgba(255, 71, 87, 0.32);
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .cricket-match-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-color);
+            box-shadow: 0 12px 28px rgba(255, 71, 87, 0.22);
+        }
+
+        .card-top {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            flex-wrap: wrap;
+            margin-bottom: 12px;
             gap: 8px;
-            width: 100%;
-            max-width: 100%;
         }
 
-        .left-controls,
-        .right-controls {
-            display: flex;
-            align-items: center;
-            gap: 7px;
-            flex-wrap: wrap;
-        }
-
-        .control-btn {
-            background: rgba(255, 255, 255, 0.12);
-            border: 1px solid rgba(255, 255, 255, 0.14);
+        .live-badge {
+            background: #ef4444;
             color: #fff;
-            padding: 6px 10px;
-            border-radius: 8px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 4px 10px;
+            border-radius: 999px;
             display: inline-flex;
             align-items: center;
-            justify-content: center;
-            gap: 4px;
-            flex-shrink: 0;
-            line-height: 1.2;
-        }
-        .control-btn:hover {
-            background: rgba(255, 255, 255, 0.22);
+            gap: 6px;
         }
 
-        #volumeSlider {
-            width: 72px;
-            cursor: pointer;
-            accent-color: var(--primary-color);
+        .live-dot {
+            width: 7px; height: 7px;
+            background: #fff; border-radius: 50%;
+            animation: pulse 1.4s infinite;
         }
 
-        @media (max-width: 540px) {
-            .navbar { padding: 12px 16px; }
-            .container { padding: 14px 12px; }
-            .video-controls-overlay {
-                padding: 8px 10px;
-                gap: 6px;
-            }
-            .controls-row {
-                gap: 6px;
-            }
-            .left-controls,
-            .right-controls {
-                gap: 5px;
-            }
-            .control-btn {
-                padding: 5px 8px;
-                font-size: 11px;
-            }
-            #volumeSlider {
-                width: 48px;
-            }
-        }
-
-        .quality-wrapper { position: relative; display: inline-flex; align-items: center; gap: 4px; }
-        .quality-badge-label {
-            font-size: 11px; font-weight: 700; color: #e2e8f0;
-            background: rgba(255, 255, 255, 0.08); padding: 3px 7px; border-radius: 6px;
-        }
-        .quality-menu {
-            position: absolute; bottom: 42px; right: 0; background: rgba(20, 20, 25, 0.96);
-            border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 10px; padding: 6px 0;
-            list-style: none; margin: 0; min-width: 110px; display: none; z-index: 25;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.7); backdrop-filter: blur(10px);
-        }
-        .quality-menu.active { display: block; }
-        .quality-menu li {
-            padding: 8px 14px; font-size: 12.5px; color: #cbd5e1; cursor: pointer;
-            transition: background 0.2s, color 0.2s; text-align: center; font-weight: 600;
-        }
-        .quality-menu li:hover { background: var(--primary-color); color: #fff; }
-        .quality-menu li.selected { color: #a5b4fc; background: rgba(99, 102, 241, 0.18); font-weight: 700; }
-
-        .connection-status {
-            display: flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.05);
-            padding: 6px 12px; border-radius: 8px; font-size: 13px; color: #cbd5e1;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .ping-dot {
-            width: 8px; height: 8px; border-radius: 50%; background: #22c55e;
-            box-shadow: 0 0 8px #22c55e; transition: background 0.3s, box-shadow 0.3s;
-        }
-        .ping-dot.fair { background: #eab308; box-shadow: 0 0 8px #eab308; }
-        .ping-dot.poor { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-
-        /* Clean, neat server buttons */
-        .server-selector {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-            gap: 10px;
-            margin: 15px 0;
-            max-height: 142px;
-            overflow-y: auto;
-            padding: 6px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-        }
-        .server-selector button {
-            background: linear-gradient(145deg, #171720, #121218);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.09);
-            padding: 10px 12px;
-            border-radius: 11px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 12px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+        .teams-row {
             display: flex;
             align-items: center;
-            gap: 8px;
-            min-width: 0;
-            text-align: left;
-        }
-        .server-selector button .srv-badge {
-            flex-shrink: 0;
-            font-size: 10px;
-            font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.07);
-            color: #a5b4fc;
-        }
-        .server-selector button span.srv-label {
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            flex: 1;
-        }
-        .server-selector button:hover {
-            border-color: rgba(99, 102, 241, 0.6);
-            color: #fff;
-            background: linear-gradient(145deg, #1e1e2b, #161620);
-        }
-        .server-selector button.active-server {
-            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
-            border-color: rgba(165, 180, 252, 0.55);
-            color: #fff;
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.42);
-        }
-        .server-selector button.active-server .srv-badge {
-            background: rgba(255, 255, 255, 0.2);
-            color: #fff;
+            justify-content: space-between;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            border-radius: 12px;
+            padding: 12px;
         }
 
-        .match-info-bar {
-            background: var(--card-bg); border: 1px solid var(--border-color);
-            padding: 14px 20px; border-radius: 14px; display: flex;
-            justify-content: space-between; align-items: center; margin-top: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.3); flex-wrap: wrap; gap: 10px;
-        }
-        .viewers-count {
-            background: rgba(255, 255, 255, 0.05); padding: 6px 12px;
-            border-radius: 8px; font-size: 13px; color: #cbd5e1;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-        }
-
-        .watch-container {
-            display: grid; grid-template-columns: 1fr 360px; gap: 24px;
-        }
-        @media (max-width: 900px) { .watch-container { grid-template-columns: 1fr; } }
-
-        .chat-box {
-            background: var(--card-bg); border: 1px solid var(--border-color);
-            border-radius: 18px; display: flex; flex-direction: column;
-            height: 530px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-        }
-        .chat-header {
-            background: rgba(255, 255, 255, 0.02); padding: 16px; font-weight: 700;
-            font-size: 15px; border-bottom: 1px solid var(--border-color); color: #fff;
-            display: flex; align-items: center; gap: 8px;
-        }
-        .chat-messages {
-            flex: 1; padding: 16px; overflow-y: auto; display: flex;
-            flex-direction: column; gap: 12px;
-        }
-        .message {
-            background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 10px 14px; border-radius: 12px; font-size: 13px; position: relative;
-            animation: fadeIn 0.3s ease;
-        }
-        .msg-user { font-weight: 700; margin-bottom: 4px; }
-        .chat-input-area {
-            display: flex; padding: 14px; background: rgba(0, 0, 0, 0.2);
-            border-top: 1px solid var(--border-color); gap: 10px;
-        }
-        .chat-input-area input {
-            flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
-            padding: 10px 14px; border-radius: 10px; color: #fff; outline: none; font-size: 13px;
-            transition: border-color 0.3s;
-        }
-        .chat-input-area input:focus { border-color: var(--primary-color); }
-        .chat-input-area button {
-            background: linear-gradient(135deg, var(--primary-color), #4f46e5); color: white;
-            border: none; padding: 10px 18px; border-radius: 10px; font-weight: 700;
-            cursor: pointer; transition: filter 0.3s;
-        }
-        .chat-input-area button:hover { filter: brightness(1.1); }
-
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(10px);
-            display: none; align-items: center; justify-content: center; z-index: 2000;
-        }
-        .modal-overlay.active {
+        .team-col {
             display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            width: 42%;
+            text-align: center;
         }
-        .modal-content {
-            background: linear-gradient(145deg, #181820, #121217); border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 35px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.8); position: relative;
-        }
-        .modal-close-btn {
-            position: absolute; top: 14px; right: 16px; background: transparent;
-            border: none; color: #9ca3af; font-size: 18px; cursor: pointer;
-            padding: 4px 8px; transition: color 0.2s;
-        }
-        .modal-close-btn:hover { color: #fff; }
-        .modal-content h2 { margin-top: 0; color: #fff; font-size: 22px; }
-        .modal-content p { color: #9ca3af; font-size: 13px; margin-bottom: 20px; }
-        .modal-content input {
-            width: 100%; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 12px 16px; border-radius: 12px; color: #fff; font-size: 14px; outline: none;
-            margin-bottom: 20px;
-        }
-        .modal-content button.submit-name-btn {
-            width: 100%; background: linear-gradient(135deg, var(--primary-color), var(--accent-color));
-            color: #fff; border: none; padding: 12px; border-radius: 12px; font-weight: 700;
-            font-size: 15px; cursor: pointer; box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
-            transition: transform 0.2s;
-        }
-        .modal-content button.submit-name-btn:hover { transform: translateY(-2px); }
 
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
+        .team-logo {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #181824;
+            border: 2px solid rgba(255, 255, 255, 0.16);
+        }
+
+        .team-name {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #f3f4f6;
+            line-height: 1.25;
+        }
+
+        .vs-tag {
+            font-size: 11px;
+            font-weight: 800;
+            color: #a5b4fc;
+            background: rgba(99, 102, 241, 0.16);
+            padding: 4px 8px;
+            border-radius: 7px;
+        }
+
+        .card-foot {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            font-size: 12px;
+        }
+
+        .site-footer {
+            position: relative;
+            z-index: 1;
+            background: linear-gradient(180deg, #0a0a0f 0%, #030305 100%);
+            border-top: 1px solid var(--border-color);
+            margin-top: 40px;
+            padding: 28px 18px;
+            text-align: center;
+            color: #9ca3af;
+            font-size: 12.5px;
+        }
+
+        /* Always-visible Fixed Bottom Dock Bar */
+        .bottom-nav-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 62px;
+            background: rgba(10, 10, 16, 0.96);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: 0 -8px 28px rgba(0, 0, 0, 0.75);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 9999;
+            transform: translate3d(0, 0, 0);
+            will-change: transform;
+            box-sizing: border-box;
+        }
+
+        .bottom-nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 3px;
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 6px 4px;
+            white-space: nowrap;
+        }
+        .bottom-nav-item i { font-size: 16px; }
+        .bottom-nav-item.active, .bottom-nav-item:hover { color: #fff; }
+        .bottom-nav-item.active i { color: #38bdf8; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(0.95); opacity: 0.8; }
         }
     </style>
 </head>
 <body>
 
-    <div class="modal-overlay" id="usernameModal">
-        <div class="modal-content">
-            <button type="button" class="modal-close-btn" id="closeModalBtn" title="Cancel"><i class="fa-solid fa-xmark"></i></button>
-            <h2>Enter Chat Username</h2>
-            <p>Set your name once to start sending messages in live chat.</p>
-            <input type="text" id="usernameInput" placeholder="Your Username..." autocomplete="off">
-            <button type="button" class="submit-name-btn" id="joinChatBtn">Save & Send Message</button>
-        </div>
-    </div>
+    <div class="glow-orb-1"></div>
+    <div class="glow-orb-2"></div>
 
     <nav class="navbar">
-        <a href="/" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px;">STREAMX</a>
-        <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding: 0;">
-            <li><a href="/" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
+        <a href="/" class="logo"><i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 18px;"></i> STREAMX</a>
+        <ul class="nav-links">
+            <li class="hide-mobile"><a href="/" class="active"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li class="hide-mobile"><a href="/category/cricket"><i class="fa-solid fa-baseball-bat-ball"></i> Cricket All</a></li>
+            <li><a href="https://t.me/+Qycsil9v4Zo0ZDM1" target="_blank" class="tg-nav-btn"><i class="fa-brands fa-telegram"></i> Join Telegram</a></li>
         </ul>
     </nav>
 
     <div class="container">
-        <h2 id="matchTitle" class="section-title" style="margin-bottom: 10px; font-size: 22px; font-weight: 800; color: #fff;">Loading Match...</h2>
 
-        <div class="match-teams-banner" id="matchTeamsBanner" style="display: none;">
-            <div class="match-team-chip">
-                <img id="bannerFlagA" src="" alt="">
-                <span id="bannerTeamA"></span>
+        <section class="hero-box">
+            <h1>Watch Sports <span>Anytime, Anywhere</span></h1>
+            <p>Live Cricket matches streaming now in HD with fast servers and live fan chat.</p>
+            <div class="hero-actions">
+                <a href="#categories" class="btn-more-cats"><i class="fa-solid fa-layer-group"></i> Categories</a>
+                <a href="#liveCricketSection" class="btn-live-cricket"><i class="fa-solid fa-circle-dot"></i> Live Cricket</a>
             </div>
-            <span style="font-size: 11px; font-weight: 800; color: #a5b4fc; background: rgba(99,102,241,0.18); padding: 3px 7px; border-radius: 6px;">VS</span>
-            <div class="match-team-chip">
-                <img id="bannerFlagB" src="" alt="">
-                <span id="bannerTeamB"></span>
-            </div>
-        </div>
-        
-        <div class="watch-container">
-            <div>
-                <div class="custom-video-container" id="playerContainer">
-                    <img id="playerThumbnail" class="player-thumb-overlay" src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Match Thumbnail">
+        </section>
 
-                    <div id="playerCountdownOverlay" class="player-countdown-overlay hidden">
-                        <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 30px; border-radius: 20px; backdrop-filter: blur(15px); max-width: 400px; width: 90%; box-shadow: 0 15px 35px rgba(0,0,0,0.6);">
-                            <div style="color: var(--primary-color); font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
-                                <i class="fa-regular fa-clock"></i> Upcoming Match
-                            </div>
-                            <h3 id="countdownMatchTitle" style="color: #fff; font-size: 18px; margin: 0 0 15px 0;">Stream Starting Soon</h3>
-                            <div style="color: #9ca3af; font-size: 13px; margin-bottom: 15px;">Scheduled Time: <strong id="scheduledTimeText" style="color: #fff;">--:--</strong></div>
-                            
-                            <div id="countdownTimerBoxes" style="display: flex; justify-content: center; gap: 10px; font-weight: 700; color: #fff; font-size: 20px;">
-                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdHours">00h</span> : 
-                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdMinutes">00m</span> : 
-                                <span style="background: rgba(0,0,0,0.4); padding: 8px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1);" id="cdSeconds">00s</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div id="playerLoader" class="player-loader hidden">
-                        <div class="spinner"></div>
-                        <span>Connecting Live Stream...</span>
-                    </div>
-
-                    <div id="streamWarmupBlur" class="stream-warmup-blur-overlay" aria-live="polite">
-                        <div class="stream-warmup-card">
-                            <div class="warmup-ring-spinner"></div>
-                            <div class="stream-warmup-title">
-                                <span>Buffering Live</span>
-                                <span class="warmup-dots"><span>.</span><span>.</span><span>.</span></span>
-                            </div>
-                            <div class="stream-warmup-sub">This may take around 10 seconds, please wait</div>
-                        </div>
-                    </div>
-
-                    <div id="streamErrorOverlay" class="stream-error-overlay" role="alert">
-                        <div class="stream-error-card">
-                            <div class="stream-error-icon">
-                                <i class="fa-solid fa-triangle-exclamation"></i>
-                            </div>
-                            <div class="stream-error-title" id="streamErrorTitle">Stream Not Working</div>
-                            <div class="stream-error-desc" id="streamErrorDesc">This server is currently unavailable or failing to play. Please try another server.</div>
-                            <div class="stream-error-actions">
-                                <button type="button" class="stream-err-btn primary" id="nextServerErrBtn" style="display: none;">
-                                    <i class="fa-solid fa-forward-step"></i> Next Server
-                                </button>
-                                <button type="button" class="stream-err-btn" id="retryServerErrBtn">
-                                    <i class="fa-solid fa-rotate-right"></i> Retry
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <video id="hlsPlayer" playsinline autoplay></video>
-                    <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
-                    
-                    <div class="video-controls-overlay" id="controlsOverlay">
-                        <div class="progress-bar-container" id="progressContainer" style="display: block;">
-                            <div class="progress-bar" id="progressBar"></div>
-                        </div>
-
-                        <div class="controls-row">
-                            <div class="left-controls" id="leftControlsGroup">
-                                <button type="button" class="control-btn" id="playPauseBtn"><i class="fa-solid fa-pause"></i></button>
-                                <button type="button" class="control-btn" id="skipBackwardBtn"><i class="fa-solid fa-rotate-left"></i> 10s</button>
-                                <button type="button" class="control-btn" id="skipForwardBtn"><i class="fa-solid fa-rotate-right"></i> 10s</button>
-                                
-                                <div class="volume-box" style="display: flex; gap: 6px; align-items: center;">
-                                    <button type="button" class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-high"></i></button>
-                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
-                                </div>
-                            </div>
-
-                            <div class="right-controls">
-                                <div class="quality-wrapper" id="qualityWrapper" style="display: none;">
-                                    <span class="quality-badge-label" id="currentQualityLabel">Auto</span>
-                                    <button type="button" class="control-btn" id="qualityBtn" title="Select Quality"><i class="fa-solid fa-gear"></i></button>
-                                    <ul class="quality-menu" id="qualityMenu"></ul>
-                                </div>
-                                <button type="button" class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
-                                <button type="button" class="control-btn" id="fullscreenBtn" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Dynamic Server Select Buttons -->
-                <div class="server-selector" id="serverSelector"></div>
-
-                <div class="match-info-bar">
-                    <span id="nowPlayingText" style="font-weight: 600; color: #9ca3af; display: flex; align-items: center; gap: 6px;">● Live Stream Broadcast</span>
-
-                    <div style="display: flex; gap: 10px; align-items: center;">
-                        <div class="connection-status">
-                            <div class="ping-dot" id="pingDot"></div>
-                            <span id="pingText">Checking ping...</span>
-                        </div>
-                        <div class="viewers-count">
-                            <span>👀</span> <span id="viewersCount">0</span> Watching Now
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Live Chat Box -->
-            <div class="chat-box">
-                <div class="chat-header"><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Live Fan Chat</div>
-                <div class="chat-messages" id="chatMessages"></div>
-                <form class="chat-input-area" id="chatForm">
-                    <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
-                    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
-                </form>
+        <!-- 1. Categories Section (Above Live Cricket Cards) -->
+        <div class="categories-section" id="categories">
+            <h2 style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;"><i class="fa-solid fa-layer-group" style="color: var(--primary-color);"></i> Categories</h2>
+            <div class="categories-grid">
+                <a href="/category/cricket" class="cat-link-card">🏏 Cricket</a>
+                <a href="/category/football" class="cat-link-card">⚽ Football</a>
+                <a href="/category/basketball" class="cat-link-card">🏀 Basketball</a>
+                <a href="/category/motorsports" class="cat-link-card">🏎️ Motorsports</a>
+                <a href="/category/boxing" class="cat-link-card">🥊 Boxing / UFC</a>
+                <a href="/category/hockey" class="cat-link-card">🏒 Hockey</a>
             </div>
         </div>
+
+        <!-- 2. Live Cricket Matches Section (Below Categories) -->
+        <div id="liveCricketSection" class="live-cricket-banner">
+            <span>🏏 Live Cricket Matches</span>
+            <span class="live-count-pill" id="liveCricketCount">0 Live</span>
+        </div>
+
+        <input type="text" id="cricketSearchInput" class="search-box" placeholder="Search live cricket matches..." oninput="renderLiveCricket()">
+
+        <div class="cricket-live-grid" id="liveCricketGrid">
+            <div class="cricket-match-card" style="text-align: center; color: #9ca3af;">Loading live cricket matches...</div>
+        </div>
+
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <footer class="site-footer">
+        <p style="margin: 0;">&copy; 2026 StreamX. All rights reserved.</p>
+    </footer>
+
+    <nav class="bottom-nav-bar" aria-label="Bottom Navigation">
+        <a href="/" class="bottom-nav-item active"><i class="fa-solid fa-house"></i><span>Home</span></a>
+        <a href="/category/cricket" class="bottom-nav-item"><i class="fa-solid fa-baseball-bat-ball"></i><span>Cricket</span></a>
+        <a href="/category/football" class="bottom-nav-item"><i class="fa-solid fa-futbol"></i><span>Football</span></a>
+        <a href="/category/basketball" class="bottom-nav-item"><i class="fa-solid fa-basketball"></i><span>Basketball</span></a>
+        <a href="/category/motorsports" class="bottom-nav-item"><i class="fa-solid fa-flag-checkered"></i><span>Motorsports</span></a>
+    </nav>
+
     <script>
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
         const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         const TEAM_COUNTRY_CODES = {
-            "india": "in",
-            "new zealand": "nz",
-            "sri lanka": "lk",
-            "australia": "au",
-            "england": "gb-eng",
-            "pakistan": "pk",
-            "south africa": "za",
-            "bangladesh": "bd",
-            "afghanistan": "af",
-            "west indies": "jm",
-            "ireland": "ie",
-            "zimbabwe": "zw",
-            "netherlands": "nl",
-            "scotland": "gb-sct",
-            "nepal": "np",
-            "uae": "ae",
-            "united arab emirates": "ae",
-            "oman": "om",
-            "usa": "us",
-            "united states": "us",
-            "canada": "ca",
-            "namibia": "na",
-            "kenya": "ke",
-            "argentina": "ar",
-            "brazil": "br",
-            "france": "fr",
-            "germany": "de",
-            "spain": "es",
-            "portugal": "pt",
-            "italy": "it",
-            "japan": "jp",
-            "south korea": "kr",
-            "china": "cn"
+            "india": "in", "new zealand": "nz", "sri lanka": "lk", "australia": "au",
+            "england": "gb-eng", "pakistan": "pk", "south africa": "za", "bangladesh": "bd",
+            "afghanistan": "af", "west indies": "jm", "ireland": "ie", "zimbabwe": "zw",
+            "netherlands": "nl", "scotland": "gb-sct", "nepal": "np", "uae": "ae",
+            "oman": "om", "usa": "us", "canada": "ca", "namibia": "na", "kenya": "ke"
         };
 
-        function safeDecodeValue(val) {
-            if (!val) return '';
-            try {
-                return decodeURIComponent(val);
-            } catch (e) {
-                return String(val);
-            }
+        function escapeAttr(val) {
+            return String(val || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
         function getFlagUrlByTeamName(teamName) {
             if (!teamName) return null;
-            const normalized = teamName.trim().toLowerCase();
-            if (TEAM_COUNTRY_CODES[normalized]) {
-                return `https://flagcdn.com/w80/${TEAM_COUNTRY_CODES[normalized]}.png`;
-            }
-            for (const [key, code] of Object.entries(TEAM_COUNTRY_CODES)) {
-                if (normalized.includes(key)) {
-                    return `https://flagcdn.com/w80/${code}.png`;
-                }
+            const n = teamName.trim().toLowerCase();
+            if (TEAM_COUNTRY_CODES[n]) return `https://flagcdn.com/w80/${TEAM_COUNTRY_CODES[n]}.png`;
+            for (const [k, code] of Object.entries(TEAM_COUNTRY_CODES)) {
+                if (n.includes(k)) return `https://flagcdn.com/w80/${code}.png`;
             }
             return null;
         }
 
-        function applyFlagImage(imgEl, rawUrl, teamName) {
-            if (!imgEl) return;
-            const candidates = [];
-
-            const countryFlag = getFlagUrlByTeamName(teamName);
-            if (countryFlag) candidates.push(countryFlag);
-
-            if (rawUrl && rawUrl.trim() !== "") {
-                const cleanRaw = rawUrl.trim().replace(/^http:\/\//i, 'https://');
-                if (cleanRaw.includes('img.sofascore.com')) {
-                    candidates.push(`/img-proxy?url=${encodeURIComponent(cleanRaw)}`);
+        function buildTeamLogoCandidates(rawUrl, teamName) {
+            const list = [];
+            const flag = getFlagUrlByTeamName(teamName);
+            if (flag) list.push(flag);
+            if (rawUrl && rawUrl.trim()) {
+                const clean = rawUrl.trim().replace(/^http:\/\//i, 'https://');
+                if (clean.includes('img.sofascore.com')) {
+                    list.push(`/img-proxy?url=${encodeURIComponent(clean)}`);
+                    list.push(`https://wsrv.nl/?url=${encodeURIComponent(clean)}&w=80&h=80&fit=cover`);
                 }
-                candidates.push(cleanRaw);
+                list.push(clean);
             }
+            list.push(FALLBACK_FLAG);
+            return list;
+        }
 
-            candidates.push(FALLBACK_FLAG);
-
-            let idx = 0;
-            imgEl.referrerPolicy = "no-referrer";
-            imgEl.onerror = function () {
+        function handleLogoError(imgEl) {
+            const raw = imgEl.getAttribute('data-cands');
+            let idx = parseInt(imgEl.getAttribute('data-idx') || '0', 10);
+            try {
+                const arr = JSON.parse(decodeURIComponent(raw));
                 idx += 1;
-                if (idx < candidates.length) {
-                    this.src = candidates[idx];
-                } else {
-                    this.onerror = null;
-                    this.src = FALLBACK_FLAG;
-                }
-            };
-            imgEl.src = candidates[0];
-        }
-
-        document.addEventListener('contextmenu', event => event.preventDefault());
-        document.onkeydown = function(e) {
-            if (e.keyCode == 123 || (e.ctrlKey && e.shiftKey && e.keyCode == 73) || (e.ctrlKey && e.keyCode == 85)) {
-                return false;
-            }
-        };
-
-        function getUsernameColor(username) {
-            let hash = 0;
-            for (let i = 0; i < username.length; i++) {
-                hash = username.charCodeAt(i) + ((hash << 5) - hash);
-            }
-            const colors = [
-                '#f43f5e', '#ec4899', '#d946ef', '#a855f7', 
-                '#8b5cf6', '#6366f1', '#3b82f6', '#0ea5e9', 
-                '#14b8a6', '#10b981', '#22c55e', '#eab308', '#f97316'
-            ];
-            return colors[Math.abs(hash) % colors.length];
-        }
-
-        const urlParams = new URLSearchParams(window.location.search);
-        const rawMatchIdParam = urlParams.get('id') || 'default-match';
-        const rawQueryTitleParam = urlParams.get('title') || '';
-        const matchId = safeDecodeValue(rawMatchIdParam);
-        const queryTitle = safeDecodeValue(rawQueryTitleParam);
-
-        if (queryTitle) {
-            document.getElementById('matchTitle').innerText = queryTitle;
-        }
-
-        const video = document.getElementById('hlsPlayer');
-        const ytIframe = document.getElementById('youtubePlayer');
-        const controlsOverlay = document.getElementById('controlsOverlay');
-        const playerThumbnail = document.getElementById('playerThumbnail');
-        const playerLoader = document.getElementById('playerLoader');
-        const streamWarmupBlur = document.getElementById('streamWarmupBlur');
-        const streamErrorOverlay = document.getElementById('streamErrorOverlay');
-        const streamErrorTitle = document.getElementById('streamErrorTitle');
-        const streamErrorDesc = document.getElementById('streamErrorDesc');
-        const nextServerErrBtn = document.getElementById('nextServerErrBtn');
-        const retryServerErrBtn = document.getElementById('retryServerErrBtn');
-        const playerCountdownOverlay = document.getElementById('playerCountdownOverlay');
-        const progressContainer = document.getElementById('progressContainer');
-        const playPauseBtn = document.getElementById('playPauseBtn');
-        const skipBackBtn = document.getElementById('skipBackwardBtn');
-        const skipFwdBtn = document.getElementById('skipForwardBtn');
-        const playerContainer = document.getElementById('playerContainer');
-        const serverSelectorEl = document.getElementById('serverSelector');
-        const muteBtn = document.getElementById('muteBtn');
-        const volumeSlider = document.getElementById('volumeSlider');
-        const fullscreenBtn = document.getElementById('fullscreenBtn');
-        const progressBar = document.getElementById('progressBar');
-        
-        const qualityWrapper = document.getElementById('qualityWrapper');
-        const qualityBtn = document.getElementById('qualityBtn');
-        const qualityMenu = document.getElementById('qualityMenu');
-        const currentQualityLabel = document.getElementById('currentQualityLabel');
-
-        let socket = null;
-        try {
-            if (typeof io === "function") {
-                socket = io();
-            }
-        } catch (e) {}
-
-        let currentHls = null;
-        let currentShakaPlayer = null;
-        let isMatchLive = false;
-        let activeMatchFeedItem = null;
-        let activeServersMap = {};
-        let currentServerKey = 'server1';
-        let streamAttemptToken = 0;
-        let streamFailWatchdog = null;
-
-        let username = localStorage.getItem('chat_username') || '';
-        let replyingTo = null;
-        let countdownInterval = null;
-        let pendingMessage = null;
-
-        let warmupFallbackTimer = null;
-        let warmupActive = false;
-        let lastSmoothVideoTime = -1;
-        let smoothAdvanceTicks = 0;
-
-        function syncAudioUiState() {
-            if (!video) return;
-            if (video.muted || video.volume === 0) {
-                if (muteBtn) muteBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-                if (volumeSlider) volumeSlider.value = 0;
-            } else {
-                if (muteBtn) muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-                if (volumeSlider) volumeSlider.value = video.volume;
-            }
-        }
-
-        function clearWarmupTimers() {
-            if (warmupFallbackTimer) {
-                clearTimeout(warmupFallbackTimer);
-                warmupFallbackTimer = null;
-            }
-        }
-
-        function hideWarmupBlur() {
-            clearWarmupTimers();
-            warmupActive = false;
-            smoothAdvanceTicks = 0;
-            lastSmoothVideoTime = -1;
-            if (streamWarmupBlur) {
-                streamWarmupBlur.classList.remove('active');
-            }
-        }
-
-        function startWarmupBlurAfterConnect() {
-            clearWarmupTimers();
-            warmupActive = true;
-            smoothAdvanceTicks = 0;
-            lastSmoothVideoTime = video ? video.currentTime : -1;
-            if (streamWarmupBlur) {
-                streamWarmupBlur.classList.add('active');
-            }
-            warmupFallbackTimer = setTimeout(() => {
-                hideWarmupBlur();
-            }, 12000);
-        }
-
-        function clearStreamFailWatchdog() {
-            if (streamFailWatchdog) {
-                clearTimeout(streamFailWatchdog);
-                streamFailWatchdog = null;
-            }
-        }
-
-        function hideStreamError() {
-            clearStreamFailWatchdog();
-            if (streamErrorOverlay) {
-                streamErrorOverlay.classList.remove('active');
-            }
-        }
-
-        function getNextServerKey() {
-            const keys = Object.keys(activeServersMap);
-            if (keys.length <= 1) return null;
-            const idx = keys.indexOf(currentServerKey);
-            if (idx === -1) return keys[0];
-            return keys[(idx + 1) % keys.length];
-        }
-
-        function showStreamError(titleText, descText, token) {
-            if (token !== undefined && token !== streamAttemptToken) return;
-            clearStreamFailWatchdog();
-            hideWarmupBlur();
-            if (playerLoader) playerLoader.classList.add('hidden');
-            if (playerThumbnail) {
-                playerThumbnail.classList.add('hidden');
-                playerThumbnail.style.display = 'none';
-            }
-            if (streamErrorTitle) {
-                streamErrorTitle.innerText = titleText || 'Stream Not Working';
-            }
-            if (streamErrorDesc) {
-                streamErrorDesc.innerText = descText || 'This server is currently unavailable or failing to play. Please try another server.';
-            }
-            const nextKey = getNextServerKey();
-            if (nextServerErrBtn) {
-                nextServerErrBtn.style.display = nextKey ? 'inline-flex' : 'none';
-            }
-            if (streamErrorOverlay) {
-                streamErrorOverlay.classList.add('active');
-            }
-        }
-
-        function armStreamFailWatchdog(token) {
-            clearStreamFailWatchdog();
-            streamFailWatchdog = setTimeout(() => {
-                if (token !== streamAttemptToken || !isMatchLive) return;
-                if (video.style.display !== 'none') {
-                    const hasProgress = (video.currentTime > 0) || (video.readyState >= 3 && !video.paused);
-                    if (!hasProgress) {
-                        showStreamError(
-                            'Stream Not Working',
-                            'No video feed received from this server. Try another server or retry.',
-                            token
-                        );
-                    }
-                }
-            }, 14000);
-        }
-
-        if (nextServerErrBtn) {
-            nextServerErrBtn.addEventListener('click', () => {
-                const nextKey = getNextServerKey();
-                if (nextKey) {
-                    switchServer(nextKey);
-                }
-            });
-        }
-
-        if (retryServerErrBtn) {
-            retryServerErrBtn.addEventListener('click', () => {
-                if (!isMatchLive) return;
-                loadFeedServer(currentServerKey);
-            });
-        }
-
-        function setQualityLabelText(text) {
-            if (currentQualityLabel) currentQualityLabel.innerText = text;
-        }
-
-        function setupHlsQualityMenu(hls, levels, defaultLowestIdx = null) {
-            const validLevels = (levels || [])
-                .map((lvl, idx) => ({ idx, height: lvl.height || 0, bitrate: lvl.bitrate || 0 }))
-                .filter(item => item.height > 0)
-                .sort((a, b) => b.height - a.height);
-
-            if (validLevels.length <= 1) {
-                qualityWrapper.style.display = 'none';
-                return;
-            }
-
-            qualityWrapper.style.display = 'inline-flex';
-            const lowestItem = defaultLowestIdx !== null
-                ? validLevels.find(v => v.idx === defaultLowestIdx)
-                : null;
-
-            if (lowestItem) {
-                setQualityLabelText(`${lowestItem.height}p`);
-            } else {
-                setQualityLabelText('Auto');
-            }
-
-            qualityMenu.innerHTML = `<li data-mode="auto" class="${lowestItem ? '' : 'selected'}">Auto</li>`;
-            validLevels.forEach(lvl => {
-                const isLowSelected = lowestItem && lvl.idx === lowestItem.idx;
-                qualityMenu.innerHTML += `<li data-mode="manual" data-level="${lvl.idx}" data-label="${lvl.height}p" class="${isLowSelected ? 'selected' : ''}">${lvl.height}p</li>`;
-            });
-
-            qualityMenu.querySelectorAll('li').forEach(li => {
-                li.onclick = (e) => {
-                    e.stopPropagation();
-                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
-                    li.classList.add('selected');
-
-                    const mode = li.getAttribute('data-mode');
-                    if (mode === 'auto') {
-                        hls.currentLevel = -1;
-                        hls.loadLevel = -1;
-                        hls.nextLevel = -1;
-                        setQualityLabelText('Auto');
-                    } else {
-                        const targetIdx = parseInt(li.getAttribute('data-level'), 10);
-                        hls.loadLevel = targetIdx;
-                        hls.currentLevel = targetIdx;
-                        hls.nextLevel = targetIdx;
-                        setQualityLabelText(li.getAttribute('data-label') || 'HD');
-                    }
-                    qualityMenu.classList.remove('active');
-                };
-            });
-        }
-
-        function setupShakaQualityMenu(shakaPlayer, lowestTrack = null) {
-            const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
-            const byHeight = new Map();
-            tracks.forEach(t => {
-                if (t.height && t.height > 0) {
-                    const existing = byHeight.get(t.height);
-                    if (!existing || (t.bandwidth || 0) > (existing.bandwidth || 0)) {
-                        byHeight.set(t.height, t);
-                    }
-                }
-            });
-
-            const sortedHeights = Array.from(byHeight.keys()).sort((a, b) => b - a);
-            if (sortedHeights.length <= 1) {
-                qualityWrapper.style.display = 'none';
-                return;
-            }
-
-            qualityWrapper.style.display = 'inline-flex';
-            const lowestHeight = lowestTrack && lowestTrack.height ? lowestTrack.height : null;
-
-            if (lowestHeight) {
-                setQualityLabelText(`${lowestHeight}p`);
-            } else {
-                setQualityLabelText('Auto');
-            }
-
-            qualityMenu.innerHTML = `<li data-mode="auto" class="${lowestHeight ? '' : 'selected'}">Auto</li>`;
-            sortedHeights.forEach(h => {
-                const isLowSelected = lowestHeight && h === lowestHeight;
-                qualityMenu.innerHTML += `<li data-mode="manual" data-height="${h}" data-label="${h}p" class="${isLowSelected ? 'selected' : ''}">${h}p</li>`;
-            });
-
-            qualityMenu.querySelectorAll('li').forEach(li => {
-                li.onclick = (e) => {
-                    e.stopPropagation();
-                    qualityMenu.querySelectorAll('li').forEach(l => l.classList.remove('selected'));
-                    li.classList.add('selected');
-
-                    const mode = li.getAttribute('data-mode');
-                    if (mode === 'auto') {
-                        shakaPlayer.configure({ abr: { enabled: true } });
-                        setQualityLabelText('Auto');
-                    } else {
-                        const chosenHeight = parseInt(li.getAttribute('data-height'), 10);
-                        const chosenTrack = byHeight.get(chosenHeight);
-                        shakaPlayer.configure({ abr: { enabled: false } });
-                        if (chosenTrack) {
-                            shakaPlayer.selectVariantTrack(chosenTrack, true);
-                        }
-                        setQualityLabelText(`${chosenHeight}p`);
-                    }
-                    qualityMenu.classList.remove('active');
-                };
-            });
-        }
-
-        function hideOverlaysSafely() {
-            playerThumbnail.classList.add('hidden');
-            if (playerLoader) playerLoader.classList.add('hidden');
-            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 150);
-        }
-
-        async function kickPlayNow() {
-            if (video.style.display === 'none') return;
-            try {
-                video.volume = 1;
-                video.muted = false;
-                await video.play();
-                syncAudioUiState();
-            } catch (e) {
-                try {
-                    video.muted = true;
-                    await video.play();
-                    syncAudioUiState();
-                    const unlockAudioOnce = () => {
-                        video.muted = false;
-                        video.volume = 1;
-                        syncAudioUiState();
-                        document.removeEventListener('click', unlockAudioOnce);
-                        document.removeEventListener('touchstart', unlockAudioOnce);
-                    };
-                    document.addEventListener('click', unlockAudioOnce, { once: true });
-                    document.addEventListener('touchstart', unlockAudioOnce, { once: true });
-                } catch (err2) {}
-            }
-        }
-
-        function nudgeStalledFrame() {
-            if (video.style.display === 'none') return;
-            try {
-                if (video.buffered && video.buffered.length > 0) {
-                    const bufEnd = video.buffered.end(video.buffered.length - 1);
-                    if (bufEnd > video.currentTime + 0.12) {
-                        video.currentTime = Math.min(bufEnd - 0.08, video.currentTime + 0.06);
-                    }
-                }
-                if (currentHls && currentHls.startLoad) {
-                    currentHls.startLoad(-1);
+                if (idx < arr.length) {
+                    imgEl.setAttribute('data-idx', String(idx));
+                    imgEl.src = arr[idx];
+                    return;
                 }
             } catch (e) {}
-            if (!video.paused) {
-                video.play().catch(() => {});
-            }
+            imgEl.onerror = null;
+            imgEl.src = FALLBACK_FLAG;
         }
 
-        setInterval(() => {
-            if (!warmupActive || video.style.display === 'none') return;
-            if (!video.paused && video.readyState >= 3) {
-                if (lastSmoothVideoTime >= 0 && (video.currentTime - lastSmoothVideoTime) >= 0.45) {
-                    smoothAdvanceTicks += 1;
-                    if (smoothAdvanceTicks >= 2) {
-                        hideWarmupBlur();
-                    }
-                } else {
-                    smoothAdvanceTicks = 0;
-                }
-                lastSmoothVideoTime = video.currentTime;
-            }
-        }, 700);
-
-        video.addEventListener('playing', () => {
-            clearStreamFailWatchdog();
-            hideOverlaysSafely();
-            if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-        });
-
-        video.addEventListener('pause', () => {
-            if (playPauseBtn) playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-        });
-
-        video.addEventListener('error', () => {
-            if (!isMatchLive || video.style.display === 'none' || !video.src) return;
-            showStreamError(
-                'Stream Not Working',
-                'This video source failed to play. Please try another server.',
-                streamAttemptToken
-            );
-        });
-
-        video.addEventListener('loadedmetadata', () => {
-            kickPlayNow();
-        });
-
-        video.addEventListener('loadeddata', () => {
-            if (playerLoader) playerLoader.classList.add('hidden');
-            kickPlayNow();
-        });
-
-        video.addEventListener('canplay', () => {
-            if (playerLoader) playerLoader.classList.add('hidden');
-            kickPlayNow();
-        });
-
-        let lastWatchTime = -1;
-        let stuckTicks = 0;
-        setInterval(() => {
-            if (video.style.display === 'none') {
-                stuckTicks = 0;
-                return;
-            }
-            const timeMoved = Math.abs(video.currentTime - lastWatchTime) >= 0.02;
-            if (!timeMoved && video.readyState >= 2) {
-                stuckTicks += 1;
-                if (stuckTicks >= 1) {
-                    nudgeStalledFrame();
-                }
-            } else {
-                stuckTicks = 0;
-            }
-            lastWatchTime = video.currentTime;
-        }, 1000);
-
-        function buildSlugId(cat, idx, title) {
-            return `${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+        function logoHtml(rawUrl, teamName) {
+            const cands = buildTeamLogoCandidates(rawUrl, teamName);
+            const enc = encodeURIComponent(JSON.stringify(cands));
+            return `<img src="${cands[0]}" alt="${escapeAttr(teamName)}" class="team-logo" referrerpolicy="no-referrer" data-cands="${enc}" data-idx="0" onerror="handleLogoError(this)">`;
         }
 
-        function formatChannelLabel(sObj, index) {
-            const rawName = (sObj && (sObj.channel_name || sObj.name || sObj.server_name) || '').trim();
-            if (rawName) {
-                return rawName.replace(/\s+/g, ' ');
-            }
-            return `Server ${index + 1}`;
-        }
+        let liveCricketMatches = [];
 
-        function isEmbedUrl(url) {
-            return (
-                url.includes('youtube.com') ||
-                url.includes('youtu.be') ||
-                url.includes('rumble.com') ||
-                url.includes('kick.com') ||
-                url.includes('<iframe')
-            );
-        }
-
-        function probeSingleStream(streamObj, timeoutMs = 3500) {
-            return new Promise((resolve) => {
-                if (!streamObj || !streamObj.stream_url || !streamObj.stream_url.trim()) {
-                    resolve(false);
-                    return;
-                }
-                const directLink = streamObj.stream_url.trim();
-                const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
-                const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
-
-                let settled = false;
-                const finish = (ok) => {
-                    if (settled) return;
-                    settled = true;
-                    clearTimeout(timer);
-                    resolve(Boolean(ok));
-                };
-
-                const timer = setTimeout(() => finish(false), timeoutMs);
-
-                if (isEmbedUrl(directLink)) {
-                    finish(true);
-                    return;
-                }
-
-                const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
-
-                if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
-                    const probeVid = document.createElement('video');
-                    probeVid.muted = true;
-                    probeVid.playsInline = true;
-                    const p = new shaka.Player();
-                    p.attach(probeVid).then(() => {
-                        const cfg = {
-                            streaming: {
-                                retryParameters: { timeout: 1500, maxAttempts: 1, baseDelay: 100 }
-                            }
-                        };
-                        if (kid && key) {
-                            cfg.drm = { clearKeys: { [kid]: key } };
-                        }
-                        p.configure(cfg);
-                        return p.load(directLink);
-                    }).then(async () => {
-                        try { await p.unload(); await p.destroy(); } catch (e) {}
-                        finish(true);
-                    }).catch(async () => {
-                        try { await p.unload(); await p.destroy(); } catch (e) {}
-                        finish(false);
-                    });
-                    return;
-                }
-
-                if (window.Hls && Hls.isSupported() && directLink.toLowerCase().includes('.m3u8')) {
-                    const h = new Hls({
-                        manifestLoadingTimeOut: 2200,
-                        levelLoadingTimeOut: 2200,
-                        fragLoadingTimeOut: 2500,
-                        enableWorker: false
-                    });
-                    h.on(Hls.Events.MANIFEST_PARSED, () => {
-                        try { h.destroy(); } catch (e) {}
-                        finish(true);
-                    });
-                    h.on(Hls.Events.ERROR, (ev, data) => {
-                        if (data && data.fatal) {
-                            try { h.destroy(); } catch (e) {}
-                            finish(false);
-                        }
-                    });
-                    h.loadSource(directLink);
-                    return;
-                }
-
-                fetch(directLink, { method: 'GET', mode: 'cors', cache: 'no-store' })
-                    .then((resp) => {
-                        finish(resp && resp.ok);
-                    })
-                    .catch(() => {
-                        const vCheck = document.createElement('video');
-                        vCheck.muted = true;
-                        vCheck.preload = 'metadata';
-                        vCheck.onloadedmetadata = () => finish(true);
-                        vCheck.onerror = () => finish(false);
-                        vCheck.src = directLink;
-                    });
-            });
-        }
-
-        async function sortWorkingStreamsFirst(streams) {
-            if (!Array.isArray(streams) || streams.length <= 1) return streams || [];
-            const results = await Promise.all(
-                streams.map(async (sObj, originalIndex) => {
-                    const ok = await probeSingleStream(sObj, 3500);
-                    return { sObj, originalIndex, ok };
-                })
-            );
-            results.sort((a, b) => {
-                if (a.ok === b.ok) return a.originalIndex - b.originalIndex;
-                return a.ok ? -1 : 1;
-            });
-            return results.map(r => r.sObj);
-        }
-
-        function renderDynamicServerButtons(validStreams, selectedKey) {
-            if (!serverSelectorEl) return;
-            if (!validStreams || validStreams.length === 0) {
-                serverSelectorEl.innerHTML = `<button type="button" id="btnServer1" class="active-server" onclick="switchServer('server1')"><span class="srv-badge">S1</span><span class="srv-label">Server 1</span></button>`;
-                return;
-            }
-
-            serverSelectorEl.innerHTML = validStreams.map((sObj, idx) => {
-                const key = `server${idx + 1}`;
-                const fullLabel = formatChannelLabel(sObj, idx);
-                const safeTitle = fullLabel.replace(/"/g, '&quot;');
-                const isActive = key === selectedKey ? 'active-server' : '';
-                return `<button type="button" id="btnServer${idx + 1}" class="${isActive}" title="${safeTitle}" onclick="switchServer('${key}')"><span class="srv-badge">S${idx + 1}</span><span class="srv-label">${safeTitle}</span></button>`;
-            }).join('');
-        }
-
-        async function loadMatchFromFeed() {
-            try {
-                const res = await fetch(`${SPORTS_JSON_URL}?t=${Date.now()}`, { cache: "no-store" });
-                if (!res.ok) return;
-                const data = await res.json();
-                const list = Array.isArray(data.matches) ? data.matches : [];
-
-                let matched = null;
-                list.forEach((m, idx) => {
-                    const info = m.eventInfo || {};
-                    const tA = info.teamA || m.event_name || "Team A";
-                    const tB = info.teamB || "Team B";
-                    const title = m.event_name || `${tA} Vs ${tB}`;
-                    const slugId = buildSlugId(m.Category, idx, title);
-
-                    if (
-                        slugId === matchId ||
-                        safeDecodeValue(slugId) === matchId ||
-                        (queryTitle && title.toLowerCase() === queryTitle.toLowerCase())
-                    ) {
-                        matched = { raw: m, title, teamA: tA, teamB: tB, flagA: info.teamAFlag, flagB: info.teamBFlag, info };
-                    }
-                });
-
-                if (!matched) {
-                    const firstLiveIdx = list.findIndex(m => (m.status || "").toUpperCase() === "LIVE");
-                    const idxToUse = firstLiveIdx !== -1 ? firstLiveIdx : 0;
-                    if (list[idxToUse]) {
-                        const m = list[idxToUse];
-                        const info = m.eventInfo || {};
-                        const tA = info.teamA || m.event_name || "Team A";
-                        const tB = info.teamB || "Team B";
-                        matched = {
-                            raw: m,
-                            title: m.event_name || `${tA} Vs ${tB}`,
-                            teamA: tA,
-                            teamB: tB,
-                            flagA: info.teamAFlag,
-                            flagB: info.teamBFlag,
-                            info
-                        };
-                    }
-                }
-
-                if (!matched) return;
-                activeMatchFeedItem = matched;
-
-                if (!queryTitle) {
-                    document.getElementById('matchTitle').innerText = matched.title;
-                }
-
-                if (matched.teamA || matched.teamB || matched.flagA || matched.flagB) {
-                    document.getElementById('matchTeamsBanner').style.display = 'inline-flex';
-                    applyFlagImage(document.getElementById('bannerFlagA'), matched.flagA, matched.teamA);
-                    applyFlagImage(document.getElementById('bannerFlagB'), matched.flagB, matched.teamB);
-                    document.getElementById('bannerTeamA').innerText = matched.teamA;
-                    document.getElementById('bannerTeamB').innerText = matched.teamB;
-                }
-
-                const rawValidStreams = Array.isArray(matched.raw.streams)
-                    ? matched.raw.streams.filter(s => s && s.stream_url && s.stream_url.trim() !== "")
-                    : [];
-
-                const orderedStreams = await sortWorkingStreamsFirst(rawValidStreams);
-
-                activeServersMap = {};
-                orderedStreams.forEach((sObj, idx) => {
-                    activeServersMap[`server${idx + 1}`] = sObj;
-                });
-
-                const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
-                const chosenKey = firstAvailableKey;
-                currentServerKey = chosenKey;
-                renderDynamicServerButtons(orderedStreams, chosenKey);
-
-                const statusUpper = (matched.raw.status || "").toUpperCase();
-                const startTimeStr = matched.info?.startTime || "";
-
-                if (statusUpper === "UPCOMING") {
-                    isMatchLive = false;
-                    hideWarmupBlur();
-                    hideStreamError();
-                    playerCountdownOverlay.classList.remove('hidden');
-                    document.getElementById('countdownMatchTitle').innerText = matched.title;
-                    document.getElementById('scheduledTimeText').innerText = startTimeStr || "Scheduled Soon";
-                    if (startTimeStr) {
-                        startPlayerCountdown(startTimeStr);
-                    }
-                } else {
-                    isMatchLive = true;
-                    playerCountdownOverlay.classList.add('hidden');
-                    loadFeedServer(chosenKey);
-                }
-            } catch (err) {
-                console.error("Error loading match from Sports_data.json:", err);
-            }
-        }
-
-        function startPlayerCountdown(timeString) {
-            if (countdownInterval) clearInterval(countdownInterval);
-
-            let targetDate = new Date();
-            const fullMatch = timeString.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
-
-            if (fullMatch) {
-                const day = parseInt(fullMatch[1], 10);
-                const month = parseInt(fullMatch[2], 10) - 1;
-                const year = parseInt(fullMatch[3], 10);
-                let hrs = parseInt(fullMatch[4], 10);
-                const mins = parseInt(fullMatch[5], 10);
-                const secs = parseInt(fullMatch[6] || "0", 10);
-                const mod = (fullMatch[7] || "").toUpperCase();
-                if (mod === "PM" && hrs < 12) hrs += 12;
-                if (mod === "AM" && hrs === 12) hrs = 0;
-                const utcMs = Date.UTC(year, month, day, hrs - 6, mins, secs);
-                targetDate = new Date(utcMs);
-            } else {
-                let [time, modifier] = timeString.split(' ');
-                let [hours, minutes] = (time || "00:00").split(':');
-                if (modifier && modifier.toUpperCase() === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
-                if (modifier && modifier.toUpperCase() === 'AM' && hours === '12') hours = 0;
-                targetDate.setHours(parseInt(hours || 0, 10), parseInt(minutes || 0, 10), 0, 0);
-            }
-
-            const targetTime = targetDate.getTime();
-
-            countdownInterval = setInterval(() => {
-                const now = Date.now();
-                const distance = targetTime - now;
-
-                if (distance <= 0) {
-                    clearInterval(countdownInterval);
-                    playerCountdownOverlay.classList.add('hidden');
-                    document.getElementById('nowPlayingText').innerHTML = `<span style="color: #ef4444; font-weight: bold;"><i class="fa-solid fa-circle-dot"></i> LIVE NOW</span>`;
-                    isMatchLive = true;
-                    const firstAvailableKey = Object.keys(activeServersMap)[0] || 'server1';
-                    loadFeedServer(firstAvailableKey);
-                    return;
-                }
-
-                const hoursLeft = Math.floor(distance / (1000 * 60 * 60));
-                const minutesLeft = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                const secondsLeft = Math.floor((distance % (1000 * 60)) / 1000);
-
-                document.getElementById('cdHours').innerText = String(hoursLeft).padStart(2, '0') + 'h';
-                document.getElementById('cdMinutes').innerText = String(minutesLeft).padStart(2, '0') + 'm';
-                document.getElementById('cdSeconds').innerText = String(secondsLeft).padStart(2, '0') + 's';
-            }, 1000);
-        }
-
-        function highlightServerButton(serverKey) {
-            currentServerKey = serverKey;
-            const buttons = serverSelectorEl ? serverSelectorEl.querySelectorAll('button') : [];
-            buttons.forEach(btn => {
-                if (btn.id === `btn${serverKey.charAt(0).toUpperCase() + serverKey.slice(1)}`) {
-                    btn.classList.add('active-server');
-                } else {
-                    btn.classList.remove('active-server');
-                }
-            });
-        }
-
-        async function destroyPlayers() {
-            hideWarmupBlur();
-            clearStreamFailWatchdog();
-            if (currentHls) {
-                try { currentHls.destroy(); } catch (e) {}
-                currentHls = null;
-            }
-            if (currentShakaPlayer) {
-                try {
-                    await currentShakaPlayer.unload();
-                    await currentShakaPlayer.destroy();
-                } catch (e) {}
-                currentShakaPlayer = null;
-            }
-            try {
-                video.pause();
-                video.removeAttribute('src');
-                video.load();
-            } catch (e) {}
-        }
-
-        async function playStreamItem(streamObj) {
-            streamAttemptToken += 1;
-            const myToken = streamAttemptToken;
-            hideStreamError();
-
-            if (!streamObj || !streamObj.stream_url) {
-                showStreamError('Stream Not Working', 'Stream URL is missing for this server.', myToken);
-                return;
-            }
-            const directLink = streamObj.stream_url.trim();
-            const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
-            const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
-
-            lastWatchTime = -1;
-            stuckTicks = 0;
-
-            if (playerLoader) playerLoader.classList.remove('hidden');
-            await destroyPlayers();
-            if (myToken !== streamAttemptToken) return;
-
-            qualityWrapper.style.display = 'none';
-            setQualityLabelText('Auto');
-            armStreamFailWatchdog(myToken);
-
-            const isEmbed = isEmbedUrl(directLink);
-
-            if (isEmbed) {
-                video.style.display = 'none';
-                progressContainer.style.display = 'none';
-                playPauseBtn.style.display = 'none';
-                skipBackBtn.style.display = 'none';
-                skipFwdBtn.style.display = 'none';
-
-                let embedUrl = directLink;
-                if (directLink.includes('watch?v=')) {
-                    const videoId = directLink.split('watch?v=')[1].split('&')[0];
-                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`;
-                } else if (directLink.includes('youtu.be/')) {
-                    const videoId = directLink.split('youtu.be/')[1].split('?')[0];
-                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`;
-                } else if (directLink.includes('/live/')) {
-                    const videoId = directLink.split('/live/')[1].split('?')[0];
-                    embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=0&playsinline=1`;
-                } else if (directLink.includes('<iframe')) {
-                    const matchSrc = directLink.match(/src="([^"]+)"/);
-                    if (matchSrc && matchSrc[1]) embedUrl = matchSrc[1];
-                }
-
-                ytIframe.src = embedUrl;
-                ytIframe.style.display = 'block';
-
-                setTimeout(() => {
-                    if (myToken !== streamAttemptToken) return;
-                    clearStreamFailWatchdog();
-                    hideOverlaysSafely();
-                }, 500);
-                return;
-            }
-
-            ytIframe.style.display = 'none';
-            video.style.display = 'block';
-            progressContainer.style.display = 'block';
-            playPauseBtn.style.display = 'inline-flex';
-            skipBackBtn.style.display = 'inline-flex';
-            skipFwdBtn.style.display = 'inline-flex';
-
-            const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
-
-            if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
-                try {
-                    const shakaPlayer = new shaka.Player();
-                    await shakaPlayer.attach(video);
-                    if (myToken !== streamAttemptToken) {
-                        await shakaPlayer.destroy();
-                        return;
-                    }
-                    currentShakaPlayer = shakaPlayer;
-
-                    shakaPlayer.addEventListener('error', (event) => {
-                        console.error('Shaka Player Error:', event.detail);
-                        if (myToken !== streamAttemptToken) return;
-                        showStreamError(
-                            'Stream Not Working',
-                            'Unable to load or decrypt this stream. Please try another server.',
-                            myToken
-                        );
-                    });
-
-                    const shakaConfig = {
-                        streaming: {
-                            bufferingGoal: 1.2,
-                            rebufferingGoal: 0.4,
-                            startAtSegmentBoundary: false,
-                            jumpLargeGaps: true,
-                            inaccurateManifestTolerance: 2.5,
-                            retryParameters: {
-                                timeout: 2000,
-                                maxAttempts: 2,
-                                baseDelay: 150
-                            }
-                        },
-                        abr: {
-                            enabled: false,
-                            defaultBandwidthEstimate: 1200000
-                        }
-                    };
-                    if (kid && key) {
-                        shakaConfig.drm = {
-                            clearKeys: {
-                                [kid]: key
-                            }
-                        };
-                    }
-                    shakaPlayer.configure(shakaConfig);
-
-                    await shakaPlayer.load(directLink);
-                    if (myToken !== streamAttemptToken) return;
-
-                    const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
-                    let lowestTrack = null;
-                    if (tracks.length > 0) {
-                        lowestTrack = tracks.reduce((best, t) => {
-                            const bwA = best.bandwidth || (best.height ? best.height * 1000 : Infinity);
-                            const bwB = t.bandwidth || (t.height ? t.height * 1000 : Infinity);
-                            return bwB < bwA ? t : best;
-                        }, tracks[0]);
-                        shakaPlayer.configure({ abr: { enabled: false } });
-                        shakaPlayer.selectVariantTrack(lowestTrack, true);
-                    }
-
-                    setupShakaQualityMenu(shakaPlayer, lowestTrack);
-                    await kickPlayNow();
-                    if (myToken !== streamAttemptToken) return;
-                    hideOverlaysSafely();
-                    startWarmupBlurAfterConnect();
-                    return;
-                } catch (err) {
-                    console.error("Shaka load failed:", err);
-                    if (myToken !== streamAttemptToken) return;
-                    showStreamError(
-                        'Stream Not Working',
-                        'This server failed to start playback. Please switch to another server.',
-                        myToken
-                    );
-                    return;
-                }
-            }
-
-            if (window.Hls && Hls.isSupported()) {
-                let hlsNetworkRetries = 0;
-                let hlsMediaRetries = 0;
-                const hls = new Hls({
-                    lowLatencyMode: true,
-                    startLevel: 0,
-                    maxBufferLength: 2,
-                    maxMaxBufferLength: 4,
-                    liveSyncDurationCount: 1,
-                    liveMaxLatencyDurationCount: 2,
-                    abrBandWidthFactor: 0.85,
-                    abrBandWidthUpFactor: 0.75,
-                    manifestLoadingTimeOut: 2500,
-                    levelLoadingTimeOut: 2500,
-                    fragLoadingTimeOut: 3000,
-                    enableWorker: true
-                });
-                currentHls = hls;
-                hls.loadSource(directLink);
-                hls.attachMedia(video);
-
-                hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
-                    if (myToken !== streamAttemptToken) return;
-                    const levels = data.levels || hls.levels || [];
-                    let minIdx = null;
-                    if (levels.length > 0) {
-                        minIdx = 0;
-                        let minBitrate = Infinity;
-                        levels.forEach((lvl, idx) => {
-                            const bw = lvl.bitrate || (lvl.height ? lvl.height * 1000 : Infinity);
-                            if (bw < minBitrate) {
-                                minBitrate = bw;
-                                minIdx = idx;
-                            }
-                        });
-                        hls.startLevel = minIdx;
-                        hls.loadLevel = minIdx;
-                        hls.currentLevel = minIdx;
-                        hls.nextLevel = minIdx;
-                    }
-                    setupHlsQualityMenu(hls, levels, minIdx);
-                    await kickPlayNow();
-                    if (myToken !== streamAttemptToken) return;
-                    hideOverlaysSafely();
-                    startWarmupBlurAfterConnect();
-                });
-
-                hls.on(Hls.Events.ERROR, function (event, data) {
-                    if (myToken !== streamAttemptToken) return;
-                    if (data.fatal) {
-                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 2) {
-                            hlsNetworkRetries += 1;
-                            hls.startLoad();
-                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 1) {
-                            hlsMediaRetries += 1;
-                            hls.recoverMediaError();
-                        } else {
-                            showStreamError(
-                                'Stream Not Working',
-                                'This server is offline or blocked. Please try another server.',
-                                myToken
-                            );
-                        }
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = directLink;
-                video.addEventListener('loadedmetadata', async function () {
-                    if (myToken !== streamAttemptToken) return;
-                    await kickPlayNow();
-                    if (myToken !== streamAttemptToken) return;
-                    hideOverlaysSafely();
-                    startWarmupBlurAfterConnect();
-                }, { once: true });
-            } else {
-                showStreamError(
-                    'Stream Not Working',
-                    'Unsupported stream format on this device. Please try another server.',
-                    myToken
+        function renderLiveCricket() {
+            const q = (document.getElementById('cricketSearchInput').value || '').toLowerCase().trim();
+            const list = liveCricketMatches.filter(m => {
+                if (!q) return true;
+                return (
+                    m.title.toLowerCase().includes(q) ||
+                    m.teamA.toLowerCase().includes(q) ||
+                    m.teamB.toLowerCase().includes(q) ||
+                    m.eventName.toLowerCase().includes(q)
                 );
-            }
-        }
-
-        function loadFeedServer(serverKey) {
-            highlightServerButton(serverKey);
-            const streamObj = activeServersMap[serverKey];
-            if (streamObj && streamObj.stream_url) {
-                playStreamItem(streamObj);
-            } else if (socket) {
-                hideStreamError();
-                if (playerLoader) playerLoader.classList.remove('hidden');
-                socket.emit('requestStreamLink', { matchId, serverType: serverKey });
-            } else {
-                showStreamError('Stream Not Working', 'No stream link available for this server.');
-            }
-        }
-
-        if (socket) {
-            socket.on('refreshMatchesData', () => {
-                loadMatchFromFeed();
             });
 
-            socket.on('secureStreamLink', async (directLink) => {
-                if (!isMatchLive) return;
-                if (!directLink) {
-                    showStreamError('Stream Not Working', 'Server did not return a playable stream link.');
-                    return;
-                }
-                await playStreamItem({ stream_url: directLink });
-            });
-        }
+            document.getElementById('liveCricketCount').innerText = `${list.length} Live`;
+            const grid = document.getElementById('liveCricketGrid');
 
-        function switchServer(serverType) {
-            if (!isMatchLive) {
-                alert('Match has not started yet!');
+            if (list.length === 0) {
+                grid.innerHTML = `<div class="cricket-match-card" style="grid-column: 1/-1; text-align: center; color: #9ca3af;">No live cricket matches right now.</div>`;
                 return;
             }
-            hideStreamError();
-            playerThumbnail.style.display = 'block';
-            playerThumbnail.classList.remove('hidden');
-            loadFeedServer(serverType);
-        }
 
-        qualityBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            qualityMenu.classList.toggle('active');
-        });
-        window.addEventListener('click', () => { qualityMenu.classList.remove('active'); });
-
-        playPauseBtn.addEventListener('click', () => {
-            if (video.paused) {
-                video.play();
-                playPauseBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-            } else {
-                video.pause();
-                playPauseBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-            }
-        });
-
-        skipBackBtn.addEventListener('click', () => { video.currentTime = Math.max(0, video.currentTime - 10); });
-        skipFwdBtn.addEventListener('click', () => { video.currentTime = Math.min(video.duration || 0, video.currentTime + 10); });
-
-        volumeSlider.addEventListener('input', (e) => {
-            const val = parseFloat(e.target.value);
-            video.volume = val;
-            video.muted = (val === 0);
-            syncAudioUiState();
-        });
-
-        muteBtn.addEventListener('click', () => {
-            if (video.muted || video.volume === 0) {
-                video.muted = false;
-                if (video.volume === 0) video.volume = 1;
-            } else {
-                video.muted = true;
-            }
-            syncAudioUiState();
-        });
-
-        fullscreenBtn.addEventListener('click', () => {
-            if (!document.fullscreenElement) {
-                playerContainer.requestFullscreen().catch(err => alert(err.message));
-                fullscreenBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
-            } else {
-                document.exitFullscreen();
-                fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
-            }
-        });
-
-        document.addEventListener('fullscreenchange', () => {
-            if (!document.fullscreenElement) {
-                fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
-            } else {
-                fullscreenBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
-            }
-        });
-
-        const pipBtn = document.getElementById('pipBtn');
-        if ('pictureInPictureEnabled' in document) {
-            pipBtn.style.display = 'inline-flex';
-            pipBtn.addEventListener('click', async () => {
-                try {
-                    if (document.pictureInPictureElement) await document.exitPictureInPicture();
-                    else if (video.style.display !== 'none') await video.requestPictureInPicture();
-                } catch (error) { console.error(error); }
-            });
-        } else { pipBtn.style.display = 'none'; }
-
-        video.addEventListener('timeupdate', () => {
-            if (video.duration > 0) progressBar.style.width = `${(video.currentTime / video.duration) * 100}%`;
-        });
-
-        progressContainer.addEventListener('click', (e) => {
-            const rect = progressContainer.getBoundingClientRect();
-            if (video.duration) video.currentTime = video.duration * ((e.clientX - rect.left) / rect.width);
-        });
-
-        let hideTimeout;
-        function showControls() {
-            controlsOverlay.classList.remove('hidden');
-            clearTimeout(hideTimeout);
-            hideTimeout = setTimeout(() => {
-                if (!video.paused && video.style.display !== 'none') controlsOverlay.classList.add('hidden');
-            }, 3000);
-        }
-
-        playerContainer.addEventListener('mousemove', showControls);
-        playerContainer.addEventListener('touchstart', showControls);
-
-        // Chat & Room Logic
-        const modal = document.getElementById('usernameModal');
-        const usernameInput = document.getElementById('usernameInput');
-        const joinBtn = document.getElementById('joinChatBtn');
-        const closeModalBtn = document.getElementById('closeModalBtn');
-        const chatForm = document.getElementById('chatForm');
-        const msgInput = document.getElementById('msgInput');
-        const chatMessages = document.getElementById('chatMessages');
-
-        let hasJoinedRoom = false;
-
-        function joinMatchRoom(userLabel) {
-            if (!socket) return;
-            if (hasJoinedRoom) {
-                if (userLabel) socket.emit('joinMatch', { matchId, username: userLabel });
-                return;
-            }
-            hasJoinedRoom = true;
-            socket.emit('joinMatch', { matchId, username: userLabel || 'Guest' });
-        }
-
-        joinMatchRoom(username || 'Guest');
-
-        function openUsernameModal(messageToSend) {
-            pendingMessage = messageToSend || null;
-            modal.classList.add('active');
-            setTimeout(() => usernameInput.focus(), 50);
-        }
-
-        function closeUsernameModal() {
-            modal.classList.remove('active');
-            pendingMessage = null;
-        }
-
-        closeModalBtn.addEventListener('click', closeUsernameModal);
-
-        function saveUsernameAndSend() {
-            const val = usernameInput.value.trim();
-            if (val.length < 2) {
-                alert('Please enter a valid username (at least 2 characters)');
-                return;
-            }
-            username = val;
-            localStorage.setItem('chat_username', username);
-            modal.classList.remove('active');
-
-            if (socket) {
-                socket.emit('joinMatch', { matchId, username });
-            }
-
-            const msgToSend = pendingMessage || msgInput.value.trim();
-            pendingMessage = null;
-            if (msgToSend) {
-                sendChatMessage(msgToSend);
-                msgInput.value = '';
-            }
-        }
-
-        joinBtn.addEventListener('click', saveUsernameAndSend);
-        usernameInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveUsernameAndSend();
-            }
-        });
-
-        function renderMessage(data) {
-            let replyHtml = '';
-            if (data.replyTo) {
-                replyHtml = `
-                    <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
-                        <strong style="color: ${getUsernameColor(data.replyTo.username)};">${data.replyTo.username}</strong>
-                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
+            grid.innerHTML = list.map(m => `
+                <div class="cricket-match-card" data-match-id="${escapeAttr(m.id)}" data-match-title="${escapeAttr(m.title)}">
+                    <div class="card-top">
+                        <span class="live-badge"><span class="live-dot"></span> LIVE NOW</span>
+                        <span style="font-size: 11px; color: #9ca3af; font-weight: 600;">${escapeAttr(m.eventName)}</span>
                     </div>
-                `;
-            }
-
-            const safeMsgId = data.id || ('msg_' + Math.random());
-            const safeText = (data.message || '').replace(/'/g, "\\'");
-            const safeUser = (data.username || '').replace(/'/g, "\\'");
-            const userColor = getUsernameColor(data.username || 'User');
-
-            chatMessages.innerHTML += `
-                <div class="message" data-msg-id="${safeMsgId}">
-                    ${replyHtml}
-                    <div class="msg-user" style="color: ${userColor};">
-                        ${data.username} 
-                        <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
-                    </div>
-                    <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${data.message}</div>
-                    
-                    <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${safeMsgId}')">
-                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                    </div>
-                    
-                    <div id="menu-${safeMsgId}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
-                        <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${safeMsgId}', '${safeUser}', '${safeText}')">
-                            <i class="fa-solid fa-reply"></i> Reply
+                    <div class="teams-row">
+                        <div class="team-col">
+                            ${logoHtml(m.flagA, m.teamA)}
+                            <span class="team-name">${escapeAttr(m.teamA)}</span>
+                        </div>
+                        <span class="vs-tag">VS</span>
+                        <div class="team-col">
+                            ${logoHtml(m.flagB, m.teamB)}
+                            <span class="team-name">${escapeAttr(m.teamB)}</span>
                         </div>
                     </div>
+                    <div class="card-foot">
+                        <span style="color: #ff6b78; font-weight: 700;"><i class="fa-solid fa-play-circle"></i> Watch Live</span>
+                        <span style="color: #9ca3af;">${m.streamsCount > 0 ? `${m.streamsCount} Servers` : 'HD Feed'}</span>
+                    </div>
                 </div>
-            `;
-            chatMessages.scrollTop = chatMessages.scrollHeight;
+            `).join('');
         }
 
-        if (socket) {
-            socket.on('viewerCount', (count) => {
-                document.getElementById('viewersCount').innerText = count;
-            });
-
-            socket.on('chatHistory', (history) => {
-                chatMessages.innerHTML = '';
-                history.forEach(data => renderMessage(data));
-            });
-
-            socket.on('chatMessage', (data) => {
-                renderMessage(data);
-            });
-        }
-
-        function sendChatMessage(msg) {
-            if (socket) {
-                socket.emit('chatMessage', { message: msg, replyTo: replyingTo });
-            } else {
-                renderMessage({
-                    id: 'local_' + Date.now(),
-                    username: username || 'You',
-                    message: msg,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    replyTo: replyingTo
-                });
-            }
-            msgInput.value = '';
-            cancelReply();
-        }
-
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const msg = msgInput.value.trim();
-            if (!msg) return;
-
-            if (!username) {
-                openUsernameModal(msg);
-                return;
-            }
-
-            sendChatMessage(msg);
+        document.addEventListener('click', (e) => {
+            const card = e.target.closest('.cricket-match-card[data-match-id]');
+            if (!card) return;
+            const rawId = card.getAttribute('data-match-id') || '';
+            const rawTitle = card.getAttribute('data-match-title') || '';
+            const safeId = encodeURIComponent(rawId);
+            const safeTitle = encodeURIComponent(rawTitle);
+            window.location.href = `/match?id=${safeId}&title=${safeTitle}`;
         });
 
-        function toggleMsgMenu(msgId) {
-            const menu = document.getElementById(`menu-${msgId}`);
-            document.querySelectorAll('[id^="menu-"]').forEach(m => { if (m.id !== `menu-${msgId}`) m.style.display = 'none'; });
-            menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-        }
+        async function loadLiveCricketMatches() {
+            try {
+                const res = await fetch(`${SPORTS_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
+                if (!res.ok) throw new Error('Feed error');
+                const data = await res.json();
+                const all = Array.isArray(data.matches) ? data.matches : [];
 
-        function setReply(msgId, username, messageText) {
-            replyingTo = { id: msgId, username: username, message: messageText };
-            document.querySelectorAll('[id^="menu-"]').forEach(m => { if (m.id !== `menu-${msgId}`) m.style.display = 'none'; });
+                liveCricketMatches = all
+                    .map((m, idx) => ({ m, idx }))
+                    .filter(({ m }) => {
+                        const cat = (m.Category || '').trim().toLowerCase();
+                        const status = (m.status || '').trim().toUpperCase();
+                        return cat === 'cricket' && status === 'LIVE';
+                    })
+                    .map(({ m, idx }) => {
+                        const info = m.eventInfo || {};
+                        const teamA = info.teamA || m.event_name || 'Team A';
+                        const teamB = info.teamB || 'Team B';
+                        const title = m.event_name || `${teamA} Vs ${teamB}`;
+                        const rawSlug = `cricket-${idx}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+                        return {
+                            id: rawSlug,
+                            title,
+                            teamA,
+                            teamB,
+                            flagA: info.teamAFlag || '',
+                            flagB: info.teamBFlag || '',
+                            eventName: info.eventName || 'Cricket',
+                            streamsCount: Array.isArray(m.streams) ? m.streams.filter(s => s && s.stream_url).length : 0
+                        };
+                    });
 
-            let previewBar = document.getElementById('replyPreviewBar');
-            if (!previewBar) {
-                previewBar = document.createElement('div');
-                previewBar.id = 'replyPreviewBar';
-                previewBar.style.cssText = "background: rgba(20, 20, 25, 0.95); padding: 8px 12px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #cbd5e1;";
-                const chatInputArea = document.getElementById('chatForm');
-                chatInputArea.parentNode.insertBefore(previewBar, chatInputArea);
+                renderLiveCricket();
+            } catch (e) {
+                document.getElementById('liveCricketGrid').innerHTML = `<div class="cricket-match-card" style="grid-column: 1/-1; text-align: center; color: #9ca3af;">Unable to load live cricket matches right now.</div>`;
             }
-
-            previewBar.innerHTML = `
-                <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
-                    <i class="fa-solid fa-reply" style="color: #6366f1;"></i> Replying to <strong style="color: ${getUsernameColor(username)};">${username}</strong>: <span style="color: #9ca3af;">${messageText}</span>
-                </div>
-                <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 14px; padding: 4px;" onclick="cancelReply()"></i>
-            `;
-            document.getElementById('msgInput').focus();
         }
 
-        function cancelReply() {
-            replyingTo = null;
-            const previewBar = document.getElementById('replyPreviewBar');
-            if (previewBar) previewBar.remove();
-        }
-
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('.fa-ellipsis-vertical') && !e.target.closest('[id^="menu-"]')) {
-                document.querySelectorAll('[id^="menu-"]').forEach(m => m.style.display = 'none');
-            }
-        });
-
-        function checkConnectionPing() {
-            const pingDot = document.getElementById('pingDot');
-            const pingText = document.getElementById('pingText');
-            const startTime = performance.now();
-
-            fetch(`${SPORTS_JSON_URL}?ping=${Date.now()}`, { method: 'HEAD', cache: 'no-store' })
-                .then(() => {
-                    const pingMs = Math.round(performance.now() - startTime);
-                    pingText.innerText = `${pingMs} ms`;
-                    pingDot.className = 'ping-dot';
-                    if (pingMs > 250) pingDot.classList.add('poor');
-                    else if (pingMs > 120) pingDot.classList.add('fair');
-                })
-                .catch(() => {
-                    pingDot.className = 'ping-dot poor';
-                    pingText.innerText = 'Offline';
-                });
-        }
-
-        syncAudioUiState();
-        loadMatchFromFeed();
-        setInterval(loadMatchFromFeed, 120000);
-        checkConnectionPing();
-        setInterval(checkConnectionPing, 6000);
+        loadLiveCricketMatches();
+        setInterval(loadLiveCricketMatches, 120000);
     </script>
 </body>
 </html>
