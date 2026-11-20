@@ -27,7 +27,7 @@ async function getMatchesDataFromGitHub() {
                 'Accept': 'application/vnd.github.v3.raw'
             }
         });
-
+        
         if (!response.ok) throw new Error('Failed to fetch from GitHub');
         const data = await response.json();
         return data;
@@ -44,52 +44,40 @@ function parseM3uPlaylist(rawText) {
         .filter(Boolean);
 
     const channels = [];
-    let current = {
-        name: '',
-        logo: '',
-        group: 'Live TV',
-        kid: '',
-        key: '',
-        referer: '',
-        userAgent: ''
-    };
+    let pendingName = '';
+    let pendingLogo = '';
+    let pendingGroup = 'Live TV';
+    let pendingKid = '';
+    let pendingKey = '';
+    let pendingReferer = '';
+    let pendingUserAgent = '';
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
 
         if (line.startsWith('#EXTINF:')) {
-            current = {
-                name: '',
-                logo: '',
-                group: 'Live TV',
-                kid: '',
-                key: '',
-                referer: '',
-                userAgent: ''
-            };
-
             const logoMatch = line.match(/tvg-logo="([^"]*)"/i);
             const groupMatch = line.match(/group-title="([^"]*)"/i);
-            current.logo = logoMatch ? logoMatch[1].trim() : '';
-            current.group = groupMatch && groupMatch[1].trim() ? groupMatch[1].trim() : 'Live TV';
+            pendingLogo = logoMatch ? logoMatch[1].trim() : '';
+            pendingGroup = groupMatch && groupMatch[1].trim() ? groupMatch[1].trim() : 'Live TV';
 
             const commaIdx = line.lastIndexOf(',');
-            current.name = commaIdx !== -1
+            pendingName = commaIdx !== -1
                 ? line.slice(commaIdx + 1).trim()
                 : `Channel ${channels.length + 1}`;
         } else if (line.startsWith('#KODIPROP:')) {
             const keyMatch = line.match(/([0-9a-fA-F]{32}):([0-9a-fA-F]{32})/);
             if (keyMatch) {
-                current.kid = keyMatch[1].toLowerCase();
-                current.key = keyMatch[2].toLowerCase();
+                pendingKid = keyMatch[1].toLowerCase();
+                pendingKey = keyMatch[2].toLowerCase();
             }
         } else if (line.startsWith('#EXTVLCOPT:')) {
             const optContent = line.replace(/^#EXTVLCOPT:/i, '').trim();
             const lowerOpt = optContent.toLowerCase();
             if (lowerOpt.startsWith('http-referrer=')) {
-                current.referer = optContent.slice('http-referrer='.length).trim();
+                pendingReferer = optContent.slice('http-referrer='.length).trim();
             } else if (lowerOpt.startsWith('http-user-agent=')) {
-                current.userAgent = optContent.slice('http-user-agent='.length).trim();
+                pendingUserAgent = optContent.slice('http-user-agent='.length).trim();
             }
         } else if (!line.startsWith('#')) {
             const rawStreamUrl = line.trim();
@@ -100,52 +88,28 @@ function parseM3uPlaylist(rawText) {
 
             channels.push({
                 id: `tv-${channels.length + 1}`,
-                name: current.name || `Channel ${channels.length + 1}`,
-                logo: current.logo,
-                group: current.group,
+                name: pendingName || `Channel ${channels.length + 1}`,
+                logo: pendingLogo,
+                group: pendingGroup,
                 raw_url: rawStreamUrl,
                 stream_url: playableUrl,
-                kid: current.kid,
-                key: current.key,
-                referer: current.referer,
-                userAgent: current.userAgent
+                kid: pendingKid,
+                key: pendingKey,
+                referer: pendingReferer,
+                userAgent: pendingUserAgent
             });
 
-            current = {
-                name: '',
-                logo: '',
-                group: 'Live TV',
-                kid: '',
-                key: '',
-                referer: '',
-                userAgent: ''
-            };
+            pendingName = '';
+            pendingLogo = '';
+            pendingGroup = 'Live TV';
+            pendingKid = '';
+            pendingKey = '';
+            pendingReferer = '';
+            pendingUserAgent = '';
         }
     }
 
     return channels;
-}
-
-function pickTapmadStream(allChannels) {
-    if (!Array.isArray(allChannels) || allChannels.length === 0) return null;
-
-    // 1. Tapmad keyword match වෙන stream එකක් තියෙනවද බලනවා
-    const tapmadMatch = allChannels.find(ch =>
-        String(ch.name || '').toLowerCase().includes('tapmad') ||
-        String(ch.raw_url || '').toLowerCase().includes('tapmad') ||
-        String(ch.logo || '').toLowerCase().includes('tapmad') ||
-        String(ch.group || '').toLowerCase().includes('tapmad')
-    );
-    if (tapmadMatch) return tapmadMatch;
-
-    // 2. Tapmad keyword එක නැත්නම් .m3u8 stream එකක් තෝරාගන්නවා
-    const hlsMatch = allChannels.find(ch =>
-        String(ch.raw_url || '').toLowerCase().includes('.m3u8')
-    );
-    if (hlsMatch) return hlsMatch;
-
-    // 3. Fallback: playlist එකේ පළවෙනි stream එක
-    return allChannels[0];
 }
 
 // --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
@@ -203,7 +167,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
     }
 });
 
-// --- Tapmad / M3U Playlist API Route (Auto-Extract Tapmad Live) ---
+// --- Tapmad / M3U Playlist API Route ---
 app.get('/api/tapmad-playlist', async (req, res) => {
     const now = Date.now();
     if (tapmadCache.data && now < tapmadCache.expiresAt) {
@@ -213,10 +177,8 @@ app.get('/api/tapmad-playlist', async (req, res) => {
     try {
         const response = await fetch(TAPMAD_PLAYLIST_URL, {
             headers: {
-                'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
-                'Accept': '*/*',
-                'Accept-Encoding': 'identity',
-                'Connection': 'keep-alive'
+                'User-Agent': 'OTT Navigator/1.6.8 (Linux; Android 13)',
+                'Accept': '*/*'
             }
         });
 
@@ -229,29 +191,16 @@ app.get('/api/tapmad-playlist', async (req, res) => {
         }
 
         const rawM3u = await response.text();
-        const allChannels = parseM3uPlaylist(rawM3u);
-        const picked = pickTapmadStream(allChannels);
-
-        const singleChannel = picked
-            ? [{
-                ...picked,
-                id: 'tapmad-live',
-                name: 'Tapmad Live',
-                stream_url: picked.raw_url && picked.raw_url.toLowerCase().includes('.m3u8')
-                    ? `/hls-proxy?url=${encodeURIComponent(picked.raw_url)}`
-                    : picked.stream_url
-            }]
-            : [];
-
+        const channels = parseM3uPlaylist(rawM3u);
         const payload = {
             ok: true,
-            count: singleChannel.length,
-            channels: singleChannel
+            count: channels.length,
+            channels
         };
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 30 * 1000 // 30 seconds cache (match links fresh වෙන්න)
+            expiresAt: now + 60 * 1000 // 1 minute cache
         };
 
         return res.json(payload);
@@ -310,10 +259,9 @@ app.get('/hls-proxy', async (req, res) => {
     try {
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
+                'User-Agent': 'VLC/3.0.18 LibVLC/3.0.18',
                 'Accept': '*/*',
-                'Accept-Encoding': 'identity',
-                'Connection': 'keep-alive'
+                'Referer': 'https://www.fancode.com/'
             }
         });
 
@@ -322,49 +270,37 @@ app.get('/hls-proxy', async (req, res) => {
         }
 
         const contentType = response.headers.get('content-type') || '';
-        const lowerUrl = targetUrl.toLowerCase();
-        const lowerCt = contentType.toLowerCase();
-
+        
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', '*');
 
-        const isPlaylistByHeaderOrUrl =
-            lowerUrl.includes('.m3u8') ||
-            lowerCt.includes('mpegurl') ||
-            lowerCt.includes('application/vnd.apple.mpegurl');
-
-        if (isPlaylistByHeaderOrUrl) {
+        if (targetUrl.includes('.m3u8') || contentType.includes('mpegurl') || contentType.includes('application/vnd.apple.mpegurl')) {
             res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-            const bodyText = await response.text();
-            const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-            const lines = bodyText.split(/\r?\n/);
+            let bodyText = await response.text();
 
+            const baseUrl = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
+            const lines = bodyText.split('\n');
+            
             const rewrittenLines = lines.map(line => {
                 const trimmed = line.trim();
-                if (!trimmed) return '';
-                if (trimmed.startsWith('#')) {
+                if (!trimmed || trimmed.startsWith('#')) {
                     if (trimmed.includes('URI="')) {
-                        return trimmed.replace(/URI="([^"]+)"/g, (match, uri) => {
-                            const absoluteUri = uri.startsWith('http')
-                                ? uri
-                                : new URL(uri, baseUrl).toString();
+                        return trimmed.replace(/URI="([^"]+)"/, (match, uri) => {
+                            let absoluteUri = uri.startsWith('http') ? uri : new URL(uri, baseUrl).toString();
                             return `URI="/hls-proxy?url=${encodeURIComponent(absoluteUri)}"`;
                         });
                     }
                     return line;
                 } else {
-                    const absoluteUrl = trimmed.startsWith('http')
-                        ? trimmed
-                        : new URL(trimmed, baseUrl).toString();
+                    let absoluteUrl = trimmed.startsWith('http') ? trimmed : new URL(trimmed, baseUrl).toString();
                     return `/hls-proxy?url=${encodeURIComponent(absoluteUrl)}`;
                 }
             });
 
             return res.send(rewrittenLines.join('\n'));
         } else {
-            const safeCt = contentType || (lowerUrl.includes('.ts') ? 'video/mp2t' : 'application/octet-stream');
-            res.setHeader('Content-Type', safeCt);
+            res.setHeader('Content-Type', contentType);
             const buffer = await response.arrayBuffer();
             return res.send(Buffer.from(buffer));
         }
@@ -402,7 +338,7 @@ io.on('connection', (socket) => {
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
-
+        
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
@@ -468,7 +404,7 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId] = [];
         }
         matchChatHistories[matchId].push(messageData);
-
+        
         if (matchChatHistories[matchId].length > 150) {
             matchChatHistories[matchId].shift();
         }
@@ -480,7 +416,7 @@ io.on('connection', (socket) => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
             if (matchViewers[socket.currentMatch] < 0) matchViewers[socket.currentMatch] = 0;
-
+            
             io.to(socket.currentMatch).emit('viewerCount', matchViewers[socket.currentMatch]);
         }
         console.log('User disconnected: ' + socket.id);
