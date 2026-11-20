@@ -27,7 +27,7 @@ async function getMatchesDataFromGitHub() {
                 'Accept': 'application/vnd.github.v3.raw'
             }
         });
-        
+
         if (!response.ok) throw new Error('Failed to fetch from GitHub');
         const data = await response.json();
         return data;
@@ -126,6 +126,28 @@ function parseM3uPlaylist(rawText) {
     return channels;
 }
 
+function pickTapmadStream(allChannels) {
+    if (!Array.isArray(allChannels) || allChannels.length === 0) return null;
+
+    // 1. Tapmad keyword match වෙන stream එකක් තියෙනවද බලනවා
+    const tapmadMatch = allChannels.find(ch =>
+        String(ch.name || '').toLowerCase().includes('tapmad') ||
+        String(ch.raw_url || '').toLowerCase().includes('tapmad') ||
+        String(ch.logo || '').toLowerCase().includes('tapmad') ||
+        String(ch.group || '').toLowerCase().includes('tapmad')
+    );
+    if (tapmadMatch) return tapmadMatch;
+
+    // 2. Tapmad keyword එක නැත්නම් .m3u8 stream එකක් තෝරාගන්නවා
+    const hlsMatch = allChannels.find(ch =>
+        String(ch.raw_url || '').toLowerCase().includes('.m3u8')
+    );
+    if (hlsMatch) return hlsMatch;
+
+    // 3. Fallback: playlist එකේ පළවෙනි stream එක
+    return allChannels[0];
+}
+
 // --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
 
 // 1. Home Page (ස්වයංක්‍රීයව index.html පෙන්වයි)
@@ -181,7 +203,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
     }
 });
 
-// --- Tapmad / M3U Playlist API Route (Tapmad Live Only) ---
+// --- Tapmad / M3U Playlist API Route (Auto-Extract Tapmad Live) ---
 app.get('/api/tapmad-playlist', async (req, res) => {
     const now = Date.now();
     if (tapmadCache.data && now < tapmadCache.expiresAt) {
@@ -208,16 +230,17 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
         const rawM3u = await response.text();
         const allChannels = parseM3uPlaylist(rawM3u);
+        const picked = pickTapmadStream(allChannels);
 
-        const matchedTapmad = allChannels.find(ch =>
-            String(ch.name || '').toLowerCase().includes('tapmad') ||
-            String(ch.raw_url || '').toLowerCase().includes('tapmad') ||
-            String(ch.logo || '').toLowerCase().includes('tapmad') ||
-            String(ch.group || '').toLowerCase().includes('tapmad')
-        ) || allChannels[0] || null;
-
-        const singleChannel = matchedTapmad
-            ? [{ ...matchedTapmad, id: 'tapmad-live', name: 'Tapmad Live' }]
+        const singleChannel = picked
+            ? [{
+                ...picked,
+                id: 'tapmad-live',
+                name: 'Tapmad Live',
+                stream_url: picked.raw_url && picked.raw_url.toLowerCase().includes('.m3u8')
+                    ? `/hls-proxy?url=${encodeURIComponent(picked.raw_url)}`
+                    : picked.stream_url
+            }]
             : [];
 
         const payload = {
@@ -228,7 +251,7 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 60 * 1000 // 1 minute cache
+            expiresAt: now + 30 * 1000 // 30 seconds cache (match links fresh වෙන්න)
         };
 
         return res.json(payload);
@@ -379,7 +402,7 @@ io.on('connection', (socket) => {
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
         const allData = await getMatchesDataFromGitHub();
         let directLink = '';
-        
+
         for (let cat in allData) {
             const found = allData[cat].find(m => m.id === matchId);
             if (found) {
@@ -445,7 +468,7 @@ io.on('connection', (socket) => {
             matchChatHistories[matchId] = [];
         }
         matchChatHistories[matchId].push(messageData);
-        
+
         if (matchChatHistories[matchId].length > 150) {
             matchChatHistories[matchId].shift();
         }
@@ -457,7 +480,7 @@ io.on('connection', (socket) => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
             if (matchViewers[socket.currentMatch] < 0) matchViewers[socket.currentMatch] = 0;
-            
+
             io.to(socket.currentMatch).emit('viewerCount', matchViewers[socket.currentMatch]);
         }
         console.log('User disconnected: ' + socket.id);
