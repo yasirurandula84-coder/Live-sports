@@ -20,7 +20,7 @@
 
     <!-- Website Favicon / Google Search Logo -->
     <link rel="icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
-    <link rel="shortcut icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
+    <link rel="shortcut" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     <link rel="apple-touch-icon" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
     
     <link rel="stylesheet" href="style.css">
@@ -843,7 +843,6 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const isLiveTvMode = urlParams.get('tv') === '1';
-        const tvStreamUrlParam = safeDecodeValue(urlParams.get('url') || '');
         const tvKidParam = safeDecodeValue(urlParams.get('kid') || '');
         const tvKeyParam = safeDecodeValue(urlParams.get('key') || '');
 
@@ -1405,35 +1404,67 @@
             }).join('');
         }
 
-        function initLiveTvStream() {
+        async function initLiveTvStream() {
             isMatchLive = true;
             playerCountdownOverlay.classList.add('hidden');
             document.getElementById('matchTeamsBanner').style.display = 'none';
+
             if (queryTitle) {
                 document.getElementById('matchTitle').innerText = queryTitle;
+                document.title = `${queryTitle} - StreamX`;
             }
 
-            if (!tvStreamUrlParam) {
-                showStreamError('Stream Not Working', 'Live TV stream URL is missing.');
-                return;
+            if (playerLoader) playerLoader.classList.remove('hidden');
+
+            try {
+                const resp = await fetch(`/api/tapmad-playlist?t=${Date.now()}`, { cache: 'no-store' });
+                if (!resp.ok) {
+                    showStreamError('Stream Not Working', 'Failed to load playlist from server.');
+                    return;
+                }
+
+                const json = await resp.json();
+                const channels = Array.isArray(json.channels) ? json.channels : [];
+
+                if (channels.length === 0) {
+                    showStreamError('Stream Not Working', 'No channels found in playlist.');
+                    return;
+                }
+
+                // Match strictly by id first, then by exact title, otherwise fallback to first channel
+                const matchedCh =
+                    channels.find(c => String(c.id || '') === matchId) ||
+                    (queryTitle
+                        ? channels.find(c => String(c.name || '').trim().toLowerCase() === queryTitle.trim().toLowerCase())
+                        : null) ||
+                    channels[0];
+
+                const finalTitle = matchedCh.name || queryTitle || 'Live TV';
+                document.getElementById('matchTitle').innerText = finalTitle;
+                document.title = `${finalTitle} - StreamX`;
+
+                const tvObj = {
+                    id: matchedCh.id,
+                    name: finalTitle,
+                    stream_url: matchedCh.stream_url || (matchedCh.raw_url ? `/hls-proxy?url=${encodeURIComponent(matchedCh.raw_url)}` : ''),
+                    raw_url: matchedCh.raw_url || '',
+                    kid: matchedCh.kid || tvKidParam,
+                    key: matchedCh.key || tvKeyParam
+                };
+
+                activeServersMap = { server1: tvObj };
+                currentServerKey = 'server1';
+                renderDynamicServerButtons([tvObj], 'server1');
+                playStreamItem(tvObj);
+            } catch (e) {
+                console.error('Error resolving Live TV channel:', e);
+                showStreamError('Stream Not Working', 'Unable to resolve channel stream.');
             }
-
-            const tvObj = {
-                name: queryTitle || 'Live TV',
-                stream_url: tvStreamUrlParam,
-                kid: tvKidParam,
-                key: tvKeyParam
-            };
-
-            activeServersMap = { server1: tvObj };
-            currentServerKey = 'server1';
-            renderDynamicServerButtons([tvObj], 'server1');
-            playStreamItem(tvObj);
         }
 
         async function loadMatchFromFeed() {
             if (isLiveTvMode) {
-                initLiveTvStream();
+                await initLiveTvStream();
                 return;
             }
 
