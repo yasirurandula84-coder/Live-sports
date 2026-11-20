@@ -430,7 +430,7 @@
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
-        const FALLBACK_FLAG = "https://via.placeholder.com/48x48/161622/a5b4fc?text=VS";
+        const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         document.addEventListener('contextmenu', event => event.preventDefault());
         document.onkeydown = function(e) {
@@ -438,6 +438,26 @@
                 return false;
             }
         };
+
+        function getProxiedFlagUrl(url) {
+            if (!url) return FALLBACK_FLAG;
+            const cleanUrl = url.trim().replace(/^http:\/\//i, 'https://');
+            if (cleanUrl.includes('img.sofascore.com')) {
+                return `https://wsrv.nl/?url=${encodeURIComponent(cleanUrl)}&w=64&h=64&fit=cover&default=${encodeURIComponent(FALLBACK_FLAG)}`;
+            }
+            return cleanUrl;
+        }
+
+        function applyFlagImage(imgEl, rawUrl, teamName) {
+            if (!imgEl) return;
+            const primarySrc = getProxiedFlagUrl(rawUrl);
+            imgEl.onerror = function () {
+                this.onerror = null;
+                this.src = FALLBACK_FLAG;
+                this.title = teamName || '';
+            };
+            imgEl.src = primarySrc;
+        }
 
         function getUsernameColor(username) {
             let hash = 0;
@@ -498,15 +518,6 @@
 
         function setQualityLabelText(text) {
             if (currentQualityLabel) currentQualityLabel.innerText = text;
-        }
-
-        function markQualityOptionSelected(matchAttrName, matchAttrValue) {
-            qualityMenu.querySelectorAll('li').forEach(l => {
-                l.classList.remove('selected');
-                if (l.getAttribute(matchAttrName) === String(matchAttrValue)) {
-                    l.classList.add('selected');
-                }
-            });
         }
 
         function setupHlsQualityMenu(hls, levels, defaultLowestIdx = null) {
@@ -750,8 +761,8 @@
 
                 if (matched.flagA || matched.flagB) {
                     document.getElementById('matchTeamsBanner').style.display = 'inline-flex';
-                    document.getElementById('bannerFlagA').src = matched.flagA || FALLBACK_FLAG;
-                    document.getElementById('bannerFlagB').src = matched.flagB || FALLBACK_FLAG;
+                    applyFlagImage(document.getElementById('bannerFlagA'), matched.flagA, matched.teamA);
+                    applyFlagImage(document.getElementById('bannerFlagB'), matched.flagB, matched.teamB);
                     document.getElementById('bannerTeamA').innerText = matched.teamA;
                     document.getElementById('bannerTeamB').innerText = matched.teamB;
                 }
@@ -974,7 +985,6 @@
 
                     await shakaPlayer.load(directLink);
 
-                    // Select lowest bitrate/height track at startup so initial playback is smooth
                     const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
                     let lowestTrack = null;
                     if (tracks.length > 0) {
@@ -1028,7 +1038,6 @@
                                 minIdx = idx;
                             }
                         });
-                        // Force start at the lowest quality level so early playback does not lag
                         hls.startLevel = minIdx;
                         hls.loadLevel = minIdx;
                         hls.currentLevel = minIdx;
