@@ -522,6 +522,15 @@
             "portugal": "pt", "italy": "it", "japan": "jp", "south korea": "kr", "china": "cn"
         };
 
+        function escapeAttr(val) {
+            return String(val || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
         function getFlagUrlByTeamName(teamName) {
             if (!teamName) return null;
             const normalized = teamName.trim().toLowerCase();
@@ -582,7 +591,7 @@
             const candidates = getFlagCandidateList(rawUrl, teamName);
             const primarySrc = candidates[0] || FALLBACK_FLAG;
             const encodedList = encodeURIComponent(JSON.stringify(candidates));
-            return `<img src="${primarySrc}" alt="${altText}" class="team-flag-avatar" referrerpolicy="no-referrer" data-candidates="${encodedList}" data-cand-idx="0" onerror="handleFlagError(this)">`;
+            return `<img src="${primarySrc}" alt="${escapeAttr(altText)}" class="team-flag-avatar" referrerpolicy="no-referrer" data-candidates="${encodedList}" data-cand-idx="0" onerror="handleFlagError(this)">`;
         }
 
         let socket = null;
@@ -650,9 +659,9 @@
                         const team1 = info.teamA || m.event_name || "Team A";
                         const team2 = info.teamB || "Team B";
                         const title = m.event_name || `${team1} Vs ${team2}`;
-                        const safeId = encodeURIComponent(`${cat}-${idx}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+                        const rawSlug = `${cat}-${idx}-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
                         return {
-                            id: safeId,
+                            id: rawSlug,
                             title,
                             team1,
                             team2,
@@ -735,21 +744,21 @@
 
         function createLiveVerticalCardHTML(match) {
             return `
-                <div class="live-v-card" onclick="openMatch('${match.id}', '${encodeURIComponent(match.title)}')">
+                <div class="live-v-card" data-match-id="${escapeAttr(match.id)}" data-match-title="${escapeAttr(match.title)}">
                     <div class="card-top-meta">
                         <div class="live-badge"><span class="live-dot"></span> LIVE NOW</div>
-                        <span class="tournament-label">${match.eventName}</span>
+                        <span class="tournament-label">${escapeAttr(match.eventName)}</span>
                     </div>
 
                     <div class="teams-flag-stage">
                         <div class="flag-team-col">
                             ${renderTeamFlagImg(match.team1Flag, match.team1, match.team1)}
-                            <span class="team-flag-name">${match.team1}</span>
+                            <span class="team-flag-name">${escapeAttr(match.team1)}</span>
                         </div>
                         <span class="vs-badge">VS</span>
                         <div class="flag-team-col">
                             ${renderTeamFlagImg(match.team2Flag, match.team2, match.team2)}
-                            <span class="team-flag-name">${match.team2}</span>
+                            <span class="team-flag-name">${escapeAttr(match.team2)}</span>
                         </div>
                     </div>
 
@@ -762,7 +771,7 @@
         }
 
         function createUpcomingHorizontalCardHTML(match) {
-            const notifKey = `streamx_notif_${match.id}`;
+            const notifKey = `streamx_notif_${encodeURIComponent(match.id)}`;
             const isNotifOn = localStorage.getItem(notifKey) === 'true';
             const bellClass = isNotifOn ? 'notif-bell active' : 'notif-bell';
             const bellIconStyle = isNotifOn ? 'fa-solid fa-bell' : 'fa-regular fa-bell';
@@ -771,24 +780,24 @@
                 <div class="upcoming-h-card">
                     <div class="card-top-meta">
                         <div class="upcoming-badge"><i class="fa-regular fa-clock"></i> UPCOMING</div>
-                        <span class="tournament-label">${match.eventName}</span>
+                        <span class="tournament-label">${escapeAttr(match.eventName)}</span>
                     </div>
 
                     <div class="teams-flag-stage">
                         <div class="flag-team-col">
                             ${renderTeamFlagImg(match.team1Flag, match.team1, match.team1)}
-                            <span class="team-flag-name">${match.team1}</span>
+                            <span class="team-flag-name">${escapeAttr(match.team1)}</span>
                         </div>
                         <span class="vs-badge">VS</span>
                         <div class="flag-team-col">
                             ${renderTeamFlagImg(match.team2Flag, match.team2, match.team2)}
-                            <span class="team-flag-name">${match.team2}</span>
+                            <span class="team-flag-name">${escapeAttr(match.team2)}</span>
                         </div>
                     </div>
 
                     <div class="card-bottom-meta">
-                        <span><i class="fa-regular fa-calendar" style="color: var(--primary-color);"></i> ${match.startTime}</span>
-                        <button class="${bellClass}" id="bell_${match.id}" onclick="event.stopPropagation(); toggleNotification('${match.id}', '${encodeURIComponent(match.title)}')" title="Toggle Match Reminder">
+                        <span><i class="fa-regular fa-calendar" style="color: var(--primary-color);"></i> ${escapeAttr(match.startTime)}</span>
+                        <button type="button" class="${bellClass}" data-bell-id="${escapeAttr(match.id)}" data-bell-title="${escapeAttr(match.title)}" title="Toggle Match Reminder">
                             <i class="${bellIconStyle}"></i>
                         </button>
                     </div>
@@ -798,25 +807,44 @@
 
         function filterMatches() { renderMatches(); }
 
-        function openMatch(id, title) {
-            location.href = `/match?id=${id}&title=${title}`;
+        function openMatch(rawId, rawTitle) {
+            const safeId = encodeURIComponent(String(rawId || '').trim());
+            const safeTitle = encodeURIComponent(String(rawTitle || '').trim());
+            window.location.href = `/match?id=${safeId}&title=${safeTitle}`;
         }
 
-        function toggleNotification(matchId, encodedTitle) {
-            const bellBtn = document.getElementById(`bell_${matchId}`);
+        document.addEventListener('click', (e) => {
+            const bellBtn = e.target.closest('[data-bell-id]');
+            if (bellBtn) {
+                e.stopPropagation();
+                const matchId = bellBtn.getAttribute('data-bell-id') || '';
+                const matchTitle = bellBtn.getAttribute('data-bell-title') || '';
+                toggleNotification(matchId, matchTitle, bellBtn);
+                return;
+            }
+
+            const card = e.target.closest('[data-match-id]');
+            if (!card) return;
+            const rawId = card.getAttribute('data-match-id') || '';
+            const rawTitle = card.getAttribute('data-match-title') || '';
+            openMatch(rawId, rawTitle);
+        });
+
+        function toggleNotification(matchId, matchTitle, bellBtnEl) {
+            const bellBtn = bellBtnEl || document.querySelector(`[data-bell-id="${CSS.escape(matchId)}"]`);
             if (!bellBtn) return;
             const bellIcon = bellBtn.querySelector('i');
-            const notifKey = `streamx_notif_${matchId}`;
+            const notifKey = `streamx_notif_${encodeURIComponent(matchId)}`;
             const newState = !(localStorage.getItem(notifKey) === 'true');
-            localStorage.setItem(notifKey, newState);
+            localStorage.setItem(notifKey, String(newState));
 
             if (newState) {
                 bellBtn.classList.add('active');
-                bellIcon.className = 'fa-solid fa-bell';
-                showNotificationAlert(`Reminder set for: ${decodeURIComponent(encodedTitle)}`);
+                if (bellIcon) bellIcon.className = 'fa-solid fa-bell';
+                showNotificationAlert(`Reminder set for: ${matchTitle}`);
             } else {
                 bellBtn.classList.remove('active');
-                bellIcon.className = 'fa-regular fa-bell';
+                if (bellIcon) bellIcon.className = 'fa-regular fa-bell';
                 showNotificationAlert(`Reminder removed.`);
             }
         }
