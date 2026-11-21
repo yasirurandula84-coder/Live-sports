@@ -47,7 +47,6 @@
             border-radius: 50%; z-index: 0; pointer-events: none;
         }
 
-        /* Navbar + Right Slide Drawer */
         .navbar {
             background: rgba(11, 11, 16, 0.92) !important;
             backdrop-filter: blur(20px);
@@ -422,7 +421,7 @@
         </section>
 
         <div class="format-tabs" id="formatTabs">
-            <button type="button" class="format-tab-btn" data-fmt="test" onclick="selectFormat('test')">Test</button>
+            <button type="button" class="format-tab-btn active" data-fmt="test" onclick="selectFormat('test')">Test</button>
             <button type="button" class="format-tab-btn" data-fmt="odi" onclick="selectFormat('odi')">ODI</button>
             <button type="button" class="format-tab-btn" data-fmt="t20" onclick="selectFormat('t20')">T20</button>
         </div>
@@ -444,11 +443,11 @@
     </nav>
 
     <script>
-        const RANKINGS_BASE_URL = "https://cricbuzz-scraper-kkkw.onrender.com/rankings";
+        const CRICBUZZ_RANKINGS_API = "/api/cricbuzz-rankings";
+        const CRICBUZZ_RANKINGS_DIRECT_FALLBACK = "https://cricbuzz-scraper-kkkw.onrender.com/rankings";
         const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         let rankingPayload = null;
-        let rankingLoadError = "";
         let currentFormat = "test";
 
         function toggleRightDrawer(open) {
@@ -479,12 +478,23 @@
             return `<span class="trend-pill trend-flat"><i class="fa-solid fa-minus"></i> Flat</span>`;
         }
 
-        function normalizeRankingsMap(rawRankings) {
-            if (!rawRankings || typeof rawRankings !== "object") return {};
+        function normalizeRankingsMap(rawObj) {
             const out = {};
-            for (const [k, v] of Object.entries(rawRankings)) {
-                const key = String(k || "").toLowerCase().replace(/i$/, "");
-                if (Array.isArray(v)) out[key] = v;
+            const source = (rawObj && rawObj.rankings && typeof rawObj.rankings === "object")
+                ? rawObj.rankings
+                : rawObj;
+
+            if (!source || typeof source !== "object") return out;
+
+            for (const [k, v] of Object.entries(source)) {
+                const lower = String(k || "").toLowerCase();
+                const normKey = lower.includes("test") ? "test"
+                    : lower.includes("odi") ? "odi"
+                    : lower.includes("t20") ? "t20"
+                    : lower.replace(/i$/, "");
+                if (Array.isArray(v)) {
+                    out[normKey] = v;
+                }
             }
             return out;
         }
@@ -505,46 +515,48 @@
             const genderLabel = rankingPayload && rankingPayload.gender ? String(rankingPayload.gender).toUpperCase() : "MEN";
             document.getElementById("rankingMetaBadge").innerText = `${genderLabel} · ${catLabel} · ${currentFormat.toUpperCase()}`;
 
-            if (rankingLoadError && !rankingPayload) {
-                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #f87171;">${escapeHtml(rankingLoadError)}</div>`;
-                return;
-            }
+            const map = normalizeRankingsMap(rankingPayload);
+            let list = Array.isArray(map[currentFormat]) ? map[currentFormat] : [];
 
-            const map = normalizeRankingsMap(rankingPayload && rankingPayload.rankings);
-            const list = Array.isArray(map[currentFormat]) ? map[currentFormat] : [];
+            if (list.length === 0 && Array.isArray(rankingPayload && rankingPayload.players)) {
+                list = rankingPayload.players;
+            }
 
             const filtered = list.filter(item => {
                 if (!query) return true;
                 return (
-                    String(item.name || "").toLowerCase().includes(query) ||
-                    String(item.country || "").toLowerCase().includes(query) ||
+                    String(item.name || item.player || "").toLowerCase().includes(query) ||
+                    String(item.country || item.team || "").toLowerCase().includes(query) ||
                     String(item.rank || "").includes(query)
                 );
             });
 
             if (filtered.length === 0) {
-                const msg = list.length === 0
-                    ? `No ${currentFormat.toUpperCase()} ranking entries returned by API.`
-                    : "No players match your search.";
-                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">${escapeHtml(msg)}</div>`;
+                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">No players match your search.</div>`;
                 return;
             }
 
-            grid.innerHTML = filtered.map(player => {
-                const rankNum = Number(player.rank || 0);
+            grid.innerHTML = filtered.map((player, idx) => {
+                const rankVal = player.rank ?? (idx + 1);
+                const rankNum = Number(rankVal || 0);
                 const isTopOne = rankNum === 1;
-                const imgSrc = player.image || FALLBACK_AVATAR;
+                const nameVal = player.name || player.player || "Player";
+                const countryVal = player.country || player.team || "";
                 const ratingVal = player.rating ?? player.points ?? "-";
+                const rawImg = player.image || player.img || player.avatar || "";
+                const imgSrc = rawImg
+                    ? (rawImg.includes("static.cricbuzz.com") ? `/img-proxy?url=${encodeURIComponent(rawImg)}` : rawImg)
+                    : FALLBACK_AVATAR;
 
                 return `
                     <div class="player-rank-card ${isTopOne ? "top-one" : ""}">
                         <div class="rank-left">
-                            <span class="rank-badge">#${escapeHtml(player.rank)}</span>
-                            <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(player.name)}" class="player-avatar" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}';">
+                            <span class="rank-badge">#${escapeHtml(rankVal)}</span>
+                            <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(nameVal)}" class="player-avatar" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}';">
                             <div class="player-meta">
-                                <div class="player-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</div>
+                                <div class="player-name" title="${escapeHtml(nameVal)}">${escapeHtml(nameVal)}</div>
                                 <div class="player-country">
-                                    <span>${escapeHtml(player.country || "")}</span>
+                                    <span>${escapeHtml(countryVal)}</span>
                                     ${renderTrendBadge(player.trend)}
                                 </div>
                             </div>
@@ -558,32 +570,51 @@
             }).join("");
         }
 
-        async function loadRankings() {
-            rankingLoadError = "";
+        async function loadCricbuzzRankings() {
             try {
-                const url = `${RANKINGS_BASE_URL}?category=batting&gender=men&t=${Date.now()}`;
-                const res = await fetch(url, { cache: "no-store" });
-                if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const json = await res.json();
-                rankingPayload = json && json.data && json.data.rankings ? json.data : json;
+                let payload = null;
+                const qs = `category=batting&gender=men&t=${Date.now()}`;
 
+                try {
+                    const res = await fetch(`${CRICBUZZ_RANKINGS_API}?${qs}`, { cache: "no-store" });
+                    if (res.ok) {
+                        const json = await res.json();
+                        payload = json && json.data ? json.data : json;
+                    }
+                } catch (_) {}
+
+                if (!payload) {
+                    const directRes = await fetch(`${CRICBUZZ_RANKINGS_DIRECT_FALLBACK}?${qs}`, { cache: "no-store" });
+                    if (!directRes.ok) return;
+                    payload = await directRes.json();
+                }
+
+                rankingPayload = payload && payload.data && payload.data.rankings ? payload.data : payload;
+
+                const map = normalizeRankingsMap(rankingPayload);
+                const availableKeys = Object.keys(map);
                 const preferred = (rankingPayload && rankingPayload.default_format)
                     ? String(rankingPayload.default_format).toLowerCase().replace(/i$/, "")
-                    : "test";
-                currentFormat = ["test", "odi", "t20"].includes(preferred) ? preferred : "test";
+                    : currentFormat;
+
+                if (map[preferred] && map[preferred].length > 0) {
+                    currentFormat = preferred;
+                } else if (availableKeys.length > 0) {
+                    currentFormat = availableKeys[0];
+                }
 
                 document.querySelectorAll(".format-tab-btn").forEach(btn => {
                     btn.classList.toggle("active", btn.getAttribute("data-fmt") === currentFormat);
                 });
+
                 renderRankingsCards();
             } catch (err) {
-                console.error("Rankings fetch error:", err);
-                rankingLoadError = "Unable to load rankings from Cricbuzz scraper right now.";
-                renderRankingsCards();
+                console.error("Cricbuzz rankings error:", err);
             }
         }
 
-        loadRankings();
+        loadCricbuzzRankings();
+        setInterval(loadCricbuzzRankings, 60000);
     </script>
 </body>
 </html>
