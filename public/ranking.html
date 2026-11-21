@@ -444,10 +444,11 @@
     </nav>
 
     <script>
-        const RANKINGS_API_URL = "/api/cricbuzz-rankings?category=batting&gender=men";
+        const RANKINGS_BASE_URL = "https://cricbuzz-scraper-kkkw.onrender.com/rankings";
         const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         let rankingPayload = null;
+        let rankingLoadError = "";
         let currentFormat = "test";
 
         function toggleRightDrawer(open) {
@@ -478,6 +479,16 @@
             return `<span class="trend-pill trend-flat"><i class="fa-solid fa-minus"></i> Flat</span>`;
         }
 
+        function normalizeRankingsMap(rawRankings) {
+            if (!rawRankings || typeof rawRankings !== "object") return {};
+            const out = {};
+            for (const [k, v] of Object.entries(rawRankings)) {
+                const key = String(k || "").toLowerCase().replace(/i$/, "");
+                if (Array.isArray(v)) out[key] = v;
+            }
+            return out;
+        }
+
         function selectFormat(fmt) {
             currentFormat = fmt;
             document.querySelectorAll(".format-tab-btn").forEach(btn => {
@@ -494,7 +505,12 @@
             const genderLabel = rankingPayload && rankingPayload.gender ? String(rankingPayload.gender).toUpperCase() : "MEN";
             document.getElementById("rankingMetaBadge").innerText = `${genderLabel} · ${catLabel} · ${currentFormat.toUpperCase()}`;
 
-            const map = (rankingPayload && rankingPayload.rankings) || {};
+            if (rankingLoadError && !rankingPayload) {
+                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #f87171;">${escapeHtml(rankingLoadError)}</div>`;
+                return;
+            }
+
+            const map = normalizeRankingsMap(rankingPayload && rankingPayload.rankings);
             const list = Array.isArray(map[currentFormat]) ? map[currentFormat] : [];
 
             const filtered = list.filter(item => {
@@ -507,7 +523,10 @@
             });
 
             if (filtered.length === 0) {
-                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">No players match your search.</div>`;
+                const msg = list.length === 0
+                    ? `No ${currentFormat.toUpperCase()} ranking entries returned by API.`
+                    : "No players match your search.";
+                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">${escapeHtml(msg)}</div>`;
                 return;
             }
 
@@ -540,14 +559,16 @@
         }
 
         async function loadRankings() {
+            rankingLoadError = "";
             try {
-                const res = await fetch(`${RANKINGS_API_URL}&t=${Date.now()}`, { cache: "no-store" });
-                if (!res.ok) throw new Error("Failed to load rankings");
+                const url = `${RANKINGS_BASE_URL}?category=batting&gender=men&t=${Date.now()}`;
+                const res = await fetch(url, { cache: "no-store" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
-                rankingPayload = json && json.data ? json.data : json;
+                rankingPayload = json && json.data && json.data.rankings ? json.data : json;
 
                 const preferred = (rankingPayload && rankingPayload.default_format)
-                    ? String(rankingPayload.default_format).toLowerCase()
+                    ? String(rankingPayload.default_format).toLowerCase().replace(/i$/, "")
                     : "test";
                 currentFormat = ["test", "odi", "t20"].includes(preferred) ? preferred : "test";
 
@@ -556,7 +577,9 @@
                 });
                 renderRankingsCards();
             } catch (err) {
-                document.getElementById("rankingsGrid").innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">Unable to load rankings data right now.</div>`;
+                console.error("Rankings fetch error:", err);
+                rankingLoadError = "Unable to load rankings from Cricbuzz scraper right now.";
+                renderRankingsCards();
             }
         }
 
