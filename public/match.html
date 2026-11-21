@@ -120,7 +120,7 @@
 
         .player-thumb-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.12s ease;
+            object-fit: cover; background: #000; z-index: 15; transition: opacity 0.2s ease;
         }
         .player-thumb-overlay.hidden {
             opacity: 0; visibility: hidden; pointer-events: none;
@@ -141,16 +141,89 @@
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             z-index: 18; display: flex; flex-direction: column; align-items: center; gap: 10px;
             color: #fff; font-size: 14px; font-weight: 600; background: rgba(0, 0, 0, 0.65);
-            padding: 14px 22px; border-radius: 12px; backdrop-filter: blur(5px);
+            padding: 15px 25px; border-radius: 12px; backdrop-filter: blur(5px);
             border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .spinner {
-            width: 32px; height: 32px; border: 3px solid rgba(255, 255, 255, 0.2);
+            width: 35px; height: 35px; border: 3px solid rgba(255, 255, 255, 0.2);
             border-top: 3px solid var(--primary-color); border-radius: 50%;
-            animation: spin 0.65s linear infinite;
+            animation: spin 0.7s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .player-loader.hidden { display: none; }
+
+        /* Blur Overlay with animated loading indicator */
+        .stream-warmup-blur-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 17;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            background: rgba(10, 10, 16, 0.45);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .stream-warmup-blur-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .stream-warmup-card {
+            background: rgba(15, 16, 24, 0.84);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 18px;
+            padding: 22px 26px;
+            max-width: 340px;
+            width: 90%;
+            box-shadow: 0 14px 36px rgba(0, 0, 0, 0.65);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .warmup-ring-spinner {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid rgba(99, 102, 241, 0.22);
+            border-top-color: #6366f1;
+            border-right-color: #ff4757;
+            animation: spin 0.8s linear infinite;
+        }
+        .stream-warmup-title {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.3px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+        .warmup-dots span {
+            display: inline-block;
+            animation: warmupDotBounce 1.2s infinite ease-in-out;
+            color: #a5b4fc;
+            font-weight: 900;
+        }
+        .warmup-dots span:nth-child(2) { animation-delay: 0.2s; }
+        .warmup-dots span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes warmupDotBounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+            40% { transform: translateY(-4px); opacity: 1; }
+        }
+        .stream-warmup-sub {
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #cbd5e1;
+            line-height: 1.45;
+        }
 
         /* Stream Failure / Error Overlay */
         .stream-error-overlay {
@@ -346,6 +419,7 @@
         .ping-dot.fair { background: #eab308; box-shadow: 0 0 8px #eab308; }
         .ping-dot.poor { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
+        /* Clean, neat server buttons */
         .server-selector {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
@@ -555,9 +629,20 @@
                         </div>
                     </div>
 
-                    <div id="playerLoader" class="player-loader">
+                    <div id="playerLoader" class="player-loader hidden">
                         <div class="spinner"></div>
-                        <span>Starting Instant Stream...</span>
+                        <span>Connecting Live Stream...</span>
+                    </div>
+
+                    <div id="streamWarmupBlur" class="stream-warmup-blur-overlay" aria-live="polite">
+                        <div class="stream-warmup-card">
+                            <div class="warmup-ring-spinner"></div>
+                            <div class="stream-warmup-title">
+                                <span>Buffering Live</span>
+                                <span class="warmup-dots"><span>.</span><span>.</span><span>.</span></span>
+                            </div>
+                            <div class="stream-warmup-sub">Preparing smooth playback, please wait</div>
+                        </div>
                     </div>
 
                     <div id="streamErrorOverlay" class="stream-error-overlay" role="alert">
@@ -578,7 +663,7 @@
                         </div>
                     </div>
                     
-                    <video id="hlsPlayer" playsinline webkit-playsinline autoplay muted preload="auto"></video>
+                    <video id="hlsPlayer" playsinline autoplay></video>
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
                     
                     <div class="video-controls-overlay" id="controlsOverlay">
@@ -593,8 +678,8 @@
                                 <button type="button" class="control-btn" id="skipForwardBtn"><i class="fa-solid fa-rotate-right"></i> 10s</button>
                                 
                                 <div class="volume-box" style="display: flex; gap: 6px; align-items: center;">
-                                    <button type="button" class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-xmark"></i></button>
-                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0">
+                                    <button type="button" class="control-btn" id="muteBtn"><i class="fa-solid fa-volume-high"></i></button>
+                                    <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="1">
                                 </div>
                             </div>
 
@@ -775,6 +860,7 @@
         const controlsOverlay = document.getElementById('controlsOverlay');
         const playerThumbnail = document.getElementById('playerThumbnail');
         const playerLoader = document.getElementById('playerLoader');
+        const streamWarmupBlur = document.getElementById('streamWarmupBlur');
         const streamErrorOverlay = document.getElementById('streamErrorOverlay');
         const streamErrorTitle = document.getElementById('streamErrorTitle');
         const streamErrorDesc = document.getElementById('streamErrorDesc');
@@ -818,6 +904,11 @@
         let countdownInterval = null;
         let pendingMessage = null;
 
+        let warmupFallbackTimer = null;
+        let warmupActive = false;
+        let lastSmoothVideoTime = -1;
+        let smoothAdvanceTicks = 0;
+
         function syncAudioUiState() {
             if (!video) return;
             if (video.muted || video.volume === 0) {
@@ -827,6 +918,36 @@
                 if (muteBtn) muteBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
                 if (volumeSlider) volumeSlider.value = video.volume;
             }
+        }
+
+        function clearWarmupTimers() {
+            if (warmupFallbackTimer) {
+                clearTimeout(warmupFallbackTimer);
+                warmupFallbackTimer = null;
+            }
+        }
+
+        function hideWarmupBlur() {
+            clearWarmupTimers();
+            warmupActive = false;
+            smoothAdvanceTicks = 0;
+            lastSmoothVideoTime = -1;
+            if (streamWarmupBlur) {
+                streamWarmupBlur.classList.remove('active');
+            }
+        }
+
+        function startWarmupBlurAfterConnect() {
+            clearWarmupTimers();
+            warmupActive = true;
+            smoothAdvanceTicks = 0;
+            lastSmoothVideoTime = video ? video.currentTime : -1;
+            if (streamWarmupBlur) {
+                streamWarmupBlur.classList.add('active');
+            }
+            warmupFallbackTimer = setTimeout(() => {
+                hideWarmupBlur();
+            }, 4500);
         }
 
         function clearStreamFailWatchdog() {
@@ -854,6 +975,7 @@
         function showStreamError(titleText, descText, token) {
             if (token !== undefined && token !== streamAttemptToken) return;
             clearStreamFailWatchdog();
+            hideWarmupBlur();
             if (playerLoader) playerLoader.classList.add('hidden');
             if (playerThumbnail) {
                 playerThumbnail.classList.add('hidden');
@@ -888,7 +1010,7 @@
                         );
                     }
                 }
-            }, 14000);
+            }, 15000);
         }
 
         if (nextServerErrBtn) {
@@ -915,7 +1037,7 @@
             if (currentQualityLabel) currentQualityLabel.innerText = text;
         }
 
-        function setupHlsQualityMenu(hls, levels) {
+        function setupHlsQualityMenu(hls, levels, defaultLowestIdx = null) {
             const validLevels = (levels || [])
                 .map((lvl, idx) => ({ idx, height: lvl.height || 0, bitrate: lvl.bitrate || 0 }))
                 .filter(item => item.height > 0)
@@ -927,11 +1049,20 @@
             }
 
             qualityWrapper.style.display = 'inline-flex';
-            setQualityLabelText('Auto');
+            const lowestItem = defaultLowestIdx !== null
+                ? validLevels.find(v => v.idx === defaultLowestIdx)
+                : null;
 
-            qualityMenu.innerHTML = `<li data-mode="auto" class="selected">Auto</li>`;
+            if (lowestItem) {
+                setQualityLabelText(`${lowestItem.height}p`);
+            } else {
+                setQualityLabelText('Auto');
+            }
+
+            qualityMenu.innerHTML = `<li data-mode="auto" class="${lowestItem ? '' : 'selected'}">Auto</li>`;
             validLevels.forEach(lvl => {
-                qualityMenu.innerHTML += `<li data-mode="manual" data-level="${lvl.idx}" data-label="${lvl.height}p">${lvl.height}p</li>`;
+                const isLowSelected = lowestItem && lvl.idx === lowestItem.idx;
+                qualityMenu.innerHTML += `<li data-mode="manual" data-level="${lvl.idx}" data-label="${lvl.height}p" class="${isLowSelected ? 'selected' : ''}">${lvl.height}p</li>`;
             });
 
             qualityMenu.querySelectorAll('li').forEach(li => {
@@ -958,7 +1089,7 @@
             });
         }
 
-        function setupShakaQualityMenu(shakaPlayer) {
+        function setupShakaQualityMenu(shakaPlayer, lowestTrack = null) {
             const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
             const byHeight = new Map();
             tracks.forEach(t => {
@@ -977,11 +1108,18 @@
             }
 
             qualityWrapper.style.display = 'inline-flex';
-            setQualityLabelText('Auto');
+            const lowestHeight = lowestTrack && lowestTrack.height ? lowestTrack.height : null;
 
-            qualityMenu.innerHTML = `<li data-mode="auto" class="selected">Auto</li>`;
+            if (lowestHeight) {
+                setQualityLabelText(`${lowestHeight}p`);
+            } else {
+                setQualityLabelText('Auto');
+            }
+
+            qualityMenu.innerHTML = `<li data-mode="auto" class="${lowestHeight ? '' : 'selected'}">Auto</li>`;
             sortedHeights.forEach(h => {
-                qualityMenu.innerHTML += `<li data-mode="manual" data-height="${h}" data-label="${h}p">${h}p</li>`;
+                const isLowSelected = lowestHeight && h === lowestHeight;
+                qualityMenu.innerHTML += `<li data-mode="manual" data-height="${h}" data-label="${h}p" class="${isLowSelected ? 'selected' : ''}">${h}p</li>`;
             });
 
             qualityMenu.querySelectorAll('li').forEach(li => {
@@ -1011,41 +1149,31 @@
         function hideOverlaysSafely() {
             playerThumbnail.classList.add('hidden');
             if (playerLoader) playerLoader.classList.add('hidden');
-            playerThumbnail.style.display = 'none';
+            setTimeout(() => { playerThumbnail.style.display = 'none'; }, 150);
         }
 
-        function bindUnmuteOnFirstGesture() {
-            const unlockAudioOnce = () => {
-                if (!video) return;
-                video.muted = false;
-                if (video.volume === 0) video.volume = 1;
-                video.play().catch(() => {});
-                syncAudioUiState();
-                document.removeEventListener('click', unlockAudioOnce);
-                document.removeEventListener('touchstart', unlockAudioOnce);
-                document.removeEventListener('keydown', unlockAudioOnce);
-            };
-            document.addEventListener('click', unlockAudioOnce, { once: true });
-            document.addEventListener('touchstart', unlockAudioOnce, { once: true });
-            document.addEventListener('keydown', unlockAudioOnce, { once: true });
-        }
-
-        // Start playback immediately on load: try unmuted first, fallback to instant muted autoplay
-        async function startPlaybackImmediately() {
+        async function kickPlayNow() {
             if (video.style.display === 'none') return;
             try {
+                video.volume = 1;
                 video.muted = false;
-                if (video.volume === 0) video.volume = 1;
                 await video.play();
                 syncAudioUiState();
-                hideOverlaysSafely();
             } catch (e) {
                 try {
                     video.muted = true;
                     await video.play();
                     syncAudioUiState();
-                    hideOverlaysSafely();
-                    bindUnmuteOnFirstGesture();
+                    const unlockAudioOnce = () => {
+                        video.muted = false;
+                        video.volume = 1;
+                        video.play().catch(() => {});
+                        syncAudioUiState();
+                        document.removeEventListener('click', unlockAudioOnce);
+                        document.removeEventListener('touchstart', unlockAudioOnce);
+                    };
+                    document.addEventListener('click', unlockAudioOnce, { once: true });
+                    document.addEventListener('touchstart', unlockAudioOnce, { once: true });
                 } catch (err2) {}
             }
         }
@@ -1053,16 +1181,30 @@
         function nudgeStalledFrame() {
             if (video.style.display === 'none') return;
             try {
-                if (currentShakaPlayer && typeof currentShakaPlayer.seekToLiveEdge === 'function' && currentShakaPlayer.isLive()) {
-                    currentShakaPlayer.seekToLiveEdge();
-                } else if (currentHls && currentHls.startLoad) {
+                if (currentHls && currentHls.startLoad) {
                     currentHls.startLoad(-1);
                 }
             } catch (e) {}
-            if (video.paused && video.readyState >= 2) {
+            if (video.paused && video.readyState >= 3) {
                 video.play().catch(() => {});
             }
         }
+
+        setInterval(() => {
+            if (!warmupActive || video.style.display === 'none') return;
+            if (!video.paused && video.readyState >= 3) {
+                const delta = lastSmoothVideoTime >= 0 ? (video.currentTime - lastSmoothVideoTime) : 0;
+                if (delta >= 0.35) {
+                    smoothAdvanceTicks += 1;
+                    if (smoothAdvanceTicks >= 2) {
+                        hideWarmupBlur();
+                    }
+                } else {
+                    smoothAdvanceTicks = 0;
+                }
+                lastSmoothVideoTime = video.currentTime;
+            }
+        }, 600);
 
         video.addEventListener('playing', () => {
             clearStreamFailWatchdog();
@@ -1084,17 +1226,17 @@
         });
 
         video.addEventListener('loadedmetadata', () => {
-            startPlaybackImmediately();
+            kickPlayNow();
         });
 
         video.addEventListener('loadeddata', () => {
-            hideOverlaysSafely();
-            startPlaybackImmediately();
+            if (playerLoader) playerLoader.classList.add('hidden');
+            kickPlayNow();
         });
 
         video.addEventListener('canplay', () => {
-            hideOverlaysSafely();
-            startPlaybackImmediately();
+            if (playerLoader) playerLoader.classList.add('hidden');
+            kickPlayNow();
         });
 
         let lastWatchTime = -1;
@@ -1294,6 +1436,7 @@
 
                 if (statusUpper === "UPCOMING") {
                     isMatchLive = false;
+                    hideWarmupBlur();
                     hideStreamError();
                     playerCountdownOverlay.classList.remove('hidden');
                     document.getElementById('countdownMatchTitle').innerText = matched.title;
@@ -1385,6 +1528,7 @@
         }
 
         async function destroyPlayers() {
+            hideWarmupBlur();
             clearStreamFailWatchdog();
             if (currentHls) {
                 try { currentHls.destroy(); } catch (e) {}
@@ -1459,7 +1603,7 @@
                     if (myToken !== streamAttemptToken) return;
                     clearStreamFailWatchdog();
                     hideOverlaysSafely();
-                }, 300);
+                }, 500);
                 return;
             }
 
@@ -1494,26 +1638,21 @@
 
                     const shakaConfig = {
                         streaming: {
-                            lowLatencyMode: true,
-                            inaccurateManifestProcessing: true,
-                            bufferingGoal: 4,
-                            rebufferingGoal: 0.8,
-                            bufferBehind: 8,
+                            bufferingGoal: 3,
+                            rebufferingGoal: 0.5,
+                            bufferBehind: 6,
                             startAtSegmentBoundary: false,
                             jumpLargeGaps: true,
-                            ignoreTextStreamFailures: true,
-                            segmentPrefetchLimit: 2,
                             inaccurateManifestTolerance: 2.5,
                             retryParameters: {
-                                timeout: 3500,
+                                timeout: 4000,
                                 maxAttempts: 3,
                                 baseDelay: 150
                             }
                         },
                         abr: {
-                            enabled: true,
-                            defaultBandwidthEstimate: 1200000,
-                            switchInterval: 1
+                            enabled: false,
+                            defaultBandwidthEstimate: 1200000
                         }
                     };
                     if (kid && key) {
@@ -1528,14 +1667,23 @@
                     await shakaPlayer.load(directLink);
                     if (myToken !== streamAttemptToken) return;
 
-                    if (shakaPlayer.isLive && shakaPlayer.isLive() && typeof shakaPlayer.seekToLiveEdge === 'function') {
-                        shakaPlayer.seekToLiveEdge();
+                    const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
+                    let lowestTrack = null;
+                    if (tracks.length > 0) {
+                        lowestTrack = tracks.reduce((best, t) => {
+                            const bwA = best.bandwidth || (best.height ? best.height * 1000 : Infinity);
+                            const bwB = t.bandwidth || (t.height ? t.height * 1000 : Infinity);
+                            return bwB < bwA ? t : best;
+                        }, tracks[0]);
+                        shakaPlayer.configure({ abr: { enabled: false } });
+                        shakaPlayer.selectVariantTrack(lowestTrack, true);
                     }
 
-                    setupShakaQualityMenu(shakaPlayer);
-                    await startPlaybackImmediately();
+                    setupShakaQualityMenu(shakaPlayer, lowestTrack);
+                    await kickPlayNow();
                     if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
                     return;
                 } catch (err) {
                     console.error("Shaka load failed:", err);
@@ -1553,18 +1701,18 @@
                 let hlsNetworkRetries = 0;
                 let hlsMediaRetries = 0;
                 const hls = new Hls({
-                    lowLatencyMode: true,
-                    startLevel: -1,
-                    maxBufferLength: 6,
-                    maxMaxBufferLength: 14,
+                    lowLatencyMode: false,
+                    startLevel: 0,
+                    maxBufferLength: 10,
+                    maxMaxBufferLength: 20,
                     backBufferLength: 6,
                     liveSyncDurationCount: 2,
                     liveMaxLatencyDurationCount: 5,
-                    abrBandWidthFactor: 0.85,
-                    abrBandWidthUpFactor: 0.75,
-                    manifestLoadingTimeOut: 4500,
-                    levelLoadingTimeOut: 4500,
-                    fragLoadingTimeOut: 6000,
+                    abrBandWidthFactor: 0.8,
+                    abrBandWidthUpFactor: 0.7,
+                    manifestLoadingTimeOut: 6000,
+                    levelLoadingTimeOut: 6000,
+                    fragLoadingTimeOut: 8000,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -1574,10 +1722,27 @@
                 hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
                     if (myToken !== streamAttemptToken) return;
                     const levels = data.levels || hls.levels || [];
-                    setupHlsQualityMenu(hls, levels);
-                    await startPlaybackImmediately();
+                    let minIdx = null;
+                    if (levels.length > 0) {
+                        minIdx = 0;
+                        let minBitrate = Infinity;
+                        levels.forEach((lvl, idx) => {
+                            const bw = lvl.bitrate || (lvl.height ? lvl.height * 1000 : Infinity);
+                            if (bw < minBitrate) {
+                                minBitrate = bw;
+                                minIdx = idx;
+                            }
+                        });
+                        hls.startLevel = minIdx;
+                        hls.loadLevel = minIdx;
+                        hls.currentLevel = minIdx;
+                        hls.nextLevel = minIdx;
+                    }
+                    setupHlsQualityMenu(hls, levels, minIdx);
+                    await kickPlayNow();
                     if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
@@ -1602,9 +1767,10 @@
                 video.src = directLink;
                 video.addEventListener('loadedmetadata', async function () {
                     if (myToken !== streamAttemptToken) return;
-                    await startPlaybackImmediately();
+                    await kickPlayNow();
                     if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
                 }, { once: true });
             } else {
                 showStreamError(
