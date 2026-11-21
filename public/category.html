@@ -153,7 +153,7 @@
         .cb-card-top {
             display: flex;
             justify-content: space-between;
-            align-items: flex-start;
+            align-items: center;
             gap: 8px;
             margin-bottom: 11px;
         }
@@ -165,20 +165,26 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            max-width: 175px;
+            max-width: 155px;
         }
 
         .cb-match-desc {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
-            color: #cbd5e1;
+            color: #fb923c;
+            background: rgba(249, 115, 22, 0.14);
+            border: 1px solid rgba(251, 146, 60, 0.35);
+            padding: 2px 8px;
+            border-radius: 999px;
             text-transform: uppercase;
             letter-spacing: 0.4px;
             flex-shrink: 0;
         }
 
         .cb-match-desc.result-tag {
-            color: #60a5fa;
+            color: #93c5fd;
+            background: rgba(59, 130, 246, 0.16);
+            border-color: rgba(96, 165, 250, 0.38);
         }
 
         .cb-team-row {
@@ -826,6 +832,29 @@
                 .join(' & ');
         }
 
+        function getScoreCardStateInfo(mt) {
+            const catStatus = String((mt && mt.status_category) || '').trim().toLowerCase();
+            const stateStr = String((mt && mt.state) || '').trim().toLowerCase();
+            const statusStr = String((mt && mt.status) || '').trim().toLowerCase();
+
+            const endedByCat = ['complete', 'completed', 'result', 'ended'].includes(catStatus);
+            const endedByState = /complete|completed|result|ended|stumps|abandoned|no result|draw/.test(stateStr);
+            const endedByStatus = /\bwon by\b|\bmatch drawn\b|\bmatch tied\b|\bno result\b|\babandoned\b/.test(statusStr);
+
+            if (endedByCat || endedByState || endedByStatus) {
+                return { badgeText: 'ENDED', isEnded: true };
+            }
+
+            const liveByCat = catStatus === 'live';
+            const liveByState = /progress|live|in play/.test(stateStr);
+            if (liveByCat || liveByState) {
+                return { badgeText: '● LIVE', isEnded: false };
+            }
+
+            const fallbackLabel = String((mt && (mt.state || mt.description || mt.format)) || 'LIVE').trim().toUpperCase();
+            return { badgeText: fallbackLabel, isEnded: false };
+        }
+
         function findMatchingStreamMatchForCb(cbMatch) {
             const t1Name = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.name);
             const t1Short = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.short_name);
@@ -871,9 +900,9 @@
 
             rowEl.innerHTML = cricbuzzMatchesFlat.map(mt => {
                 const seriesTitle = (mt.series && mt.series.name) || mt.description || 'Cricket';
-                const isCompleted = String(mt.status_category || '').toLowerCase() === 'completed' ||
-                                    String(mt.state || '').toLowerCase() === 'complete';
-                const rightBadge = isCompleted ? 'RESULT' : (mt.description || mt.format || 'LIVE');
+                const stateInfo = getScoreCardStateInfo(mt);
+                const isEnded = stateInfo.isEnded;
+                const rightBadge = stateInfo.badgeText;
 
                 const t1 = mt.team1 || {};
                 const t2 = mt.team2 || {};
@@ -891,7 +920,7 @@
                          data-stream-title="${escapeAttr(matchedStream ? matchedStream.title : '')}">
                         <div class="cb-card-top">
                             <span class="cb-series-name" title="${escapeAttr(seriesTitle)}">${escapeAttr(seriesTitle)}</span>
-                            <span class="cb-match-desc ${isCompleted ? 'result-tag' : ''}">${escapeAttr(rightBadge)}</span>
+                            <span class="cb-match-desc ${isEnded ? 'result-tag' : ''}">${escapeAttr(rightBadge)}</span>
                         </div>
 
                         <div class="cb-team-row">
@@ -912,7 +941,7 @@
 
                         ${statusLine ? `<div class="cb-status-text" title="${escapeAttr(statusLine)}">${escapeAttr(statusLine)}</div>` : ''}
 
-                        <div class="cb-bottom-bar ${isCompleted ? 'completed-bar' : ''}"></div>
+                        <div class="cb-bottom-bar ${isEnded ? 'completed-bar' : ''}"></div>
                     </div>
                 `;
             }).join('');
