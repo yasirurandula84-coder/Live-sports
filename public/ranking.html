@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Rankings - StreamX</title>
+    <meta property="og:title" content="StreamX - ICC Cricket Rankings">
+    <meta property="og:description" content="Check latest ICC cricket player rankings across Test, ODI, and T20 formats with ratings and trends.">
+    <meta property="og:image" content="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
+    <meta property="og:url" content="https://www.streamx.website/ranking.html">
+    <meta property="og:type" content="website">
+
+    <link rel="icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --primary-glow: rgba(99, 102, 241, 0.35);
+            --accent-color: #ff4757;
+            --bg-dark: #07070a;
+            --border-color: rgba(255, 255, 255, 0.08);
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #1f1f28; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+        html, body {
+            background-color: var(--bg-dark);
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 84px;
+            overflow-x: clip;
+        }
+
+        .glow-orb-1 {
+            position: fixed; top: -100px; left: -100px; width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.16) 0%, transparent 70%);
+            border-radius: 50%; z-index: 0; pointer-events: none;
+        }
+        .glow-orb-2 {
+            position: fixed; top: 340px; right: -100px; width: 450px; height: 450px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
+            border-radius: 50%; z-index: 0; pointer-events: none;
+        }
+
+        /* Navbar + Right Slide Drawer */
+        .navbar {
+            background: rgba(11, 11, 16, 0.92) !important;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky; top: 0; z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 24px; gap: 12px;
+        }
+
+        .navbar .logo {
+            letter-spacing: 1.5px; font-weight: 900; font-size: 21px;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-decoration: none; display: flex; align-items: center; gap: 8px;
+        }
+
+        .menu-toggle-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #fff;
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .menu-toggle-btn:hover {
+            background: rgba(99, 102, 241, 0.22);
+            border-color: var(--primary-color);
+        }
+
+        .drawer-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(3, 4, 8, 0.72);
+            backdrop-filter: blur(6px);
+            z-index: 1090;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .drawer-backdrop.open {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .right-drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: min(300px, 84vw);
+            height: 100vh;
+            background: linear-gradient(180deg, #131624 0%, #090b12 100%);
+            border-left: 1px solid rgba(255, 255, 255, 0.12);
+            box-shadow: -16px 0 44px rgba(0, 0, 0, 0.75);
+            z-index: 1100;
+            padding: 20px 16px;
+            box-sizing: border-box;
+            transform: translateX(100%);
+            transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .right-drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-bottom: 14px;
+            margin-bottom: 6px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .drawer-brand {
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.6px;
+        }
+
+        .drawer-close-btn {
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #e2e8f0;
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drawer-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 13px 14px;
+            border-radius: 13px;
+            color: #e2e8f0;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 14px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            transition: all 0.2s ease;
+        }
+        .drawer-link:hover, .drawer-link.active {
+            background: rgba(99, 102, 241, 0.18);
+            border-color: rgba(99, 102, 241, 0.5);
+            color: #fff;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1120px;
+            margin: 0 auto;
+            padding: 18px;
+        }
+
+        .ranking-banner {
+            background: linear-gradient(135deg, rgba(30, 41, 82, 0.95), rgba(15, 20, 38, 0.98));
+            border: 1px solid rgba(99, 102, 241, 0.32);
+            border-radius: 20px;
+            padding: 22px 20px;
+            margin-bottom: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 14px;
+            box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+        }
+
+        .ranking-banner h1 {
+            margin: 0 0 4px 0;
+            font-size: clamp(21px, 4vw, 28px);
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .ranking-banner p {
+            margin: 0;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        .format-tabs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .format-tab-btn {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #cbd5e1;
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .format-tab-btn.active {
+            background: linear-gradient(135deg, #4f46e5, #6366f1);
+            border-color: #818cf8;
+            color: #fff;
+            box-shadow: 0 6px 18px var(--primary-glow);
+        }
+
+        .search-box {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 11px 14px;
+            color: #fff;
+            font-size: 13.5px;
+            outline: none;
+            margin-bottom: 18px;
+        }
+        .search-box:focus { border-color: var(--primary-color); }
+
+        .rankings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 15px;
+        }
+
+        .player-rank-card {
+            background: linear-gradient(150deg, rgba(24, 27, 42, 0.94), rgba(11, 13, 22, 0.98));
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 16px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+        }
+        .player-rank-card:hover {
+            transform: translateY(-3px);
+            border-color: rgba(99, 102, 241, 0.55);
+            box-shadow: 0 12px 26px rgba(0, 0, 0, 0.5);
+        }
+
+        .player-rank-card.top-one {
+            border-color: rgba(250, 204, 21, 0.55);
+            background: linear-gradient(150deg, rgba(44, 36, 18, 0.92), rgba(14, 15, 24, 0.98));
+        }
+
+        .rank-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
+        }
+
+        .rank-badge {
+            width: 34px;
+            height: 34px;
+            border-radius: 10px;
+            background: rgba(99, 102, 241, 0.16);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            color: #c7d2fe;
+            font-weight: 900;
+            font-size: 13px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .player-rank-card.top-one .rank-badge {
+            background: rgba(250, 204, 21, 0.2);
+            border-color: rgba(250, 204, 21, 0.6);
+            color: #fde047;
+        }
+
+        .player-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            object-fit: cover;
+            object-position: top;
+            background: #181c2c;
+            border: 2px solid rgba(255, 255, 255, 0.16);
+            flex-shrink: 0;
+        }
+
+        .player-meta {
+            min-width: 0;
+        }
+
+        .player-name {
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .player-country {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 2px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .trend-pill {
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 2px 7px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+        .trend-up { color: #4ade80; background: rgba(74, 222, 128, 0.14); }
+        .trend-down { color: #f87171; background: rgba(248, 113, 113, 0.14); }
+        .trend-flat { color: #cbd5e1; background: rgba(148, 163, 184, 0.14); }
+
+        .rating-box {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .rating-value {
+            font-size: 17px;
+            font-weight: 900;
+            color: #38bdf8;
+            line-height: 1.1;
+        }
+
+        .rating-label {
+            font-size: 10.5px;
+            color: #94a3b8;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 2px;
+        }
+
+        .bottom-nav-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            width: 100%; height: 62px;
+            background: rgba(10, 10, 16, 0.96);
+            backdrop-filter: blur(18px);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 9999;
+        }
+
+        .bottom-nav-item {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 3px; color: #9ca3af; text-decoration: none; font-size: 11px; font-weight: 700;
+        }
+        .bottom-nav-item i { font-size: 16px; }
+        .bottom-nav-item.active, .bottom-nav-item:hover { color: #fff; }
+        .bottom-nav-item.active i { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="glow-orb-1"></div>
+    <div class="glow-orb-2"></div>
+
+    <nav class="navbar">
+        <a href="/" class="logo"><i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 18px;"></i> STREAMX</a>
+        <button type="button" class="menu-toggle-btn" id="openDrawerBtn" onclick="toggleRightDrawer(true)" aria-label="Open Menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+    </nav>
+
+    <div class="drawer-backdrop" id="drawerBackdrop" onclick="toggleRightDrawer(false)"></div>
+    <aside class="right-drawer" id="rightDrawer" aria-label="Navigation Menu">
+        <div class="drawer-header">
+            <span class="drawer-brand"><i class="fa-solid fa-compass" style="color: #818cf8;"></i> Menu</span>
+            <button type="button" class="drawer-close-btn" onclick="toggleRightDrawer(false)" aria-label="Close Menu">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <a href="/" class="drawer-link"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="/ranking.html" class="drawer-link active"><i class="fa-solid fa-trophy"></i> Cricket Ranking</a>
+    </aside>
+
+    <div class="container">
+        <section class="ranking-banner">
+            <div>
+                <h1 id="rankingHeading">ICC Men's Batting Rankings</h1>
+                <p id="rankingSubtext">Select a format to view player rank, country, rating, and trend.</p>
+            </div>
+            <span id="rankingMetaBadge" style="background: rgba(99, 102, 241, 0.18); border: 1px solid rgba(129, 140, 248, 0.35); color: #c7d2fe; padding: 7px 14px; border-radius: 999px; font-size: 12px; font-weight: 800;">
+                MEN · BATTING
+            </span>
+        </section>
+
+        <div class="format-tabs" id="formatTabs">
+            <button type="button" class="format-tab-btn" data-fmt="test" onclick="selectFormat('test')">Test</button>
+            <button type="button" class="format-tab-btn" data-fmt="odi" onclick="selectFormat('odi')">ODI</button>
+            <button type="button" class="format-tab-btn" data-fmt="t20" onclick="selectFormat('t20')">T20</button>
+        </div>
+
+        <input type="text" id="rankingSearchInput" class="search-box" placeholder="Search player or country..." oninput="renderRankingsCards()">
+
+        <div class="rankings-grid" id="rankingsGrid">
+            <div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">
+                Loading cricket rankings...
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav-bar" aria-label="Bottom Navigation">
+        <a href="/" class="bottom-nav-item"><i class="fa-solid fa-house"></i><span>Home</span></a>
+        <a href="/category/cricket" class="bottom-nav-item"><i class="fa-solid fa-baseball-bat-ball"></i><span>Cricket</span></a>
+        <a href="/ranking.html" class="bottom-nav-item active"><i class="fa-solid fa-trophy"></i><span>Ranking</span></a>
+        <a href="/category/football" class="bottom-nav-item"><i class="fa-solid fa-futbol"></i><span>Football</span></a>
+    </nav>
+
+    <script>
+        const RANKINGS_API_URL = "/api/cricbuzz-rankings?category=batting&gender=men";
+        const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+
+        let rankingPayload = null;
+        let currentFormat = "test";
+
+        function toggleRightDrawer(open) {
+            const drawer = document.getElementById("rightDrawer");
+            const backdrop = document.getElementById("drawerBackdrop");
+            if (!drawer || !backdrop) return;
+            drawer.classList.toggle("open", Boolean(open));
+            backdrop.classList.toggle("open", Boolean(open));
+        }
+
+        function escapeHtml(val) {
+            return String(val || "")
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        function renderTrendBadge(trendRaw) {
+            const t = String(trendRaw || "Flat").trim().toLowerCase();
+            if (t === "up") {
+                return `<span class="trend-pill trend-up"><i class="fa-solid fa-arrow-up"></i> Up</span>`;
+            }
+            if (t === "down") {
+                return `<span class="trend-pill trend-down"><i class="fa-solid fa-arrow-down"></i> Down</span>`;
+            }
+            return `<span class="trend-pill trend-flat"><i class="fa-solid fa-minus"></i> Flat</span>`;
+        }
+
+        function selectFormat(fmt) {
+            currentFormat = fmt;
+            document.querySelectorAll(".format-tab-btn").forEach(btn => {
+                btn.classList.toggle("active", btn.getAttribute("data-fmt") === fmt);
+            });
+            renderRankingsCards();
+        }
+
+        function renderRankingsCards() {
+            const grid = document.getElementById("rankingsGrid");
+            const query = (document.getElementById("rankingSearchInput").value || "").trim().toLowerCase();
+
+            const catLabel = rankingPayload && rankingPayload.category ? String(rankingPayload.category).toUpperCase() : "BATTING";
+            const genderLabel = rankingPayload && rankingPayload.gender ? String(rankingPayload.gender).toUpperCase() : "MEN";
+            document.getElementById("rankingMetaBadge").innerText = `${genderLabel} · ${catLabel} · ${currentFormat.toUpperCase()}`;
+
+            const map = (rankingPayload && rankingPayload.rankings) || {};
+            const list = Array.isArray(map[currentFormat]) ? map[currentFormat] : [];
+
+            const filtered = list.filter(item => {
+                if (!query) return true;
+                return (
+                    String(item.name || "").toLowerCase().includes(query) ||
+                    String(item.country || "").toLowerCase().includes(query) ||
+                    String(item.rank || "").includes(query)
+                );
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">No players match your search.</div>`;
+                return;
+            }
+
+            grid.innerHTML = filtered.map(player => {
+                const rankNum = Number(player.rank || 0);
+                const isTopOne = rankNum === 1;
+                const imgSrc = player.image || FALLBACK_AVATAR;
+                const ratingVal = player.rating ?? player.points ?? "-";
+
+                return `
+                    <div class="player-rank-card ${isTopOne ? "top-one" : ""}">
+                        <div class="rank-left">
+                            <span class="rank-badge">#${escapeHtml(player.rank)}</span>
+                            <img src="${escapeHtml(imgSrc)}" alt="${escapeHtml(player.name)}" class="player-avatar" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src='${FALLBACK_AVATAR}';">
+                            <div class="player-meta">
+                                <div class="player-name" title="${escapeHtml(player.name)}">${escapeHtml(player.name)}</div>
+                                <div class="player-country">
+                                    <span>${escapeHtml(player.country || "")}</span>
+                                    ${renderTrendBadge(player.trend)}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="rating-box">
+                            <div class="rating-value">${escapeHtml(ratingVal)}</div>
+                            <div class="rating-label">Rating</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        }
+
+        async function loadRankings() {
+            try {
+                const res = await fetch(`${RANKINGS_API_URL}&t=${Date.now()}`, { cache: "no-store" });
+                if (!res.ok) throw new Error("Failed to load rankings");
+                const json = await res.json();
+                rankingPayload = json && json.data ? json.data : json;
+
+                const preferred = (rankingPayload && rankingPayload.default_format)
+                    ? String(rankingPayload.default_format).toLowerCase()
+                    : "test";
+                currentFormat = ["test", "odi", "t20"].includes(preferred) ? preferred : "test";
+
+                document.querySelectorAll(".format-tab-btn").forEach(btn => {
+                    btn.classList.toggle("active", btn.getAttribute("data-fmt") === currentFormat);
+                });
+                renderRankingsCards();
+            } catch (err) {
+                document.getElementById("rankingsGrid").innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">Unable to load rankings data right now.</div>`;
+            }
+        }
+
+        loadRankings();
+    </script>
+</body>
+</html>
