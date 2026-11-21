@@ -2,7 +2,9 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 const crypto = require('crypto');
+const { spawn } = require('child_process');
 
 const app = express();
 const server = http.createServer(app);
@@ -76,6 +78,234 @@ function resolveStreamToken(token) {
     return entry.url;
 }
 
+// --- Dynamic Key-Aware HLS (.m3u8) Generator via FFmpeg ---
+const FFMPEG_BIN = process.env.FFMPEG_PATH || 'ffmpeg';
+const HLS_CACHE_ROOT = path.join(__dirname, 'hls_cache');
+fs.mkdirSync(HLS_CACHE_ROOT, { recursive: true });
+
+// sessionKey -> { proc, dir, playlistPath, keySig, lastAccess, idleTimer }
+const activeHlsSessions = new Map();
+
+function sanitizeHlsId(rawId) {
+    return String(rawId || 'stream')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '_')
+        .slice(0, 64);
+}
+
+function normalizeKeyHex(val) {
+    return String(val || '').trim().replace(/-/g, '').toLowerCase();
+}
+
+function buildKeySignature(sourceUrl, kid, key) {
+    const raw = `${String(sourceUrl || '').trim()}|${normalizeKeyHex(kid)}|${normalizeKeyHex(key)}`;
+    return crypto.createHash('sha256').update(raw).digest('hex').slice(0, 16);
+}
+
+function stopHlsSession(sessionKey) {
+    const sess = activeHlsSessions.get(sessionKey);
+    if (!sess) return;
+    if (sess.idleTimer) {
+        clearTimeout(sess.idleTimer);
+        sess.idleTimer = null;
+    }
+    try {
+        if (sess.proc && !sess.proc.killed) {
+            sess.proc.kill('SIGKILL');
+        }
+    } catch (e) {}
+    try {
+        fs.rmSync(sess.dir, { recursive: true, force: true });
+    } catch (e) {}
+    activeHlsSessions.delete(sessionKey);
+}
+
+function touchHlsSession(sessionKey) {
+    const sess = activeHlsSessions.get(sessionKey);
+    if (!sess) return;
+    sess.lastAccess = Date.now();
+    if (sess.idleTimer) clearTimeout(sess.idleTimer);
+    // Clean up FFmpeg & temp segments after 45s of no requests
+    sess.idleTimer = setTimeout(() => {
+        stopHlsSession(sessionKey);
+    }, 45000);
+}
+
+function startOrRefreshHlsSession(sessionKey, sourceUrl, kid = '', key = '') {
+    const cleanKid = normalizeKeyHex(kid);
+    const cleanKey = normalizeKeyHex(key);
+    const nextSig = buildKeySignature(sourceUrl, cleanKid, cleanKey);
+
+    const existing = activeHlsSessions.get(sessionKey);
+    if (existing && existing.keySig === nextSig) {
+        touchHlsSession(sessionKey);
+        return existing;
+    }
+
+    // Key or source URL rotated -> stop old session and generate fresh .m3u8 with new key
+    if (existing) {
+        console.log(`[HLS ${sessionKey}] Key/source updated (${existing.keySig} -> ${nextSig}). Rebuilding m3u8...`);
+        stopHlsSession(sessionKey);
+    }
+
+    const outDir = path.join(HLS_CACHE_ROOT, sessionKey);
+    fs.rmSync(outDir, { recursive: true, force: true });
+    fs.mkdirSync(outDir, { recursive: true });
+
+    const playlistPath = path.join(outDir, 'index.m3u8');
+    const segPattern = path.join(outDir, 'seg_%03d.ts');
+
+    const args = [
+        '-loglevel', 'error',
+        '-y',
+        '-headers', `User-Agent: ${UPSTREAM_STREAM_HEADERS['User-Agent']}\r\n`,
+        '-reconnect', '1',
+        '-reconnect_streamed', '1',
+        '-reconnect_delay_max', '2'
+    ];
+
+    if (cleanKey) {
+        args.push('-decryption_key', cleanKey);
+    }
+
+    args.push(
+        '-i', sourceUrl,
+        '-map', '0:v:0?',
+        '-map', '0:a:0?',
+        '-c:v', 'copy',
+        '-c:a', 'aac',
+        '-b:a', '128k',
+        '-ac', '2',
+        '-f', 'hls',
+        '-hls_time', '2',
+        '-hls_list_size', '4',
+        '-hls_flags', 'delete_segments+append_list+omit_endlist',
+        '-hls_segment_filename', segPattern,
+        playlistPath
+    );
+
+    const proc = spawn(FFMPEG_BIN, args, { stdio: ['ignore', 'ignore', 'pipe'] });
+
+    proc.stderr.on('data', (chunk) => {
+        const msg = chunk.toString().trim();
+        if (msg) console.error(`[HLS ${sessionKey}] ${msg}`);
+    });
+
+    proc.on('exit', () => {
+        const current = activeHlsSessions.get(sessionKey);
+        if (current && current.proc === proc) {
+            stopHlsSession(sessionKey);
+        }
+    });
+
+    const session = {
+        proc,
+        dir: outDir,
+        playlistPath,
+        keySig: nextSig,
+        lastAccess: Date.now(),
+        idleTimer: null
+    };
+
+    activeHlsSessions.set(sessionKey, session);
+    touchHlsSession(sessionKey);
+    return session;
+}
+
+async function resolveHlsSourceFromRequest(req) {
+    let sourceUrl = String(req.query.src || '').trim();
+    const kid = String(req.query.kid || '').trim();
+    const key = String(req.query.key || '').trim();
+
+    // If src points to local /hls-proxy?token=..., unwrap to real upstream URL
+    if (sourceUrl.includes('/hls-proxy')) {
+        try {
+            const parsed = new URL(sourceUrl, `http://${req.get('host') || 'localhost'}`);
+            const tok = parsed.searchParams.get('token');
+            const resolvedTokUrl = resolveStreamToken(tok);
+            if (resolvedTokUrl) sourceUrl = resolvedTokUrl;
+        } catch (e) {}
+    }
+
+    if (sourceUrl) {
+        return { sourceUrl, kid, key };
+    }
+
+    // Fallback to cached playlist if id matches channel id
+    if (tapmadCache.data && Array.isArray(tapmadCache.data.channels)) {
+        const found = tapmadCache.data.channels.find(c => String(c.id) === String(req.params.id));
+        if (found) {
+            const rawTokUrl = found.stream_url && found.stream_url.includes('token=')
+                ? resolveStreamToken(decodeURIComponent(found.stream_url.split('token=')[1].split('&')[0]))
+                : '';
+            return {
+                sourceUrl: rawTokUrl || found.raw_url || '',
+                kid: found.kid || kid,
+                key: found.key || key
+            };
+        }
+    }
+
+    return null;
+}
+
+// Serve generated .m3u8 playlist (auto-rebuilds when kid/key/src changes)
+app.get('/hls/:id/index.m3u8', async (req, res) => {
+    const sessionKey = sanitizeHlsId(req.params.id);
+    const resolved = await resolveHlsSourceFromRequest(req);
+
+    if (!resolved || !resolved.sourceUrl) {
+        return res.status(404).send('Stream source not found');
+    }
+
+    const session = startOrRefreshHlsSession(
+        sessionKey,
+        resolved.sourceUrl,
+        resolved.kid,
+        resolved.key
+    );
+    touchHlsSession(sessionKey);
+
+    const deadline = Date.now() + 7500;
+    while (Date.now() < deadline) {
+        if (fs.existsSync(session.playlistPath)) {
+            const content = fs.readFileSync(session.playlistPath, 'utf8');
+            if (content.includes('.ts')) {
+                res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
+                res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+                return res.send(content);
+            }
+        }
+        await new Promise(r => setTimeout(r, 200));
+    }
+
+    return res.status(503).send('Generating HLS stream, please retry');
+});
+
+// Serve generated .ts segments for active HLS session
+app.get('/hls/:id/:segment', (req, res) => {
+    const sessionKey = sanitizeHlsId(req.params.id);
+    const segName = path.basename(req.params.segment || '');
+    if (!/^[a-zA-Z0-9._-]+$/.test(segName)) {
+        return res.status(400).send('Invalid segment name');
+    }
+
+    const session = activeHlsSessions.get(sessionKey);
+    if (!session) {
+        return res.status(404).send('HLS session expired or not started');
+    }
+
+    touchHlsSession(sessionKey);
+    const fullPath = path.join(session.dir, segName);
+    if (!fs.existsSync(fullPath)) {
+        return res.status(404).send('Segment not ready');
+    }
+
+    res.setHeader('Content-Type', 'video/mp2t');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    fs.createReadStream(fullPath).pipe(res);
+});
+
 // GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
@@ -141,14 +371,21 @@ function parseM3uPlaylist(rawText) {
             const rawStreamUrl = line.trim();
             const titleName = pendingName || `Channel ${channels.length + 1}`;
             const streamToken = createStreamToken(rawStreamUrl);
+            const channelId = `tv-${channels.length + 1}`;
+            const hasKeyOrMpd = Boolean(pendingKid && pendingKey) || rawStreamUrl.toLowerCase().includes('.mpd');
+            const keySig = buildKeySignature(rawStreamUrl, pendingKid, pendingKey);
+
+            const streamUrl = hasKeyOrMpd
+                ? `/hls/${channelId}/index.m3u8?src=${encodeURIComponent(rawStreamUrl)}&kid=${encodeURIComponent(pendingKid)}&key=${encodeURIComponent(pendingKey)}&v=${encodeURIComponent(keySig.slice(0, 12))}`
+                : `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
 
             channels.push({
-                id: `tv-${channels.length + 1}`,
+                id: channelId,
                 name: titleName,
                 title: titleName,
                 logo: pendingLogo,
                 group: pendingGroup,
-                stream_url: `/hls-proxy?token=${encodeURIComponent(streamToken)}`,
+                stream_url: streamUrl,
                 kid: pendingKid,
                 key: pendingKey,
                 referer: pendingReferer,
