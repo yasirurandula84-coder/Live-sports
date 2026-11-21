@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamX - Live Cricket Streaming</title>
+    <title>StreamX - Live Sports Streaming</title>
     <!-- Open Graph / Social Media Meta Tags -->
     <meta property="og:title" content="StreamX - Ultimate Live Sports Experience">
     <meta property="og:description" content="Stream live cricket matches in high definition with live interactive chats and real-time community engagement.">
@@ -109,91 +109,35 @@
             padding: 16px 18px;
         }
 
+        @keyframes heroRiseIn {
+            0% {
+                opacity: 0;
+                transform: translateY(14px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
         .hero-box {
-            position: relative;
-            overflow: hidden;
             background: linear-gradient(155deg, rgba(20, 26, 44, 0.92), rgba(10, 12, 20, 0.96));
             border: 1px solid rgba(99, 102, 241, 0.25);
             border-radius: 22px;
-            padding: 34px 20px;
+            padding: 26px 20px;
             text-align: center;
             margin-top: 10px;
-            min-height: 220px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
             box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55);
-        }
-
-        .hero-video-bg {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            z-index: 0;
-            opacity: 0.78;
-            transition: opacity 0.6s ease;
-        }
-
-        .hero-video-bg.dimmed {
-            opacity: 0.24;
-        }
-
-        .hero-video-scrim {
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at center, rgba(7, 10, 20, 0.42) 0%, rgba(7, 9, 16, 0.86) 100%);
-            z-index: 1;
-            pointer-events: none;
-        }
-
-        .hero-content {
-            position: relative;
-            z-index: 2;
-            width: 100%;
-            opacity: 0;
-            transform: translateY(12px);
-            pointer-events: none;
-            transition: opacity 0.65s ease, transform 0.65s ease;
-        }
-
-        .hero-content.revealed {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        .hero-skip-btn {
-            position: absolute;
-            top: 12px;
-            right: 12px;
-            z-index: 3;
-            background: rgba(10, 12, 20, 0.72);
-            color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.18);
-            border-radius: 999px;
-            padding: 5px 12px;
-            font-size: 11px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .hero-skip-btn:hover {
-            background: rgba(99, 102, 241, 0.35);
-            color: #fff;
-        }
-
-        .hero-skip-btn.hidden {
-            display: none;
         }
 
         .hero-box h1 {
             margin: 0 0 8px 0;
             font-size: clamp(25px, 5vw, 35px);
             font-weight: 900;
+            letter-spacing: -0.02em;
             color: #fff;
+            opacity: 0;
+            animation: heroRiseIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.05s forwards;
         }
 
         .hero-box h1 span {
@@ -208,6 +152,8 @@
             font-size: 13.5px;
             line-height: 1.6;
             color: #9ca3af;
+            opacity: 0;
+            animation: heroRiseIn 0.65s cubic-bezier(0.22, 1, 0.36, 1) 0.16s forwards;
         }
 
         .hero-actions {
@@ -215,6 +161,8 @@
             flex-wrap: wrap;
             justify-content: center;
             gap: 12px;
+            opacity: 0;
+            animation: heroRiseIn 0.7s cubic-bezier(0.22, 1, 0.36, 1) 0.28s forwards;
         }
 
         .btn-live-cricket {
@@ -227,9 +175,10 @@
             color: #fff;
             font-weight: 700;
             font-size: 13px;
+            letter-spacing: 0.01em;
             background: linear-gradient(135deg, #ef4444, #e11d48);
             box-shadow: 0 6px 18px rgba(225, 29, 72, 0.35);
-            transition: transform 0.2s ease;
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.22s ease;
         }
 
         .btn-more-cats {
@@ -242,12 +191,28 @@
             color: #fff;
             font-weight: 700;
             font-size: 13px;
+            letter-spacing: 0.01em;
             background: linear-gradient(135deg, #0284c7, #2563eb);
             box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
-            transition: transform 0.2s ease;
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.22s ease;
         }
 
-        .btn-live-cricket:hover, .btn-more-cats:hover { transform: translateY(-2px); }
+        .btn-live-cricket:hover, .btn-more-cats:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.06);
+        }
+
+        .btn-live-cricket:active, .btn-more-cats:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero-box h1, .hero-box p, .hero-actions {
+                opacity: 1;
+                animation: none;
+                transform: none;
+            }
+        }
 
         /* Categories & Live TV Sections */
         .categories-section {
@@ -636,24 +601,13 @@
 
     <div class="container">
 
-        <section class="hero-box" id="heroBox">
-            <video class="hero-video-bg" id="heroIntroVideo" autoplay muted playsinline preload="auto">
-                <source src="/Herobat.webm" type="video/webm">
-            </video>
-            <div class="hero-video-scrim"></div>
-
-            <button type="button" class="hero-skip-btn" id="skipHeroIntroBtn" onclick="revealHeroContent()">
-                Skip <i class="fa-solid fa-forward"></i>
-            </button>
-
-            <div class="hero-content" id="heroContent">
-                <h1>Every Game <span>Live on Screen</span></h1>
-                <p>Live Cricket matches streaming now in HD with fast servers and live fan chat.</p>
-                <div class="hero-actions">
-                    <a href="#categories" class="btn-more-cats"><i class="fa-solid fa-layer-group"></i> Categories</a>
-                    <a href="#liveTvSection" class="btn-more-cats"><i class="fa-solid fa-tv"></i> Live TV</a>
-                    <a href="#liveCricketSection" class="btn-live-cricket"><i class="fa-solid fa-circle-dot"></i> Live Cricket</a>
-                </div>
+        <section class="hero-box">
+            <h1>Every Game <span>Live on Screen</span></h1>
+            <p>Live Cricket matches streaming now in HD with fast servers and live fan chat.</p>
+            <div class="hero-actions">
+                <a href="#categories" class="btn-more-cats"><i class="fa-solid fa-layer-group"></i> Categories</a>
+                <a href="#liveTvSection" class="btn-more-cats"><i class="fa-solid fa-tv"></i> Live TV</a>
+                <a href="#liveCricketSection" class="btn-live-cricket"><i class="fa-solid fa-circle-dot"></i> Live Cricket</a>
             </div>
         </section>
 
@@ -730,45 +684,6 @@
     </nav>
 
     <script>
-        let heroContentRevealed = false;
-        const heroRevealTimer = setTimeout(revealHeroContent, 5000);
-
-        function revealHeroContent() {
-            if (heroContentRevealed) return;
-            heroContentRevealed = true;
-            clearTimeout(heroRevealTimer);
-
-            const contentEl = document.getElementById('heroContent');
-            const videoEl = document.getElementById('heroIntroVideo');
-            const skipBtn = document.getElementById('skipHeroIntroBtn');
-
-            if (contentEl) contentEl.classList.add('revealed');
-            if (videoEl) videoEl.classList.add('dimmed');
-            if (skipBtn) skipBtn.classList.add('hidden');
-        }
-
-        (function initHeroIntroVideo() {
-            const videoEl = document.getElementById('heroIntroVideo');
-            if (!videoEl) {
-                revealHeroContent();
-                return;
-            }
-
-            videoEl.addEventListener('timeupdate', () => {
-                if (videoEl.currentTime >= 5) {
-                    revealHeroContent();
-                }
-            });
-
-            videoEl.addEventListener('ended', revealHeroContent);
-            videoEl.addEventListener('error', revealHeroContent);
-
-            const playPromise = videoEl.play();
-            if (playPromise && typeof playPromise.catch === 'function') {
-                playPromise.catch(() => {});
-            }
-        })();
-
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
         const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
