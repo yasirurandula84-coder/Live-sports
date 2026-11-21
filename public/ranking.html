@@ -47,6 +47,7 @@
             border-radius: 50%; z-index: 0; pointer-events: none;
         }
 
+        /* Navbar + Right Slide Drawer */
         .navbar {
             background: rgba(11, 11, 16, 0.92) !important;
             backdrop-filter: blur(20px);
@@ -443,7 +444,7 @@
     </nav>
 
     <script>
-        const TARGET_RANKINGS_URL = "https://cricbuzz-scraper-kkkw.onrender.com/rankings";
+        const RANKINGS_BASE_URL = "https://cricbuzz-scraper-kkkw.onrender.com/rankings";
         const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         let rankingPayload = null;
@@ -478,6 +479,16 @@
             return `<span class="trend-pill trend-flat"><i class="fa-solid fa-minus"></i> Flat</span>`;
         }
 
+        function normalizeRankingsMap(rawRankings) {
+            if (!rawRankings || typeof rawRankings !== "object") return {};
+            const out = {};
+            for (const [k, v] of Object.entries(rawRankings)) {
+                const key = String(k || "").toLowerCase().replace(/i$/, "");
+                if (Array.isArray(v)) out[key] = v;
+            }
+            return out;
+        }
+
         function selectFormat(fmt) {
             currentFormat = fmt;
             document.querySelectorAll(".format-tab-btn").forEach(btn => {
@@ -499,8 +510,8 @@
                 return;
             }
 
-            const rankingsMap = (rankingPayload && rankingPayload.rankings) || {};
-            const list = Array.isArray(rankingsMap[currentFormat]) ? rankingsMap[currentFormat] : [];
+            const map = normalizeRankingsMap(rankingPayload && rankingPayload.rankings);
+            const list = Array.isArray(map[currentFormat]) ? map[currentFormat] : [];
 
             const filtered = list.filter(item => {
                 if (!query) return true;
@@ -513,7 +524,7 @@
 
             if (filtered.length === 0) {
                 const msg = list.length === 0
-                    ? `No ${currentFormat.toUpperCase()} ranking entries returned.`
+                    ? `No ${currentFormat.toUpperCase()} ranking entries returned by API.`
                     : "No players match your search.";
                 grid.innerHTML = `<div class="player-rank-card" style="grid-column: 1 / -1; justify-content: center; color: #9ca3af;">${escapeHtml(msg)}</div>`;
                 return;
@@ -547,36 +558,17 @@
             }).join("");
         }
 
-        async function fetchWithCorsFallback(targetUrl) {
-            const candidates = [
-                targetUrl,
-                `https://corsproxy.io/?url=${encodeURIComponent(targetUrl)}`,
-                `https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`,
-                `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(targetUrl)}`
-            ];
-
-            for (const url of candidates) {
-                try {
-                    const res = await fetch(url, { cache: "no-store" });
-                    if (!res.ok) continue;
-                    const text = await res.text();
-                    const parsed = JSON.parse(text);
-                    if (parsed && parsed.rankings) return parsed;
-                } catch (e) {
-                    // Try next fallback source
-                }
-            }
-            throw new Error("All ranking fetch endpoints failed");
-        }
-
         async function loadRankings() {
             rankingLoadError = "";
             try {
-                const json = await fetchWithCorsFallback(TARGET_RANKINGS_URL);
-                rankingPayload = json;
+                const url = `${RANKINGS_BASE_URL}?category=batting&gender=men&t=${Date.now()}`;
+                const res = await fetch(url, { cache: "no-store" });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const json = await res.json();
+                rankingPayload = json && json.data && json.data.rankings ? json.data : json;
 
                 const preferred = (rankingPayload && rankingPayload.default_format)
-                    ? String(rankingPayload.default_format).toLowerCase()
+                    ? String(rankingPayload.default_format).toLowerCase().replace(/i$/, "")
                     : "test";
                 currentFormat = ["test", "odi", "t20"].includes(preferred) ? preferred : "test";
 
@@ -586,7 +578,7 @@
                 renderRankingsCards();
             } catch (err) {
                 console.error("Rankings fetch error:", err);
-                rankingLoadError = "Unable to fetch rankings right now. Please try again shortly.";
+                rankingLoadError = "Unable to load rankings from Cricbuzz scraper right now.";
                 renderRankingsCards();
             }
         }
