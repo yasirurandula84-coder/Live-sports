@@ -79,7 +79,12 @@ function resolveStreamToken(token) {
 }
 
 // --- Dynamic Key-Aware HLS (.m3u8) Generator via FFmpeg ---
-const FFMPEG_BIN = process.env.FFMPEG_PATH || 'ffmpeg';
+let staticFfmpegPath = '';
+try {
+    staticFfmpegPath = require('ffmpeg-static') || '';
+} catch (e) {}
+
+const FFMPEG_BIN = process.env.FFMPEG_PATH || staticFfmpegPath || 'ffmpeg';
 const HLS_CACHE_ROOT = path.join(__dirname, 'hls_cache');
 fs.mkdirSync(HLS_CACHE_ROOT, { recursive: true });
 
@@ -142,7 +147,7 @@ function startOrRefreshHlsSession(sessionKey, sourceUrl, kid = '', key = '') {
         return existing;
     }
 
-    // Key or source URL rotated -> stop old session and generate fresh .m3u8 with new key
+    // Key or source URL rotated -> stop old session and generate fresh .m3u8
     if (existing) {
         console.log(`[HLS ${sessionKey}] Key/source updated (${existing.keySig} -> ${nextSig}). Rebuilding m3u8...`);
         stopHlsSession(sessionKey);
@@ -161,14 +166,7 @@ function startOrRefreshHlsSession(sessionKey, sourceUrl, kid = '', key = '') {
         '-headers', `User-Agent: ${UPSTREAM_STREAM_HEADERS['User-Agent']}\r\n`,
         '-reconnect', '1',
         '-reconnect_streamed', '1',
-        '-reconnect_delay_max', '2'
-    ];
-
-    if (cleanKey) {
-        args.push('-decryption_key', cleanKey);
-    }
-
-    args.push(
+        '-reconnect_delay_max', '2',
         '-i', sourceUrl,
         '-map', '0:v:0?',
         '-map', '0:a:0?',
@@ -182,7 +180,7 @@ function startOrRefreshHlsSession(sessionKey, sourceUrl, kid = '', key = '') {
         '-hls_flags', 'delete_segments+append_list+omit_endlist',
         '-hls_segment_filename', segPattern,
         playlistPath
-    );
+    ];
 
     const proc = spawn(FFMPEG_BIN, args, { stdio: ['ignore', 'ignore', 'pipe'] });
 
@@ -217,7 +215,6 @@ async function resolveHlsSourceFromRequest(req) {
     const kid = String(req.query.kid || '').trim();
     const key = String(req.query.key || '').trim();
 
-    // If src points to local /hls-proxy?token=..., unwrap to real upstream URL
     if (sourceUrl.includes('/hls-proxy')) {
         try {
             const parsed = new URL(sourceUrl, `http://${req.get('host') || 'localhost'}`);
@@ -231,7 +228,6 @@ async function resolveHlsSourceFromRequest(req) {
         return { sourceUrl, kid, key };
     }
 
-    // Fallback to cached playlist if id matches channel id
     if (tapmadCache.data && Array.isArray(tapmadCache.data.channels)) {
         const found = tapmadCache.data.channels.find(c => String(c.id) === String(req.params.id));
         if (found) {
