@@ -896,6 +896,7 @@
         let activeMatchFeedItem = null;
         let activeServersMap = {};
         let currentServerKey = 'server1';
+        let activeStreamSignature = '';
         let streamAttemptToken = 0;
         let streamFailWatchdog = null;
 
@@ -908,6 +909,34 @@
         let warmupActive = false;
         let lastSmoothVideoTime = -1;
         let smoothAdvanceTicks = 0;
+
+        function normalizeKeyHex(val) {
+            return String(val || '').trim().replace(/-/g, '').toLowerCase();
+        }
+
+        function computeStreamSignature(streamObj) {
+            if (!streamObj) return '';
+            const urlPart = String(streamObj.raw_url || streamObj.stream_url || '').trim();
+            const kidPart = normalizeKeyHex(streamObj.kid || '');
+            const keyPart = normalizeKeyHex(streamObj.key || '');
+            return `${urlPart}|${kidPart}|${keyPart}`;
+        }
+
+        function buildServerM3u8Url(streamObj, serverKey) {
+            const rawSource = String(streamObj.raw_url || streamObj.stream_url || '').trim();
+            const cleanKid = normalizeKeyHex(streamObj.kid || '');
+            const cleanKey = normalizeKeyHex(streamObj.key || '');
+            const sig = computeStreamSignature(streamObj);
+
+            const sessionId = encodeURIComponent(`${matchId}_${serverKey || currentServerKey}`);
+            const params = new URLSearchParams();
+            if (rawSource) params.set('src', rawSource);
+            if (cleanKid) params.set('kid', cleanKid);
+            if (cleanKey) params.set('key', cleanKey);
+            if (sig) params.set('v', sig.slice(0, 12));
+
+            return `/hls/${sessionId}/index.m3u8?${params.toString()}`;
+        }
 
         function syncAudioUiState() {
             if (!video) return;
@@ -945,7 +974,6 @@
             if (streamWarmupBlur) {
                 streamWarmupBlur.classList.add('active');
             }
-            // Don't hold video hidden for 20s if audio is slow; reveal video quickly
             warmupFallbackTimer = setTimeout(() => {
                 hideWarmupBlur();
             }, 3000);
@@ -1011,7 +1039,7 @@
                         );
                     }
                 }
-            }, 15000);
+            }, 16000);
         }
 
         if (nextServerErrBtn) {
@@ -1026,6 +1054,7 @@
         if (retryServerErrBtn) {
             retryServerErrBtn.addEventListener('click', () => {
                 if (!isMatchLive) return;
+                activeStreamSignature = '';
                 if (isLiveTvMode) {
                     initLiveTvStream();
                 } else {
@@ -1347,7 +1376,7 @@
                 activeServersMap = { server1: tvObj };
                 currentServerKey = 'server1';
                 renderDynamicServerButtons([tvObj], 'server1');
-                playStreamItem(tvObj);
+                playStreamItem(tvObj, 'server1');
             } catch (e) {
                 console.error('Error resolving Live TV channel:', e);
                 showStreamError('Stream Not Working', 'Unable to resolve channel stream.');
@@ -1437,6 +1466,7 @@
 
                 if (statusUpper === "UPCOMING") {
                     isMatchLive = false;
+                    activeStreamSignature = '';
                     hideWarmupBlur();
                     hideStreamError();
                     playerCountdownOverlay.classList.remove('hidden');
@@ -1446,16 +1476,20 @@
                         startPlayerCountdown(startTimeStr);
                     }
                 } else {
-                    const alreadyPlayingThisServer =
+                    const activeObj = activeServersMap[chosenKey];
+                    const nextSig = computeStreamSignature(activeObj);
+                    const keyOrSourceChanged = Boolean(nextSig && nextSig !== activeStreamSignature);
+
+                    const alreadyPlayingSameKey =
                         isMatchLive &&
-                        currentServerKey === chosenKey &&
+                        !keyOrSourceChanged &&
                         video.style.display !== 'none' &&
                         !video.paused &&
                         video.readyState >= 3;
 
                     isMatchLive = true;
                     playerCountdownOverlay.classList.add('hidden');
-                    if (!alreadyPlayingThisServer) {
+                    if (!alreadyPlayingSameKey) {
                         loadFeedServer(chosenKey);
                     }
                 }
@@ -1549,7 +1583,7 @@
             } catch (e) {}
         }
 
-        async function playStreamItem(streamObj) {
+        async function playStreamItem(streamObj, serverKey = currentServerKey) {
             streamAttemptToken += 1;
             const myToken = streamAttemptToken;
             hideStreamError();
@@ -1558,9 +1592,17 @@
                 showStreamError('Stream Not Working', 'Stream URL is missing for this server.', myToken);
                 return;
             }
-            const directLink = streamObj.stream_url.trim();
-            const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
-            const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
+            const rawUrl = streamObj.stream_url.trim();
+            const kid = normalizeKeyHex(streamObj.kid || '');
+            const key = normalizeKeyHex(streamObj.key || '');
+            const hasKeyOrMpd = Boolean(kid && key) || rawUrl.toLowerCase().includes('.mpd');
+
+            // Generate server-side HLS (.m3u8) whenever key or .mpd is present
+            const directLink = hasKeyOrMpd
+                ? buildServerM3u8Url(streamObj, serverKey)
+                : rawUrl;
+
+            activeStreamSignature = computeStreamSignature(streamObj);
 
             lastWatchTime = -1;
             stuckTicks = 0;
@@ -1615,80 +1657,6 @@
             skipBackBtn.style.display = 'inline-flex';
             skipFwdBtn.style.display = 'inline-flex';
 
-            const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
-
-            if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
-                try {
-                    const shakaPlayer = new shaka.Player();
-                    await shakaPlayer.attach(video);
-                    if (myToken !== streamAttemptToken) {
-                        await shakaPlayer.destroy();
-                        return;
-                    }
-                    currentShakaPlayer = shakaPlayer;
-
-                    shakaPlayer.addEventListener('error', (event) => {
-                        console.error('Shaka Player Error:', event.detail);
-                        if (myToken !== streamAttemptToken) return;
-                        showStreamError(
-                            'Stream Not Working',
-                            'Unable to load or decrypt this stream. Please try another server.',
-                            myToken
-                        );
-                    });
-
-                    const shakaConfig = {
-                        streaming: {
-                            lowLatencyMode: false,
-                            inaccurateManifestProcessing: true,
-                            bufferingGoal: 1.5,
-                            rebufferingGoal: 0.25,
-                            bufferBehind: 5,
-                            startAtSegmentBoundary: false,
-                            jumpLargeGaps: true,
-                            ignoreTextStreamFailures: true,
-                            inaccurateManifestTolerance: 3,
-                            retryParameters: {
-                                timeout: 3000,
-                                maxAttempts: 2,
-                                baseDelay: 100
-                            }
-                        },
-                        abr: {
-                            enabled: true,
-                            defaultBandwidthEstimate: 900000
-                        }
-                    };
-                    if (kid && key) {
-                        shakaConfig.drm = {
-                            clearKeys: {
-                                [kid]: key
-                            }
-                        };
-                    }
-                    shakaPlayer.configure(shakaConfig);
-
-                    await shakaPlayer.load(directLink);
-                    if (myToken !== streamAttemptToken) return;
-
-                    setupShakaQualityMenu(shakaPlayer, null);
-                    await kickPlayNow();
-                    if (myToken !== streamAttemptToken) return;
-                    hideOverlaysSafely();
-                    startWarmupBlurAfterConnect();
-                    return;
-                } catch (err) {
-                    console.error("Shaka load failed:", err);
-                    if (myToken !== streamAttemptToken) return;
-                    showStreamError(
-                        'Stream Not Working',
-                        'This server failed to start playback. Please switch to another server.',
-                        myToken
-                    );
-                    return;
-                }
-            }
-
             if (window.Hls && Hls.isSupported()) {
                 let hlsNetworkRetries = 0;
                 let hlsMediaRetries = 0;
@@ -1702,9 +1670,9 @@
                     liveMaxLatencyDurationCount: 4,
                     abrBandWidthFactor: 0.85,
                     abrBandWidthUpFactor: 0.75,
-                    manifestLoadingTimeOut: 4000,
-                    levelLoadingTimeOut: 4000,
-                    fragLoadingTimeOut: 5000,
+                    manifestLoadingTimeOut: 6000,
+                    levelLoadingTimeOut: 6000,
+                    fragLoadingTimeOut: 6000,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -1724,16 +1692,20 @@
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (myToken !== streamAttemptToken) return;
                     if (data.fatal) {
-                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 3) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 5) {
                             hlsNetworkRetries += 1;
-                            hls.startLoad();
-                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 2) {
+                            setTimeout(() => {
+                                if (myToken === streamAttemptToken && currentHls) {
+                                    hls.startLoad();
+                                }
+                            }, 500);
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 3) {
                             hlsMediaRetries += 1;
                             hls.recoverMediaError();
                         } else {
                             showStreamError(
                                 'Stream Not Working',
-                                'This server is offline or blocked. Please try another server.',
+                                'Unable to generate or play this stream. Please try another server.',
                                 myToken
                             );
                         }
@@ -1761,7 +1733,7 @@
             highlightServerButton(serverKey);
             const streamObj = activeServersMap[serverKey];
             if (streamObj && streamObj.stream_url) {
-                playStreamItem(streamObj);
+                playStreamItem(streamObj, serverKey);
             } else if (socket) {
                 hideStreamError();
                 if (playerLoader) playerLoader.classList.remove('hidden');
@@ -1784,7 +1756,7 @@
                     showStreamError('Stream Not Working', 'Server did not return a playable stream link.');
                     return;
                 }
-                await playStreamItem({ stream_url: directLink });
+                await playStreamItem({ stream_url: directLink }, currentServerKey);
             });
         }
 
@@ -1793,6 +1765,7 @@
                 alert('Match has not started yet!');
                 return;
             }
+            activeStreamSignature = '';
             hideStreamError();
             playerThumbnail.style.display = 'block';
             playerThumbnail.classList.remove('hidden');
