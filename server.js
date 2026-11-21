@@ -506,6 +506,166 @@ io.on('connection', (socket) => {
     });
 });
 
+// --- Auto-Post Newly LIVE Matches to StreamX Telegram Group (Country Emoji) ---
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
+const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL || 'https://www.streamx.website').replace(/\/+$/, '');
+const EXTERNAL_SPORTS_FEED_URL = 'https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json';
+
+const announcedLiveMatches = new Set();
+let isTelegramCheckRunning = false;
+
+const TEAM_COUNTRY_EMOJIS = {
+    'india': '🇮🇳',
+    'new zealand': '🇳🇿',
+    'sri lanka': '🇱🇰',
+    'australia': '🇦🇺',
+    'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
+    'pakistan': '🇵🇰',
+    'south africa': '🇿🇦',
+    'bangladesh': '🇧🇩',
+    'afghanistan': '🇦🇫',
+    'west indies': '🇯🇲',
+    'ireland': '🇮🇪',
+    'zimbabwe': '🇿🇼',
+    'netherlands': '🇳🇱',
+    'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+    'nepal': '🇳🇵',
+    'uae': '🇦🇪',
+    'united arab emirates': '🇦🇪',
+    'oman': '🇴🇲',
+    'usa': '🇺🇸',
+    'united states': '🇺🇸',
+    'canada': '🇨🇦',
+    'namibia': '🇳🇦',
+    'kenya': '🇰🇪',
+    'argentina': '🇦🇷',
+    'brazil': '🇧🇷',
+    'france': '🇫🇷',
+    'germany': '🇩🇪',
+    'spain': '🇪🇸',
+    'portugal': '🇵🇹',
+    'italy': '🇮🇹',
+    'japan': '🇯🇵',
+    'south korea': '🇰🇷',
+    'china': '🇨🇳'
+};
+
+function getTeamCountryEmoji(teamName) {
+    const clean = String(teamName || '').trim().toLowerCase();
+    if (!clean) return '🏳️';
+    if (TEAM_COUNTRY_EMOJIS[clean]) return TEAM_COUNTRY_EMOJIS[clean];
+
+    for (const [key, emoji] of Object.entries(TEAM_COUNTRY_EMOJIS)) {
+        if (clean.includes(key)) return emoji;
+    }
+    return '🏳️';
+}
+
+function escapeHtml(text) {
+    return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function buildMatchSlug(cat, idx, title) {
+    return `${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
+}
+
+async function sendTelegramLivePost(matchPayload) {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+
+    const { title, teamA, teamB, category, startTime, watchUrl } = matchPayload;
+    const emojiA = getTeamCountryEmoji(teamA);
+    const emojiB = getTeamCountryEmoji(teamB);
+    const teamsLine = (teamA || teamB)
+        ? `${emojiA} <b>${escapeHtml(teamA || 'Team A')}</b> vs ${emojiB} <b>${escapeHtml(teamB || 'Team B')}</b>`
+        : '';
+
+    const messageText = [
+        `🔴 <b>LIVE NOW ON STREAMX</b>`,
+        ``,
+        `🏏 <b>Match:</b> ${escapeHtml(title)}`,
+        teamsLine ? `🆚 <b>Teams:</b> ${teamsLine}` : '',
+        category ? `📂 <b>Category:</b> ${escapeHtml(category)}` : '',
+        startTime ? `🕒 <b>Start Time:</b> ${escapeHtml(startTime)}` : '',
+        `🌐 <b>Site:</b> <a href="${PUBLIC_SITE_URL}">www.streamx.website</a>`,
+        `▶️ <b>Watch Live:</b> <a href="${watchUrl}">Click Here to Watch</a>`
+    ].filter(Boolean).join('\n');
+
+    const baseTgApi = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
+    const msgRes = await fetch(`${baseTgApi}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: TELEGRAM_CHAT_ID,
+            text: messageText,
+            parse_mode: 'HTML',
+            disable_web_page_preview: false
+        }),
+        signal: AbortSignal.timeout(12000)
+    });
+
+    if (!msgRes.ok) {
+        const errText = await msgRes.text().catch(() => '');
+        console.error('[TG-AUTO] Failed to send message:', msgRes.status, errText);
+    }
+}
+
+async function checkAndAnnounceLiveMatches() {
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
+    if (isTelegramCheckRunning) return;
+    isTelegramCheckRunning = true;
+
+    try {
+        const res = await fetch(`${EXTERNAL_SPORTS_FEED_URL}?t=${Date.now()}`, {
+            cache: 'no-store',
+            signal: AbortSignal.timeout(15000)
+        });
+        if (!res.ok) return;
+
+        const data = await res.json();
+        const matches = Array.isArray(data.matches) ? data.matches : [];
+
+        for (let idx = 0; idx < matches.length; idx++) {
+            const m = matches[idx];
+            const status = String(m.status || '').trim().toUpperCase();
+            if (status !== 'LIVE') continue;
+
+            const info = m.eventInfo || {};
+            const teamA = info.teamA || '';
+            const teamB = info.teamB || '';
+            const title = m.event_name || `${teamA || 'Team A'} Vs ${teamB || 'Team B'}`;
+            const slugId = buildMatchSlug(m.Category, idx, title);
+            const uniqueKey = `${slugId}|${title.toLowerCase()}`;
+
+            if (announcedLiveMatches.has(uniqueKey)) continue;
+            announcedLiveMatches.add(uniqueKey);
+
+            const watchUrl = `${PUBLIC_SITE_URL}/match?id=${encodeURIComponent(slugId)}&title=${encodeURIComponent(title)}`;
+
+            await sendTelegramLivePost({
+                title,
+                teamA,
+                teamB,
+                category: m.Category || '',
+                startTime: info.startTime || '',
+                watchUrl
+            });
+        }
+    } catch (error) {
+        console.error('[TG-AUTO] Feed check error:', error.message);
+    } finally {
+        isTelegramCheckRunning = false;
+    }
+}
+
+if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
+    setTimeout(checkAndAnnounceLiveMatches, 5000);
+    setInterval(checkAndAnnounceLiveMatches, 60 * 1000);
+}
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
