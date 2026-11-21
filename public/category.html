@@ -855,6 +855,65 @@
             return { badgeText: fallbackLabel, isEnded: false };
         }
 
+        function parseTimestampMs(raw) {
+            if (raw === undefined || raw === null || raw === '') return 0;
+            if (typeof raw === 'number' && Number.isFinite(raw)) {
+                return raw < 1e12 ? raw * 1000 : raw;
+            }
+            const str = String(raw).trim();
+            if (/^\d+$/.test(str)) {
+                const num = Number(str);
+                return num < 1e12 ? num * 1000 : num;
+            }
+            const parsed = Date.parse(str);
+            return Number.isNaN(parsed) ? 0 : parsed;
+        }
+
+        function getEndedSortScore(mt) {
+            const candidates = [
+                mt.end_time, mt.endTime, mt.completed_at, mt.completedAt,
+                mt.updated_at, mt.updatedAt, mt.start_time, mt.startTime,
+                mt.match_start_time, mt.timestamp
+            ];
+            for (const val of candidates) {
+                const ts = parseTimestampMs(val);
+                if (ts > 0) return ts;
+            }
+            const idNum = Number(String(mt.id || '').replace(/\D/g, ''));
+            if (Number.isFinite(idNum) && idNum > 0) return idNum;
+            return 0;
+        }
+
+        function sortLiveAndRecentEnded(matchesList) {
+            const liveItems = [];
+            const endedItems = [];
+
+            matchesList.forEach((mt, origIdx) => {
+                const stateInfo = getScoreCardStateInfo(mt);
+                const enriched = { ...mt, _stateInfo: stateInfo, _origIdx: origIdx };
+                if (stateInfo.isEnded) {
+                    endedItems.push(enriched);
+                } else {
+                    liveItems.push(enriched);
+                }
+            });
+
+            liveItems.sort((a, b) => a._origIdx - b._origIdx);
+
+            endedItems.sort((a, b) => {
+                const scoreA = getEndedSortScore(a);
+                const scoreB = getEndedSortScore(b);
+                if (scoreA !== scoreB) return scoreB - scoreA;
+                return a._origIdx - b._origIdx;
+            });
+
+            return {
+                sortedAll: [...liveItems, ...endedItems],
+                liveCount: liveItems.length,
+                endedCount: endedItems.length
+            };
+        }
+
         function findMatchingStreamMatchForCb(cbMatch) {
             const t1Name = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.name);
             const t1Short = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.short_name);
@@ -896,11 +955,14 @@
                 return;
             }
 
-            if (countEl) countEl.innerText = `${cricbuzzMatchesFlat.length} Matches`;
+            const { sortedAll, liveCount, endedCount } = sortLiveAndRecentEnded(cricbuzzMatchesFlat);
+            if (countEl) {
+                countEl.innerText = endedCount > 0 ? `${liveCount} Live · ${endedCount} Ended` : `${liveCount} Live`;
+            }
 
-            rowEl.innerHTML = cricbuzzMatchesFlat.map(mt => {
+            rowEl.innerHTML = sortedAll.map(mt => {
                 const seriesTitle = (mt.series && mt.series.name) || mt.description || 'Cricket';
-                const stateInfo = getScoreCardStateInfo(mt);
+                const stateInfo = mt._stateInfo || getScoreCardStateInfo(mt);
                 const isEnded = stateInfo.isEnded;
                 const rightBadge = stateInfo.badgeText;
 
