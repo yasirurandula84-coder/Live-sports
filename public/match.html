@@ -896,7 +896,6 @@
         let activeMatchFeedItem = null;
         let activeServersMap = {};
         let currentServerKey = 'server1';
-        let activeStreamSignature = '';
         let streamAttemptToken = 0;
         let streamFailWatchdog = null;
 
@@ -909,34 +908,6 @@
         let warmupActive = false;
         let lastSmoothVideoTime = -1;
         let smoothAdvanceTicks = 0;
-
-        function normalizeKeyHex(val) {
-            return String(val || '').trim().replace(/-/g, '').toLowerCase();
-        }
-
-        function computeStreamSignature(streamObj) {
-            if (!streamObj) return '';
-            const urlPart = String(streamObj.raw_url || streamObj.stream_url || '').trim();
-            const kidPart = normalizeKeyHex(streamObj.kid || '');
-            const keyPart = normalizeKeyHex(streamObj.key || '');
-            return `${urlPart}|${kidPart}|${keyPart}`;
-        }
-
-        function buildServerM3u8Url(streamObj, serverKey) {
-            const rawSource = String(streamObj.raw_url || streamObj.stream_url || '').trim();
-            const cleanKid = normalizeKeyHex(streamObj.kid || '');
-            const cleanKey = normalizeKeyHex(streamObj.key || '');
-            const sig = computeStreamSignature(streamObj);
-
-            const sessionId = encodeURIComponent(`${matchId}_${serverKey || currentServerKey}`);
-            const params = new URLSearchParams();
-            if (rawSource) params.set('src', rawSource);
-            if (cleanKid) params.set('kid', cleanKid);
-            if (cleanKey) params.set('key', cleanKey);
-            if (sig) params.set('v', sig.slice(0, 12));
-
-            return `/hls/${sessionId}/index.m3u8?${params.toString()}`;
-        }
 
         function syncAudioUiState() {
             if (!video) return;
@@ -974,9 +945,10 @@
             if (streamWarmupBlur) {
                 streamWarmupBlur.classList.add('active');
             }
+            // Wait up to 9s for initial buffer / steady frame progression before revealing video
             warmupFallbackTimer = setTimeout(() => {
                 hideWarmupBlur();
-            }, 3000);
+            }, 9000);
         }
 
         function clearStreamFailWatchdog() {
@@ -1039,7 +1011,7 @@
                         );
                     }
                 }
-            }, 16000);
+            }, 15000);
         }
 
         if (nextServerErrBtn) {
@@ -1054,7 +1026,6 @@
         if (retryServerErrBtn) {
             retryServerErrBtn.addEventListener('click', () => {
                 if (!isMatchLive) return;
-                activeStreamSignature = '';
                 if (isLiveTvMode) {
                     initLiveTvStream();
                 } else {
@@ -1197,7 +1168,6 @@
                     const unlockAudioOnce = () => {
                         video.muted = false;
                         video.volume = 1;
-                        video.play().catch(() => {});
                         syncAudioUiState();
                         document.removeEventListener('click', unlockAudioOnce);
                         document.removeEventListener('touchstart', unlockAudioOnce);
@@ -1208,6 +1178,7 @@
             }
         }
 
+        // Smooth load recovery without manual currentTime seeking/chopping
         function nudgeStalledFrame() {
             if (video.style.display === 'none') return;
             try {
@@ -1215,18 +1186,19 @@
                     currentHls.startLoad(-1);
                 }
             } catch (e) {}
-            if (video.paused && video.readyState >= 2) {
+            if (video.paused && video.readyState >= 3) {
                 video.play().catch(() => {});
             }
         }
 
         setInterval(() => {
             if (!warmupActive || video.style.display === 'none') return;
-            if (!video.paused && video.readyState >= 2) {
+            if (!video.paused && video.readyState >= 3) {
                 const delta = lastSmoothVideoTime >= 0 ? (video.currentTime - lastSmoothVideoTime) : 0;
-                if (delta >= 0.25) {
+                if (delta >= 0.55) {
                     smoothAdvanceTicks += 1;
-                    if (smoothAdvanceTicks >= 1) {
+                    // Reveal once video has progressed steadily across ~2.4s of smooth intervals
+                    if (smoothAdvanceTicks >= 3) {
                         hideWarmupBlur();
                     }
                 } else {
@@ -1234,7 +1206,7 @@
                 }
                 lastSmoothVideoTime = video.currentTime;
             }
-        }, 500);
+        }, 800);
 
         video.addEventListener('playing', () => {
             clearStreamFailWatchdog();
@@ -1279,14 +1251,14 @@
             const timeMoved = Math.abs(video.currentTime - lastWatchTime) >= 0.05;
             if (!timeMoved && video.readyState >= 2 && !video.paused) {
                 stuckTicks += 1;
-                if (stuckTicks >= 2) {
+                if (stuckTicks >= 3) {
                     nudgeStalledFrame();
                 }
             } else {
                 stuckTicks = 0;
             }
             lastWatchTime = video.currentTime;
-        }, 1000);
+        }, 1200);
 
         function buildSlugId(cat, idx, title) {
             return `${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
@@ -1376,7 +1348,7 @@
                 activeServersMap = { server1: tvObj };
                 currentServerKey = 'server1';
                 renderDynamicServerButtons([tvObj], 'server1');
-                playStreamItem(tvObj, 'server1');
+                playStreamItem(tvObj);
             } catch (e) {
                 console.error('Error resolving Live TV channel:', e);
                 showStreamError('Stream Not Working', 'Unable to resolve channel stream.');
@@ -1451,6 +1423,7 @@
                     ? matched.raw.streams.filter(s => s && s.stream_url && s.stream_url.trim() !== "")
                     : [];
 
+                // Avoid background probing requests that compete with initial playback startup
                 activeServersMap = {};
                 validStreams.forEach((sObj, idx) => {
                     activeServersMap[`server${idx + 1}`] = sObj;
@@ -1466,7 +1439,6 @@
 
                 if (statusUpper === "UPCOMING") {
                     isMatchLive = false;
-                    activeStreamSignature = '';
                     hideWarmupBlur();
                     hideStreamError();
                     playerCountdownOverlay.classList.remove('hidden');
@@ -1476,20 +1448,16 @@
                         startPlayerCountdown(startTimeStr);
                     }
                 } else {
-                    const activeObj = activeServersMap[chosenKey];
-                    const nextSig = computeStreamSignature(activeObj);
-                    const keyOrSourceChanged = Boolean(nextSig && nextSig !== activeStreamSignature);
-
-                    const alreadyPlayingSameKey =
+                    const alreadyPlayingThisServer =
                         isMatchLive &&
-                        !keyOrSourceChanged &&
+                        currentServerKey === chosenKey &&
                         video.style.display !== 'none' &&
                         !video.paused &&
                         video.readyState >= 3;
 
                     isMatchLive = true;
                     playerCountdownOverlay.classList.add('hidden');
-                    if (!alreadyPlayingSameKey) {
+                    if (!alreadyPlayingThisServer) {
                         loadFeedServer(chosenKey);
                     }
                 }
@@ -1583,7 +1551,7 @@
             } catch (e) {}
         }
 
-        async function playStreamItem(streamObj, serverKey = currentServerKey) {
+        async function playStreamItem(streamObj) {
             streamAttemptToken += 1;
             const myToken = streamAttemptToken;
             hideStreamError();
@@ -1592,17 +1560,9 @@
                 showStreamError('Stream Not Working', 'Stream URL is missing for this server.', myToken);
                 return;
             }
-            const rawUrl = streamObj.stream_url.trim();
-            const kid = normalizeKeyHex(streamObj.kid || '');
-            const key = normalizeKeyHex(streamObj.key || '');
-            const hasKeyOrMpd = Boolean(kid && key) || rawUrl.toLowerCase().includes('.mpd');
-
-            // Generate server-side HLS (.m3u8) whenever key or .mpd is present
-            const directLink = hasKeyOrMpd
-                ? buildServerM3u8Url(streamObj, serverKey)
-                : rawUrl;
-
-            activeStreamSignature = computeStreamSignature(streamObj);
+            const directLink = streamObj.stream_url.trim();
+            const kid = (streamObj.kid || "").trim().replace(/-/g, "").toLowerCase();
+            const key = (streamObj.key || "").trim().replace(/-/g, "").toLowerCase();
 
             lastWatchTime = -1;
             stuckTicks = 0;
@@ -1657,22 +1617,105 @@
             skipBackBtn.style.display = 'inline-flex';
             skipFwdBtn.style.display = 'inline-flex';
 
+            const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
+
+            if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
+                try {
+                    const shakaPlayer = new shaka.Player();
+                    await shakaPlayer.attach(video);
+                    if (myToken !== streamAttemptToken) {
+                        await shakaPlayer.destroy();
+                        return;
+                    }
+                    currentShakaPlayer = shakaPlayer;
+
+                    shakaPlayer.addEventListener('error', (event) => {
+                        console.error('Shaka Player Error:', event.detail);
+                        if (myToken !== streamAttemptToken) return;
+                        showStreamError(
+                            'Stream Not Working',
+                            'Unable to load or decrypt this stream. Please try another server.',
+                            myToken
+                        );
+                    });
+
+                    const shakaConfig = {
+                        streaming: {
+                            bufferingGoal: 12,
+                            rebufferingGoal: 4,
+                            bufferBehind: 8,
+                            startAtSegmentBoundary: false,
+                            jumpLargeGaps: true,
+                            inaccurateManifestTolerance: 2.5,
+                            retryParameters: {
+                                timeout: 4000,
+                                maxAttempts: 3,
+                                baseDelay: 250
+                            }
+                        },
+                        abr: {
+                            enabled: false,
+                            defaultBandwidthEstimate: 1200000
+                        }
+                    };
+                    if (kid && key) {
+                        shakaConfig.drm = {
+                            clearKeys: {
+                                [kid]: key
+                            }
+                        };
+                    }
+                    shakaPlayer.configure(shakaConfig);
+
+                    await shakaPlayer.load(directLink);
+                    if (myToken !== streamAttemptToken) return;
+
+                    const tracks = shakaPlayer.getVariantTracks ? shakaPlayer.getVariantTracks() : [];
+                    let lowestTrack = null;
+                    if (tracks.length > 0) {
+                        lowestTrack = tracks.reduce((best, t) => {
+                            const bwA = best.bandwidth || (best.height ? best.height * 1000 : Infinity);
+                            const bwB = t.bandwidth || (t.height ? t.height * 1000 : Infinity);
+                            return bwB < bwA ? t : best;
+                        }, tracks[0]);
+                        shakaPlayer.configure({ abr: { enabled: false } });
+                        shakaPlayer.selectVariantTrack(lowestTrack, true);
+                    }
+
+                    setupShakaQualityMenu(shakaPlayer, lowestTrack);
+                    await kickPlayNow();
+                    if (myToken !== streamAttemptToken) return;
+                    hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
+                    return;
+                } catch (err) {
+                    console.error("Shaka load failed:", err);
+                    if (myToken !== streamAttemptToken) return;
+                    showStreamError(
+                        'Stream Not Working',
+                        'This server failed to start playback. Please switch to another server.',
+                        myToken
+                    );
+                    return;
+                }
+            }
+
             if (window.Hls && Hls.isSupported()) {
                 let hlsNetworkRetries = 0;
                 let hlsMediaRetries = 0;
                 const hls = new Hls({
                     lowLatencyMode: false,
-                    startLevel: -1,
-                    maxBufferLength: 6,
-                    maxMaxBufferLength: 14,
-                    backBufferLength: 5,
-                    liveSyncDurationCount: 2,
-                    liveMaxLatencyDurationCount: 4,
-                    abrBandWidthFactor: 0.85,
-                    abrBandWidthUpFactor: 0.75,
+                    startLevel: 0,
+                    maxBufferLength: 14,
+                    maxMaxBufferLength: 24,
+                    backBufferLength: 8,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 6,
+                    abrBandWidthFactor: 0.8,
+                    abrBandWidthUpFactor: 0.7,
                     manifestLoadingTimeOut: 6000,
                     levelLoadingTimeOut: 6000,
-                    fragLoadingTimeOut: 6000,
+                    fragLoadingTimeOut: 8000,
                     enableWorker: true
                 });
                 currentHls = hls;
@@ -1682,7 +1725,23 @@
                 hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
                     if (myToken !== streamAttemptToken) return;
                     const levels = data.levels || hls.levels || [];
-                    setupHlsQualityMenu(hls, levels, null);
+                    let minIdx = null;
+                    if (levels.length > 0) {
+                        minIdx = 0;
+                        let minBitrate = Infinity;
+                        levels.forEach((lvl, idx) => {
+                            const bw = lvl.bitrate || (lvl.height ? lvl.height * 1000 : Infinity);
+                            if (bw < minBitrate) {
+                                minBitrate = bw;
+                                minIdx = idx;
+                            }
+                        });
+                        hls.startLevel = minIdx;
+                        hls.loadLevel = minIdx;
+                        hls.currentLevel = minIdx;
+                        hls.nextLevel = minIdx;
+                    }
+                    setupHlsQualityMenu(hls, levels, minIdx);
                     await kickPlayNow();
                     if (myToken !== streamAttemptToken) return;
                     hideOverlaysSafely();
@@ -1692,20 +1751,16 @@
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (myToken !== streamAttemptToken) return;
                     if (data.fatal) {
-                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 5) {
+                        if (data.type === Hls.ErrorTypes.NETWORK_ERROR && hlsNetworkRetries < 3) {
                             hlsNetworkRetries += 1;
-                            setTimeout(() => {
-                                if (myToken === streamAttemptToken && currentHls) {
-                                    hls.startLoad();
-                                }
-                            }, 500);
-                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 3) {
+                            hls.startLoad();
+                        } else if (data.type === Hls.ErrorTypes.MEDIA_ERROR && hlsMediaRetries < 2) {
                             hlsMediaRetries += 1;
                             hls.recoverMediaError();
                         } else {
                             showStreamError(
                                 'Stream Not Working',
-                                'Unable to generate or play this stream. Please try another server.',
+                                'This server is offline or blocked. Please try another server.',
                                 myToken
                             );
                         }
@@ -1733,7 +1788,7 @@
             highlightServerButton(serverKey);
             const streamObj = activeServersMap[serverKey];
             if (streamObj && streamObj.stream_url) {
-                playStreamItem(streamObj, serverKey);
+                playStreamItem(streamObj);
             } else if (socket) {
                 hideStreamError();
                 if (playerLoader) playerLoader.classList.remove('hidden');
@@ -1756,7 +1811,7 @@
                     showStreamError('Stream Not Working', 'Server did not return a playable stream link.');
                     return;
                 }
-                await playStreamItem({ stream_url: directLink }, currentServerKey);
+                await playStreamItem({ stream_url: directLink });
             });
         }
 
@@ -1765,7 +1820,6 @@
                 alert('Match has not started yet!');
                 return;
             }
-            activeStreamSignature = '';
             hideStreamError();
             playerThumbnail.style.display = 'block';
             playerThumbnail.classList.remove('hidden');
