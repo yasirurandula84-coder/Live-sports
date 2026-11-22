@@ -18,6 +18,7 @@ let tapmadCache = { data: null, expiresAt: 0 };
 
 const CRICBUZZ_API_URL = (process.env.CRICBUZZ_API_URL || 'https://cricbuzz-scraper-kkkw.onrender.com').replace(/\/+$/, '');
 let cricbuzzLiveCache = { data: null, expiresAt: 0 };
+const cricbuzzRankingsCache = new Map();
 
 const UPSTREAM_STREAM_HEADERS = {
     'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
@@ -181,6 +182,10 @@ app.get('/match', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'match.html'));
 });
 
+app.get('/ranking', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'ranking.html'));
+});
+
 // --- Cricbuzz Live Scores API Route ---
 app.get('/api/cricbuzz-live', async (req, res) => {
     const now = Date.now();
@@ -215,6 +220,50 @@ app.get('/api/cricbuzz-live', async (req, res) => {
         return res.status(502).json({
             ok: false,
             error: 'Failed to reach Cricbuzz scraper'
+        });
+    }
+});
+
+// --- Cricbuzz Rankings API Route ---
+app.get('/api/cricbuzz-rankings', async (req, res) => {
+    const category = String(req.query.category || 'batting').trim().toLowerCase() || 'batting';
+    const gender = String(req.query.gender || 'men').trim().toLowerCase() || 'men';
+    const cacheKey = `${category}:${gender}`;
+    const now = Date.now();
+
+    const cached = cricbuzzRankingsCache.get(cacheKey);
+    if (cached && now < cached.expiresAt) {
+        return res.json({ ok: true, data: cached.data });
+    }
+
+    try {
+        const upstreamUrl = `${CRICBUZZ_API_URL}/rankings?category=${encodeURIComponent(category)}&gender=${encodeURIComponent(gender)}`;
+        const response = await fetch(upstreamUrl, {
+            headers: {
+                'Accept': 'application/json'
+            },
+            signal: AbortSignal.timeout(25000)
+        });
+
+        if (!response.ok) {
+            return res.status(502).json({
+                ok: false,
+                error: `Upstream Cricbuzz rankings returned ${response.status}`
+            });
+        }
+
+        const data = await response.json();
+        cricbuzzRankingsCache.set(cacheKey, {
+            data,
+            expiresAt: now + 30 * 1000
+        });
+
+        return res.json({ ok: true, data });
+    } catch (error) {
+        console.error('Cricbuzz rankings proxy error:', error.message);
+        return res.status(502).json({
+            ok: false,
+            error: 'Failed to reach Cricbuzz rankings endpoint'
         });
     }
 });
