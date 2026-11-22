@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StreamX - Private Views Panel</title>
+    <style>
+        body {
+            background: #07070a;
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 18px;
+        }
+        .wrap {
+            max-width: 960px;
+            margin: 0 auto;
+        }
+        h1 {
+            margin: 0 0 14px 0;
+            font-size: 20px;
+        }
+        .auth-bar, .filter-bar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        input, button {
+            background: #14141e;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.14);
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 13px;
+        }
+        input {
+            flex: 1;
+            min-width: 190px;
+        }
+        button {
+            background: #6366f1;
+            border-color: #6366f1;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button.secondary {
+            background: #1f2433;
+            border-color: rgba(255,255,255,0.16);
+        }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .stat-box {
+            background: #12131c;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 12px;
+            padding: 12px;
+        }
+        .stat-label {
+            font-size: 11.5px;
+            color: #9ca3af;
+        }
+        .stat-val {
+            font-size: 20px;
+            font-weight: 800;
+            margin-top: 4px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #11121a;
+            border-radius: 12px;
+            overflow: hidden;
+            font-size: 13px;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.07);
+        }
+        th {
+            background: #181a26;
+            color: #cbd5e1;
+            font-size: 12px;
+        }
+        .live-pill {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ff6b78;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            padding: 2px 8px;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: 12px;
+        }
+        .msg {
+            color: #f87171;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>Match Views Panel (Private)</h1>
+
+        <div class="auth-bar">
+            <input type="password" id="adminKeyInput" placeholder="Enter Admin Key...">
+            <button type="button" onclick="saveAndLoad()">Unlock & Refresh</button>
+            <button type="button" class="secondary" id="autoBtn" onclick="toggleAuto()">Auto: ON (5s)</button>
+        </div>
+
+        <div class="msg" id="statusMsg"></div>
+
+        <div class="summary-grid">
+            <div class="stat-box">
+                <div class="stat-label">Live Viewers Now</div>
+                <div class="stat-val" id="sumLive">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Total Match Views</div>
+                <div class="stat-val" id="sumTotal">0</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Tracked Matches</div>
+                <div class="stat-val" id="sumMatches">0</div>
+            </div>
+        </div>
+
+        <div class="filter-bar">
+            <input type="text" id="filterInput" placeholder="Filter by matchId..." oninput="renderTable()">
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Match ID</th>
+                    <th>Live Now</th>
+                    <th>Total Views</th>
+                    <th>Chats</th>
+                </tr>
+            </thead>
+            <tbody id="statsBody">
+                <tr><td colspan="4" style="color:#9ca3af;">Enter key to load stats...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'streamx_admin_stats_key';
+        let latestRows = [];
+        let autoRefresh = true;
+
+        const savedKey = localStorage.getItem(STORAGE_KEY) || '';
+        if (savedKey) {
+            document.getElementById('adminKeyInput').value = savedKey;
+        }
+
+        function escapeHtml(s) {
+            return String(s || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function saveAndLoad() {
+            const key = document.getElementById('adminKeyInput').value.trim();
+            localStorage.setItem(STORAGE_KEY, key);
+            loadStats();
+        }
+
+        function toggleAuto() {
+            autoRefresh = !autoRefresh;
+            document.getElementById('autoBtn').innerText = `Auto: ${autoRefresh ? 'ON (5s)' : 'OFF'}`;
+        }
+
+        function renderTable() {
+            const q = document.getElementById('filterInput').value.trim().toLowerCase();
+            const tbody = document.getElementById('statsBody');
+            const rows = latestRows.filter(r => !q || String(r.matchId).toLowerCase().includes(q));
+
+            if (rows.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="color:#9ca3af;">No match view data yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = rows.map(r => `
+                <tr>
+                    <td>${escapeHtml(r.matchId)}</td>
+                    <td><span class="live-pill">${Number(r.liveNow || 0)}</span></td>
+                    <td><strong>${Number(r.totalViews || 0)}</strong></td>
+                    <td>${Number(r.chatCount || 0)}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function loadStats() {
+            const key = document.getElementById('adminKeyInput').value.trim();
+            const msgEl = document.getElementById('statusMsg');
+
+            if (!key) {
+                msgEl.innerText = 'Please enter your Admin Key.';
+                return;
+            }
+
+            try {
+                const res = await fetch('/api/admin/views-stats', {
+                    headers: { 'x-admin-key': key },
+                    cache: 'no-store'
+                });
+
+                if (!res.ok) {
+                    msgEl.innerText = `Access denied or error (HTTP ${res.status}).`;
+                    return;
+                }
+
+                const json = await res.json();
+                msgEl.innerText = `Last updated: ${new Date(json.updatedAt).toLocaleTimeString()}`;
+
+                document.getElementById('sumLive').innerText = json.summary?.totalLiveNow ?? 0;
+                document.getElementById('sumTotal').innerText = json.summary?.totalAllViews ?? 0;
+                document.getElementById('sumMatches').innerText = (json.matches || []).length;
+
+                latestRows = Array.isArray(json.matches) ? json.matches : [];
+                renderTable();
+            } catch (err) {
+                msgEl.innerText = 'Failed to load stats: ' + err.message;
+            }
+        }
+
+        if (savedKey) {
+            loadStats();
+        }
+
+        setInterval(() => {
+            if (autoRefresh && document.getElementById('adminKeyInput').value.trim()) {
+                loadStats();
+            }
+        }, 5000);
+    </script>
+</body>
+</html>
