@@ -11,7 +11,17 @@ const io = new Server(server);
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
 const matchViewers = {};
+const matchTotalViews = {};
 const matchChatHistories = {}; // මැච් අනුව චැට් හිස්ට්‍රි ගබඩා කරගැනීමට
+
+const ADMIN_STATS_KEY = process.env.ADMIN_PANEL_KEY || 'streamx-admin-2026';
+
+function isAuthorizedAdmin(req) {
+    const keyFromHeader = req.get('x-admin-key') || '';
+    const keyFromQuery = typeof req.query.key === 'string' ? req.query.key : '';
+    const provided = (keyFromHeader || keyFromQuery).trim();
+    return Boolean(provided && provided === ADMIN_STATS_KEY);
+}
 
 const TAPMAD_PLAYLIST_URL = 'http://2nd.sm-monirul.top/@sm_iptv_bd/exp.php?tapmad=getPlaylist&sm=.m3u';
 let tapmadCache = { data: null, expiresAt: 0 };
@@ -191,6 +201,56 @@ app.get('/match', (req, res) => {
 
 app.get('/ranking', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'ranking.html'));
+});
+
+app.get('/admin-views', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'admin-views.html'));
+});
+
+// --- Private Admin Views Stats Route ---
+app.get('/api/admin/views-stats', (req, res) => {
+    if (!isAuthorizedAdmin(req)) {
+        return res.status(401).json({ ok: false, error: 'Unauthorized' });
+    }
+
+    const allMatchIds = new Set([
+        ...Object.keys(matchViewers),
+        ...Object.keys(matchTotalViews)
+    ]);
+
+    const rows = Array.from(allMatchIds).map((matchId) => {
+        const liveNow = matchViewers[matchId] || 0;
+        const totalViews = matchTotalViews[matchId] || 0;
+        const chatCount = Array.isArray(matchChatHistories[matchId])
+            ? matchChatHistories[matchId].length
+            : 0;
+
+        return {
+            matchId,
+            liveNow,
+            totalViews,
+            chatCount
+        };
+    });
+
+    rows.sort((a, b) => (b.liveNow - a.liveNow) || (b.totalViews - a.totalViews));
+
+    const summary = rows.reduce(
+        (acc, r) => {
+            acc.totalLiveNow += r.liveNow;
+            acc.totalAllViews += r.totalViews;
+            acc.totalChats += r.chatCount;
+            return acc;
+        },
+        { totalLiveNow: 0, totalAllViews: 0, totalChats: 0 }
+    );
+
+    return res.json({
+        ok: true,
+        updatedAt: new Date().toISOString(),
+        summary,
+        matches: rows
+    });
 });
 
 // --- Football Live Scores API Route ---
@@ -637,18 +697,28 @@ io.on('connection', (socket) => {
     });
 
     socket.on('joinMatch', ({ matchId, username }) => {
-        socket.join(matchId);
+        if (!matchId) return;
+        const safeMatchId = String(matchId).trim();
+        if (!safeMatchId) return;
+
+        socket.join(safeMatchId);
         socket.username = username;
-        socket.currentMatch = matchId;
+        socket.currentMatch = safeMatchId;
 
-        if (!matchViewers[matchId]) {
-            matchViewers[matchId] = 0;
+        if (!matchViewers[safeMatchId]) {
+            matchViewers[safeMatchId] = 0;
         }
-        matchViewers[matchId]++;
-        io.to(matchId).emit('viewerCount', matchViewers[matchId]);
+        matchViewers[safeMatchId]++;
 
-        if (matchChatHistories[matchId] && matchChatHistories[matchId].length > 0) {
-            socket.emit('chatHistory', matchChatHistories[matchId]);
+        if (!matchTotalViews[safeMatchId]) {
+            matchTotalViews[safeMatchId] = 0;
+        }
+        matchTotalViews[safeMatchId]++;
+
+        io.to(safeMatchId).emit('viewerCount', matchViewers[safeMatchId]);
+
+        if (matchChatHistories[safeMatchId] && matchChatHistories[safeMatchId].length > 0) {
+            socket.emit('chatHistory', matchChatHistories[safeMatchId]);
         }
     });
 
