@@ -20,6 +20,9 @@ const CRICBUZZ_API_URL = (process.env.CRICBUZZ_API_URL || 'https://cricbuzz-scra
 let cricbuzzLiveCache = { data: null, expiresAt: 0 };
 const cricbuzzRankingsCache = new Map();
 
+const FOOTBALL_API_BASE = (process.env.FOOTBALL_API_BASE || 'https://football-live-api-wm4o.onrender.com').replace(/\/+$/, '');
+let footballLiveCache = { data: null, expiresAt: 0 };
+
 const UPSTREAM_STREAM_HEADERS = {
     'User-Agent': 'VLC/3.0.20 LibVLC/3.0.20',
     'Accept': '*/*',
@@ -190,6 +193,81 @@ app.get('/ranking', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'ranking.html'));
 });
 
+// --- Football Live Scores API Route ---
+app.get('/api/football/live', async (req, res) => {
+    const tz = String(req.query.timezone || 'Asia/Colombo');
+    const now = Date.now();
+
+    if (footballLiveCache.data && footballLiveCache.tz === tz && now < footballLiveCache.expiresAt) {
+        return res.json(footballLiveCache.data);
+    }
+
+    try {
+        const apiUrl = `${FOOTBALL_API_BASE}/api/matches/live?timezone=${encodeURIComponent(tz)}`;
+        const response = await fetch(apiUrl, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(12000)
+        });
+
+        if (!response.ok) {
+            return res.status(502).json({
+                ok: false,
+                success: false,
+                error: `Upstream football API returned ${response.status}`
+            });
+        }
+
+        const payload = await response.json();
+        const leagues = Array.isArray(payload?.data?.leagues) ? payload.data.leagues : [];
+
+        const matches = [];
+        for (const league of leagues) {
+            for (const m of league.matches || []) {
+                matches.push({
+                    id: m.id,
+                    league: league.name || '',
+                    leagueLogo: league.logo || '',
+                    homeName: m.home?.name || m.home?.shortName || 'Home',
+                    homeScore: m.home?.score ?? 0,
+                    homeLogo: m.home?.logo || '',
+                    awayName: m.away?.name || m.away?.shortName || 'Away',
+                    awayScore: m.away?.score ?? 0,
+                    awayLogo: m.away?.logo || '',
+                    scoreStr: m.status?.scoreStr || `${m.home?.score ?? 0} - ${m.away?.score ?? 0}`,
+                    statusText: m.statusText || m.status?.liveTime?.short || 'LIVE',
+                    isLive: Boolean(m.isLive ?? m.status?.ongoing)
+                });
+            }
+        }
+
+        const result = {
+            ok: true,
+            success: true,
+            updatedAt: payload.updatedAt || new Date().toISOString(),
+            total: matches.length,
+            matches
+        };
+
+        footballLiveCache = {
+            tz,
+            data: result,
+            expiresAt: now + 25 * 1000
+        };
+
+        return res.json(result);
+    } catch (error) {
+        console.error('[FOOTBALL-LIVE] Error:', error.message);
+        if (footballLiveCache.data) {
+            return res.json({ ...footballLiveCache.data, stale: true });
+        }
+        return res.status(502).json({
+            ok: false,
+            success: false,
+            error: 'Failed to reach football live API'
+        });
+    }
+});
+
 // --- Cricbuzz Live Scores API Route ---
 app.get('/api/cricbuzz-live', async (req, res) => {
     const now = Date.now();
@@ -354,10 +432,6 @@ app.get('/img-proxy', async (req, res) => {
 
 // --- Fast DASH (.mpd) Manifest Proxy Route ---
 app.get('/mpd-proxy', async (req, res) => {
-    if (!hasAllowedReferer(req)) {
-        return res.status(403).send('Forbidden');
-    }
-
     const token = req.query.token;
     const directUrl = String(req.query.url || '').trim();
     const targetUrl = token ? resolveStreamToken(token) : directUrl;
