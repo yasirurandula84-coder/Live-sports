@@ -1298,6 +1298,87 @@
             }).join('');
         }
 
+        // MPD Manifest Prefetch + Preload First Segment helper
+        async function prefetchAndPreloadDash(mpdUrl) {
+            if (!mpdUrl || !/^https?:\/\//i.test(mpdUrl)) return;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 2500);
+            try {
+                const resp = await fetch(mpdUrl, {
+                    signal: controller.signal,
+                    cache: 'default'
+                });
+                if (!resp.ok) return;
+                const xmlText = await resp.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(xmlText, 'application/xml');
+                const reps = Array.from(doc.querySelectorAll('Representation'));
+                if (!reps.length) return;
+
+                let lowestRep = reps[0];
+                let lowestBw = parseInt(lowestRep.getAttribute('bandwidth') || '0', 10) || Infinity;
+                reps.forEach(r => {
+                    const bw = parseInt(r.getAttribute('bandwidth') || '0', 10);
+                    if (bw > 0 && bw < lowestBw) {
+                        lowestBw = bw;
+                        lowestRep = r;
+                    }
+                });
+
+                const repId = lowestRep.getAttribute('id') || '';
+                const baseUrls = Array.from(doc.querySelectorAll('BaseURL'))
+                    .map(b => (b.textContent || '').trim())
+                    .filter(Boolean);
+                const repBase = lowestRep.querySelector('BaseURL');
+                const basePrefix = (repBase && (repBase.textContent || '').trim()) || baseUrls[0] || '';
+                let resolvedBase = mpdUrl;
+                try {
+                    resolvedBase = new URL(basePrefix || './', mpdUrl).href;
+                } catch (e) {
+                    resolvedBase = mpdUrl;
+                }
+
+                const segTpl = lowestRep.querySelector('SegmentTemplate') ||
+                    (lowestRep.parentElement && lowestRep.parentElement.querySelector('SegmentTemplate'));
+
+                const toPreload = new Set();
+                if (segTpl) {
+                    const initAttr = segTpl.getAttribute('initialization');
+                    if (initAttr) {
+                        const initPath = initAttr
+                            .replace(/\$RepresentationID\$/g, repId)
+                            .replace(/\$Bandwidth\$/g, String(lowestRep.getAttribute('bandwidth') || ''));
+                        try { toPreload.add(new URL(initPath, resolvedBase).href); } catch (e) {}
+                    }
+                    const mediaAttr = segTpl.getAttribute('media');
+                    if (mediaAttr) {
+                        const startNum = parseInt(segTpl.getAttribute('startNumber') || '1', 10);
+                        const firstMedia = mediaAttr
+                            .replace(/\$RepresentationID\$/g, repId)
+                            .replace(/\$Bandwidth\$/g, String(lowestRep.getAttribute('bandwidth') || ''))
+                            .replace(/\$Number(?:%0\d+d)?\$/g, String(startNum))
+                            .replace(/\$Time\$/g, '0');
+                        if (!firstMedia.includes('$')) {
+                            try { toPreload.add(new URL(firstMedia, resolvedBase).href); } catch (e) {}
+                        }
+                    }
+                } else {
+                    const firstSegUrl = lowestRep.querySelector('SegmentURL');
+                    if (firstSegUrl && firstSegUrl.getAttribute('media')) {
+                        try { toPreload.add(new URL(firstSegUrl.getAttribute('media'), resolvedBase).href); } catch (e) {}
+                    }
+                }
+
+                Array.from(toPreload).slice(0, 2).forEach(segHref => {
+                    fetch(segHref, { mode: 'no-cors', cache: 'default' }).catch(() => {});
+                });
+            } catch (e) {
+                // Ignore prefetch errors; Shaka player handles main load
+            } finally {
+                clearTimeout(timer);
+            }
+        }
+
         async function initLiveTvStream() {
             isMatchLive = true;
             playerCountdownOverlay.classList.add('hidden');
@@ -1666,6 +1747,9 @@
                         };
                     }
                     shakaPlayer.configure(shakaConfig);
+
+                    await prefetchAndPreloadDash(directLink);
+                    if (myToken !== streamAttemptToken) return;
 
                     await shakaPlayer.load(directLink);
                     if (myToken !== streamAttemptToken) return;
