@@ -141,6 +141,10 @@ function parseM3uPlaylist(rawText) {
             const rawStreamUrl = line.trim();
             const titleName = pendingName || `Channel ${channels.length + 1}`;
             const streamToken = createStreamToken(rawStreamUrl);
+            const isMpd = rawStreamUrl.toLowerCase().includes('.mpd');
+            const streamUrl = isMpd
+                ? `/mpd-proxy?token=${encodeURIComponent(streamToken)}`
+                : `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
 
             channels.push({
                 id: `tv-${channels.length + 1}`,
@@ -148,7 +152,7 @@ function parseM3uPlaylist(rawText) {
                 title: titleName,
                 logo: pendingLogo,
                 group: pendingGroup,
-                stream_url: `/hls-proxy?token=${encodeURIComponent(streamToken)}`,
+                stream_url: streamUrl,
                 kid: pendingKid,
                 key: pendingKey,
                 referer: pendingReferer,
@@ -348,6 +352,63 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
+// --- Fast DASH (.mpd) Manifest Proxy Route ---
+app.get('/mpd-proxy', async (req, res) => {
+    if (!hasAllowedReferer(req)) {
+        return res.status(403).send('Forbidden');
+    }
+
+    const token = req.query.token;
+    const directUrl = String(req.query.url || '').trim();
+    const targetUrl = token ? resolveStreamToken(token) : directUrl;
+
+    if (!targetUrl) {
+        return res.status(403).send('Stream token expired or invalid');
+    }
+
+    try {
+        const response = await fetch(targetUrl, {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'Accept': 'application/dash+xml,application/xml,text/xml,*/*',
+                'Referer': new URL(targetUrl).origin + '/'
+            },
+            redirect: 'follow',
+            signal: AbortSignal.timeout(10000)
+        });
+
+        if (!response.ok) {
+            return res.status(response.status).send(`MPD upstream error ${response.status}`);
+        }
+
+        let xmlText = await response.text();
+        const effectiveBase = response.url || targetUrl;
+        const baseDir = effectiveBase.substring(0, effectiveBase.lastIndexOf('/') + 1);
+
+        xmlText = xmlText.replace(/<BaseURL([^>]*)>([^<]+)<\/BaseURL>/gi, (match, attrs, relUrl) => {
+            const trimmed = relUrl.trim();
+            if (/^https?:\/\//i.test(trimmed)) return match;
+            const absUrl = new URL(trimmed, baseDir).toString();
+            return `<BaseURL${attrs}>${absUrl}</BaseURL>`;
+        });
+
+        if (!/<BaseURL[\s>]/i.test(xmlText)) {
+            xmlText = xmlText.replace(
+                /<Period([^>]*)>/i,
+                `<Period$1>\n    <BaseURL>${baseDir}</BaseURL>`
+            );
+        }
+
+        res.setHeader('Content-Type', 'application/dash+xml; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Access-Control-Allow-Origin', '*');
+        return res.send(xmlText);
+    } catch (error) {
+        console.error('[MPD-PROXY] Error:', error.message);
+        return res.status(502).send('Failed to proxy MPD');
+    }
+});
+
 // --- HLS / TS Stream Proxy Route (Referer Guard + Short-Lived Token + Low-Lag Chunk Streaming) ---
 app.get('/hls-proxy', async (req, res) => {
     if (!hasAllowedReferer(req)) {
@@ -489,9 +550,13 @@ io.on('connection', (socket) => {
         }
 
         let finalLink = directLink;
-        if (directLink && directLink.includes('.m3u8')) {
+        if (directLink) {
             const streamToken = createStreamToken(directLink);
-            finalLink = `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
+            if (directLink.toLowerCase().includes('.mpd')) {
+                finalLink = `/mpd-proxy?token=${encodeURIComponent(streamToken)}`;
+            } else if (directLink.includes('.m3u8')) {
+                finalLink = `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
+            }
         }
 
         socket.emit('secureStreamLink', finalLink);
