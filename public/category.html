@@ -95,7 +95,7 @@
             padding: 16px 18px;
         }
 
-        /* Top Live Scores Horizontal Section (Cricket Only) */
+        /* Top Live Scores Horizontal Section (Cricket & Football) */
         .top-live-scores-section {
             display: none;
             margin: 8px 0 20px 0;
@@ -217,6 +217,10 @@
             font-weight: 800;
             color: #ffffff;
             letter-spacing: 0.3px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 145px;
         }
 
         .cb-team-score {
@@ -611,10 +615,10 @@
 
     <div class="container">
 
-        <!-- Top Live Scores Horizontal Row (Cricket Category Only) -->
+        <!-- Top Live Scores Horizontal Row (Cricket & Football Categories) -->
         <section class="top-live-scores-section" id="topLiveScoresSection">
             <div class="top-scores-header">
-                <h2 class="top-scores-title">Live Scores</h2>
+                <h2 class="top-scores-title" id="topLiveScoresTitle">Live Scores</h2>
                 <span style="font-size: 11.5px; color: #94a3b8; font-weight: 600;" id="topLiveScoresCount"></span>
             </div>
             <div class="live-scores-scroll-row" id="liveScoresRow"></div>
@@ -675,6 +679,8 @@
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
         const CRICBUZZ_LIVE_API = "/api/cricbuzz-live";
         const CRICBUZZ_DIRECT_FALLBACK = "https://cricbuzz-scraper-kkkw.onrender.com/matches/live";
+        const FOOTBALL_LIVE_API = "/api/football/live";
+        const FOOTBALL_DIRECT_FALLBACK = "https://football-live-api-wm4o.onrender.com/api/matches/live";
         const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         const TEAM_COUNTRY_CODES = {
@@ -736,7 +742,11 @@
 
             if (rawUrl && rawUrl.trim() !== "") {
                 const cleanRaw = rawUrl.trim().replace(/^http:\/\//i, 'https://');
-                if (cleanRaw.includes('img.sofascore.com') || cleanRaw.includes('static.cricbuzz.com')) {
+                if (
+                    cleanRaw.includes('img.sofascore.com') ||
+                    cleanRaw.includes('static.cricbuzz.com') ||
+                    cleanRaw.includes('images.fotmob.com')
+                ) {
                     candidates.push(`/img-proxy?url=${encodeURIComponent(cleanRaw)}`);
                     candidates.push(`https://wsrv.nl/?url=${encodeURIComponent(cleanRaw)}&w=80&h=80&fit=cover`);
                 }
@@ -809,11 +819,12 @@
         let categoryMatchesData = [];
         let activeStatusView = 'ALL';
         let cricbuzzMatchesFlat = [];
+        let footballMatchesFlat = [];
 
         function normalizeTeamKey(str) {
             return String(str || '')
                 .toLowerCase()
-                .replace(/\b(xi|women|u19|a|team)\b/g, '')
+                .replace(/\b(xi|women|u19|a|team|fc|cf|afc|sc|cd|ud|sd)\b/g, '')
                 .replace(/[^a-z0-9]+/g, ' ')
                 .trim();
         }
@@ -914,6 +925,23 @@
             };
         }
 
+        function findMatchingStreamMatchByTeams(teamAName, teamBName) {
+            const t1Name = normalizeTeamKey(teamAName);
+            const t2Name = normalizeTeamKey(teamBName);
+            if (!t1Name || !t2Name) return null;
+
+            return categoryMatchesData.find(m => {
+                const aKey = normalizeTeamKey(m.team1);
+                const bKey = normalizeTeamKey(m.team2);
+                if (!aKey || !bKey) return false;
+                const f = (t1Name.includes(aKey) || aKey.includes(t1Name)) &&
+                          (t2Name.includes(bKey) || bKey.includes(t2Name));
+                const r = (t1Name.includes(bKey) || bKey.includes(t1Name)) &&
+                          (t2Name.includes(aKey) || aKey.includes(t2Name));
+                return f || r;
+            }) || null;
+        }
+
         function findMatchingStreamMatchForCb(cbMatch) {
             const t1Name = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.name);
             const t1Short = normalizeTeamKey(cbMatch.team1 && cbMatch.team1.short_name);
@@ -934,15 +962,81 @@
 
         function renderTopLiveScoresRow() {
             const sectionEl = document.getElementById('topLiveScoresSection');
+            const titleEl = document.getElementById('topLiveScoresTitle');
             const rowEl = document.getElementById('liveScoresRow');
             const countEl = document.getElementById('topLiveScoresCount');
 
-            if (cat !== 'cricket') {
+            if (cat !== 'cricket' && cat !== 'football') {
                 sectionEl.classList.remove('visible');
                 return;
             }
 
             sectionEl.classList.add('visible');
+
+            if (cat === 'football') {
+                if (titleEl) titleEl.innerText = 'Live Football Scores';
+
+                if (!Array.isArray(footballMatchesFlat) || footballMatchesFlat.length === 0) {
+                    if (countEl) countEl.innerText = '';
+                    rowEl.innerHTML = `
+                        <div class="cb-score-card" style="min-width: 260px; color: #94a3b8; font-size: 12.5px; cursor: default;">
+                            No live football matches right now.
+                            <div class="cb-bottom-bar"></div>
+                        </div>
+                    `;
+                    return;
+                }
+
+                if (countEl) {
+                    countEl.innerText = `${footballMatchesFlat.length} Live`;
+                }
+
+                rowEl.innerHTML = footballMatchesFlat.map(fm => {
+                    const leagueTitle = fm.league || 'Football';
+                    const rightBadge = fm.statusText || (fm.isLive ? '● LIVE' : 'LIVE');
+                    const homeName = fm.homeName || 'Home';
+                    const awayName = fm.awayName || 'Away';
+                    const homeScore = fm.homeScore ?? 0;
+                    const awayScore = fm.awayScore ?? 0;
+                    const statusLine = fm.scoreStr || `${homeScore} - ${awayScore}`;
+                    const matchedStream = findMatchingStreamMatchByTeams(homeName, awayName);
+
+                    return `
+                        <div class="cb-score-card"
+                             data-fb-id="${escapeAttr(fm.id || '')}"
+                             data-stream-id="${escapeAttr(matchedStream ? matchedStream.id : '')}"
+                             data-stream-title="${escapeAttr(matchedStream ? matchedStream.title : '')}">
+                            <div class="cb-card-top">
+                                <span class="cb-series-name" title="${escapeAttr(leagueTitle)}">${escapeAttr(leagueTitle)}</span>
+                                <span class="cb-match-desc">${escapeAttr(rightBadge)}</span>
+                            </div>
+
+                            <div class="cb-team-row">
+                                <div class="cb-team-left">
+                                    ${renderTeamFlagImg(fm.homeLogo, homeName, homeName, 'cb-team-flag')}
+                                    <span class="cb-team-code" title="${escapeAttr(homeName)}">${escapeAttr(homeName)}</span>
+                                </div>
+                                <span class="cb-team-score">${escapeAttr(String(homeScore))}</span>
+                            </div>
+
+                            <div class="cb-team-row">
+                                <div class="cb-team-left">
+                                    ${renderTeamFlagImg(fm.awayLogo, awayName, awayName, 'cb-team-flag')}
+                                    <span class="cb-team-code" title="${escapeAttr(awayName)}">${escapeAttr(awayName)}</span>
+                                </div>
+                                <span class="cb-team-score">${escapeAttr(String(awayScore))}</span>
+                            </div>
+
+                            <div class="cb-status-text" title="${escapeAttr(statusLine)}">Score: ${escapeAttr(statusLine)}</div>
+
+                            <div class="cb-bottom-bar"></div>
+                        </div>
+                    `;
+                }).join('');
+                return;
+            }
+
+            if (titleEl) titleEl.innerText = 'Live Scores';
 
             if (!Array.isArray(cricbuzzMatchesFlat) || cricbuzzMatchesFlat.length === 0) {
                 if (countEl) countEl.innerText = '';
@@ -1047,6 +1141,63 @@
             }
         }
 
+        function normalizeFootballPayload(rawJson) {
+            if (!rawJson) return [];
+            if (Array.isArray(rawJson.matches)) return rawJson.matches;
+
+            const leagues = Array.isArray(rawJson?.data?.leagues) ? rawJson.data.leagues : [];
+            const list = [];
+            for (const league of leagues) {
+                for (const m of league.matches || []) {
+                    list.push({
+                        id: m.id,
+                        league: league.name || '',
+                        leagueLogo: league.logo || '',
+                        homeName: m.home?.name || m.home?.shortName || 'Home',
+                        homeScore: m.home?.score ?? 0,
+                        homeLogo: m.home?.logo || '',
+                        awayName: m.away?.name || m.away?.shortName || 'Away',
+                        awayScore: m.away?.score ?? 0,
+                        awayLogo: m.away?.logo || '',
+                        scoreStr: m.status?.scoreStr || `${m.home?.score ?? 0} - ${m.away?.score ?? 0}`,
+                        statusText: m.statusText || m.status?.liveTime?.short || 'LIVE',
+                        isLive: Boolean(m.isLive ?? m.status?.ongoing)
+                    });
+                }
+            }
+            return list;
+        }
+
+        async function loadFootballLiveScores() {
+            if (cat !== 'football') return;
+            try {
+                let parsedList = null;
+                try {
+                    const res = await fetch(`${FOOTBALL_LIVE_API}?timezone=Asia/Colombo&t=${Date.now()}`, { cache: 'no-store' });
+                    if (res.ok) {
+                        const json = await res.json();
+                        if (Array.isArray(json.matches)) {
+                            parsedList = json.matches;
+                        } else if (json?.data?.leagues) {
+                            parsedList = normalizeFootballPayload(json);
+                        }
+                    }
+                } catch (_) {}
+
+                if (!parsedList) {
+                    const directRes = await fetch(`${FOOTBALL_DIRECT_FALLBACK}?timezone=Asia/Colombo&t=${Date.now()}`, { cache: 'no-store' });
+                    if (!directRes.ok) return;
+                    const directJson = await directRes.json();
+                    parsedList = normalizeFootballPayload(directJson);
+                }
+
+                footballMatchesFlat = parsedList;
+                renderTopLiveScoresRow();
+            } catch (err) {
+                console.error('Football live scores error:', err);
+            }
+        }
+
         function setStatusView(view) {
             activeStatusView = view;
             const allBtn = document.getElementById('tabAllBtn');
@@ -1115,6 +1266,7 @@
             socket.on('refreshMatchesData', () => {
                 loadSportsFeed();
                 loadCricbuzzLiveScores();
+                loadFootballLiveScores();
             });
         }
 
@@ -1304,8 +1456,10 @@
 
         loadSportsFeed();
         loadCricbuzzLiveScores();
+        loadFootballLiveScores();
         setInterval(loadSportsFeed, 120000);
         setInterval(loadCricbuzzLiveScores, 15000);
+        setInterval(loadFootballLiveScores, 25000);
     </script>
 </body>
 </html>
