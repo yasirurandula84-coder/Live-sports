@@ -52,9 +52,9 @@ function hasAllowedReferer(req) {
 // Short-Lived Stream Token Store (TTL: 90s)
 const STREAM_TOKEN_SECRET = process.env.STREAM_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
 const STREAM_TOKEN_TTL_MS = 90 * 1000;
-const streamTokenRegistry = new Map(); // token -> { url, expiresAt }
+const streamTokenRegistry = new Map(); // token -> { url, expiresAt, userAgent, referer }
 
-function createStreamToken(targetUrl) {
+function createStreamToken(targetUrl, extraHeaders = {}) {
     const cleanUrl = String(targetUrl || '').trim();
     if (!cleanUrl) return null;
 
@@ -74,7 +74,12 @@ function createStreamToken(targetUrl) {
 
     const token = `${randomPart}.${sigPart}`;
     const expiresAt = now + STREAM_TOKEN_TTL_MS;
-    streamTokenRegistry.set(token, { url: cleanUrl, expiresAt });
+    streamTokenRegistry.set(token, {
+        url: cleanUrl,
+        expiresAt,
+        userAgent: String(extraHeaders.userAgent || '').trim(),
+        referer: String(extraHeaders.referer || '').trim()
+    });
     return token;
 }
 
@@ -153,7 +158,10 @@ function parseM3uPlaylist(rawText) {
         } else if (!line.startsWith('#')) {
             const rawStreamUrl = line.trim();
             const titleName = pendingName || `Channel ${channels.length + 1}`;
-            const streamToken = createStreamToken(rawStreamUrl);
+            const streamToken = createStreamToken(rawStreamUrl, {
+                userAgent: pendingUserAgent,
+                referer: pendingReferer
+            });
             const isMpd = rawStreamUrl.toLowerCase().includes('.mpd');
             const streamUrl = isMpd
                 ? `/mpd-proxy?token=${encodeURIComponent(streamToken)}`
@@ -557,8 +565,15 @@ app.get('/hls-proxy', async (req, res) => {
     }
 
     try {
+        const tokenEntry = streamTokenRegistry.get(token);
+        const upstreamHeaders = {
+            ...UPSTREAM_STREAM_HEADERS,
+            ...(tokenEntry && tokenEntry.userAgent ? { 'User-Agent': tokenEntry.userAgent } : {}),
+            ...(tokenEntry && tokenEntry.referer ? { 'Referer': tokenEntry.referer } : {})
+        };
+
         const response = await fetch(targetUrl, {
-            headers: UPSTREAM_STREAM_HEADERS,
+            headers: upstreamHeaders,
             redirect: 'follow',
             signal: AbortSignal.timeout(15000)
         });
@@ -595,7 +610,7 @@ app.get('/hls-proxy', async (req, res) => {
                             const absoluteUri = uri.startsWith('http')
                                 ? uri
                                 : new URL(uri, baseUrl).toString();
-                            const childToken = createStreamToken(absoluteUri);
+                            const childToken = createStreamToken(absoluteUri, tokenEntry || {});
                             return `URI="/hls-proxy?token=${encodeURIComponent(childToken)}"`;
                         });
                     }
@@ -604,7 +619,7 @@ app.get('/hls-proxy', async (req, res) => {
                     const absoluteUrl = trimmed.startsWith('http')
                         ? trimmed
                         : new URL(trimmed, baseUrl).toString();
-                    const segToken = createStreamToken(absoluteUrl);
+                    const segToken = createStreamToken(absoluteUrl, tokenEntry || {});
                     return `/hls-proxy?token=${encodeURIComponent(segToken)}`;
                 }
             });
@@ -659,6 +674,19 @@ io.on('connection', (socket) => {
 
     socket.on('triggerRefresh', async () => {
         io.emit('refreshMatchesData');
+    });
+
+    socket.on('requestHlsToken', ({ url, userAgent, referer }) => {
+        const cleanUrl = String(url || '').trim();
+        if (!cleanUrl) {
+            socket.emit('hlsProxyToken', { error: 'Missing URL' });
+            return;
+        }
+        const token = createStreamToken(cleanUrl, { userAgent, referer });
+        socket.emit('hlsProxyToken', {
+            originalUrl: cleanUrl,
+            proxyUrl: `/hls-proxy?token=${encodeURIComponent(token)}`
+        });
     });
 
     socket.on('requestStreamLink', async ({ matchId, serverType }) => {
@@ -763,166 +791,6 @@ io.on('connection', (socket) => {
         console.log('User disconnected: ' + socket.id);
     });
 });
-
-// --- Auto-Post Newly LIVE Matches to StreamX Telegram Group (Country Emoji) ---
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
-const TELEGRAM_CHAT_ID = process.env.TELEGRAM_CHAT_ID || '';
-const PUBLIC_SITE_URL = (process.env.PUBLIC_SITE_URL || 'https://www.streamx.website').replace(/\/+$/, '');
-const EXTERNAL_SPORTS_FEED_URL = 'https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json';
-
-const announcedLiveMatches = new Set();
-let isTelegramCheckRunning = false;
-
-const TEAM_COUNTRY_EMOJIS = {
-    'india': '🇮🇳',
-    'new zealand': '🇳🇿',
-    'sri lanka': '🇱🇰',
-    'australia': '🇦🇺',
-    'england': '🏴󠁧󠁢󠁥󠁮󠁧󠁿',
-    'pakistan': '🇵🇰',
-    'south africa': '🇿🇦',
-    'bangladesh': '🇧🇩',
-    'afghanistan': '🇦🇫',
-    'west indies': '🇯🇲',
-    'ireland': '🇮🇪',
-    'zimbabwe': '🇿🇼',
-    'netherlands': '🇳🇱',
-    'scotland': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
-    'nepal': '🇳🇵',
-    'uae': '🇦🇪',
-    'united arab emirates': '🇦🇪',
-    'oman': '🇴🇲',
-    'usa': '🇺🇸',
-    'united states': '🇺🇸',
-    'canada': '🇨🇦',
-    'namibia': '🇳🇦',
-    'kenya': '🇰🇪',
-    'argentina': '🇦🇷',
-    'brazil': '🇧🇷',
-    'france': '🇫🇷',
-    'germany': '🇩🇪',
-    'spain': '🇪🇸',
-    'portugal': '🇵🇹',
-    'italy': '🇮🇹',
-    'japan': '🇯🇵',
-    'south korea': '🇰🇷',
-    'china': '🇨🇳'
-};
-
-function getTeamCountryEmoji(teamName) {
-    const clean = String(teamName || '').trim().toLowerCase();
-    if (!clean) return '🏳️';
-    if (TEAM_COUNTRY_EMOJIS[clean]) return TEAM_COUNTRY_EMOJIS[clean];
-
-    for (const [key, emoji] of Object.entries(TEAM_COUNTRY_EMOJIS)) {
-        if (clean.includes(key)) return emoji;
-    }
-    return '🏳️';
-}
-
-function escapeHtml(text) {
-    return String(text || '')
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
-function buildMatchSlug(cat, idx, title) {
-    return `${(cat || 'other').toLowerCase()}-${idx}-${(title || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}`;
-}
-
-async function sendTelegramLivePost(matchPayload) {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-
-    const { title, teamA, teamB, category, startTime, watchUrl } = matchPayload;
-    const emojiA = getTeamCountryEmoji(teamA);
-    const emojiB = getTeamCountryEmoji(teamB);
-    const teamsLine = (teamA || teamB)
-        ? `${emojiA} <b>${escapeHtml(teamA || 'Team A')}</b> vs ${emojiB} <b>${escapeHtml(teamB || 'Team B')}</b>`
-        : '';
-
-    const messageText = [
-        `🔴 <b>LIVE NOW ON STREAMX</b>`,
-        ``,
-        `🏏 <b>Match:</b> ${escapeHtml(title)}`,
-        teamsLine ? `🆚 <b>Teams:</b> ${teamsLine}` : '',
-        category ? `📂 <b>Category:</b> ${escapeHtml(category)}` : '',
-        startTime ? `🕒 <b>Start Time:</b> ${escapeHtml(startTime)}` : '',
-        `🌐 <b>Site:</b> <a href="${PUBLIC_SITE_URL}">www.streamx.website</a>`,
-        `▶️ <b>Watch Live:</b> <a href="${watchUrl}">Click Here to Watch</a>`
-    ].filter(Boolean).join('\n');
-
-    const baseTgApi = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
-    const msgRes = await fetch(`${baseTgApi}/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            chat_id: TELEGRAM_CHAT_ID,
-            text: messageText,
-            parse_mode: 'HTML',
-            disable_web_page_preview: false
-        }),
-        signal: AbortSignal.timeout(12000)
-    });
-
-    if (!msgRes.ok) {
-        const errText = await msgRes.text().catch(() => '');
-        console.error('[TG-AUTO] Failed to send message:', msgRes.status, errText);
-    }
-}
-
-async function checkAndAnnounceLiveMatches() {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) return;
-    if (isTelegramCheckRunning) return;
-    isTelegramCheckRunning = true;
-
-    try {
-        const res = await fetch(`${EXTERNAL_SPORTS_FEED_URL}?t=${Date.now()}`, {
-            cache: 'no-store',
-            signal: AbortSignal.timeout(15000)
-        });
-        if (!res.ok) return;
-
-        const data = await res.json();
-        const matches = Array.isArray(data.matches) ? data.matches : [];
-
-        for (let idx = 0; idx < matches.length; idx++) {
-            const m = matches[idx];
-            const status = String(m.status || '').trim().toUpperCase();
-            if (status !== 'LIVE') continue;
-
-            const info = m.eventInfo || {};
-            const teamA = info.teamA || '';
-            const teamB = info.teamB || '';
-            const title = m.event_name || `${teamA || 'Team A'} Vs ${teamB || 'Team B'}`;
-            const slugId = buildMatchSlug(m.Category, idx, title);
-            const uniqueKey = `${slugId}|${title.toLowerCase()}`;
-
-            if (announcedLiveMatches.has(uniqueKey)) continue;
-            announcedLiveMatches.add(uniqueKey);
-
-            const watchUrl = `${PUBLIC_SITE_URL}/match?id=${encodeURIComponent(slugId)}&title=${encodeURIComponent(title)}`;
-
-            await sendTelegramLivePost({
-                title,
-                teamA,
-                teamB,
-                category: m.Category || '',
-                startTime: info.startTime || '',
-                watchUrl
-            });
-        }
-    } catch (error) {
-        console.error('[TG-AUTO] Feed check error:', error.message);
-    } finally {
-        isTelegramCheckRunning = false;
-    }
-}
-
-if (TELEGRAM_BOT_TOKEN && TELEGRAM_CHAT_ID) {
-    setTimeout(checkAndAnnounceLiveMatches, 5000);
-    setInterval(checkAndAnnounceLiveMatches, 60 * 1000);
-}
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
