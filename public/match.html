@@ -1244,6 +1244,119 @@
             }).join('');
         }
 
+        function requestHlsProxyUrlViaSocket(rawUrl, userAgent, referer) {
+            return new Promise((resolve) => {
+                if (!socket || !rawUrl) {
+                    resolve(null);
+                    return;
+                }
+                let settled = false;
+                const timer = setTimeout(() => {
+                    if (!settled) {
+                        settled = true;
+                        resolve(null);
+                    }
+                }, 4000);
+
+                socket.once('hlsProxyToken', (payload) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    if (payload && payload.proxyUrl && payload.originalUrl === rawUrl) {
+                        resolve(payload.proxyUrl);
+                    } else {
+                        resolve(null);
+                    }
+                });
+
+                socket.emit('requestHlsToken', {
+                    url: rawUrl,
+                    userAgent: userAgent || '',
+                    referer: referer || ''
+                });
+            });
+        }
+
+        function startHlsSource(sourceUrl, streamObj, myToken, allowProxyFallback) {
+            if (currentHls) {
+                try { currentHls.destroy(); } catch (e) {}
+                currentHls = null;
+            }
+
+            let proxyFallbackTriggered = false;
+            const triggerProxyFallback = async () => {
+                if (!allowProxyFallback || proxyFallbackTriggered || myToken !== streamAttemptToken) {
+                    showStreamError(
+                        'Stream Not Working',
+                        'This server is offline or blocked. Please try another server.',
+                        myToken
+                    );
+                    return;
+                }
+                proxyFallbackTriggered = true;
+                const proxiedUrl = await requestHlsProxyUrlViaSocket(
+                    streamObj.stream_url.trim(),
+                    streamObj.user_agent || streamObj.userAgent || '',
+                    streamObj.referer || ''
+                );
+                if (myToken !== streamAttemptToken) return;
+                if (proxiedUrl) {
+                    startHlsSource(proxiedUrl, streamObj, myToken, false);
+                } else {
+                    showStreamError(
+                        'Stream Not Working',
+                        'This server is offline or blocked. Please try another server.',
+                        myToken
+                    );
+                }
+            };
+
+            if (window.Hls && Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true
+                });
+                currentHls = hls;
+                hls.loadSource(sourceUrl);
+                hls.attachMedia(video);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
+                    if (myToken !== streamAttemptToken) return;
+                    setupHlsQualityMenu(hls, data.levels || hls.levels || []);
+                    await kickPlayNow();
+                    if (myToken !== streamAttemptToken) return;
+                    hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
+                });
+
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (myToken !== streamAttemptToken) return;
+                    if (data && data.fatal) {
+                        triggerProxyFallback();
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = sourceUrl;
+                video.addEventListener('loadedmetadata', async function () {
+                    if (myToken !== streamAttemptToken) return;
+                    await kickPlayNow();
+                    if (myToken !== streamAttemptToken) return;
+                    hideOverlaysSafely();
+                    startWarmupBlurAfterConnect();
+                }, { once: true });
+                video.addEventListener('error', function () {
+                    if (myToken !== streamAttemptToken) return;
+                    triggerProxyFallback();
+                }, { once: true });
+            } else {
+                showStreamError(
+                    'Stream Not Working',
+                    'Unsupported stream format on this device. Please try another server.',
+                    myToken
+                );
+            }
+        }
+
         async function initLiveTvStream() {
             isMatchLive = true;
             playerCountdownOverlay.classList.add('hidden');
@@ -1288,7 +1401,9 @@
                     stream_url: matchedCh.stream_url || (matchedCh.raw_url ? `/hls-proxy?url=${encodeURIComponent(matchedCh.raw_url)}` : ''),
                     raw_url: matchedCh.raw_url || '',
                     kid: matchedCh.kid || tvKidParam,
-                    key: matchedCh.key || tvKeyParam
+                    key: matchedCh.key || tvKeyParam,
+                    user_agent: matchedCh.userAgent || '',
+                    referer: matchedCh.referer || ''
                 };
 
                 activeServersMap = { server1: tvObj };
@@ -1637,49 +1752,24 @@
                 }
             }
 
-            if (window.Hls && Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true
-                });
-                currentHls = hls;
-                hls.loadSource(directLink);
-                hls.attachMedia(video);
+            // .m3u8 / HLS streams: custom user_agent or referer thiyenawanam proxy haraha, nathnam direct try karala error unoth proxy fallback
+            const hasCustomHeaders = Boolean(streamObj.user_agent || streamObj.userAgent || streamObj.referer);
+            const alreadyProxied = directLink.includes('/hls-proxy');
 
-                hls.on(Hls.Events.MANIFEST_PARSED, async function (event, data) {
-                    if (myToken !== streamAttemptToken) return;
-                    setupHlsQualityMenu(hls, data.levels || hls.levels || []);
-                    await kickPlayNow();
-                    if (myToken !== streamAttemptToken) return;
-                    hideOverlaysSafely();
-                    startWarmupBlurAfterConnect();
-                });
-
-                hls.on(Hls.Events.ERROR, function (event, data) {
-                    if (myToken !== streamAttemptToken) return;
-                    if (data.fatal) {
-                        showStreamError(
-                            'Stream Not Working',
-                            'This server is offline or blocked. Please try another server.',
-                            myToken
-                        );
-                    }
-                });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = directLink;
-                video.addEventListener('loadedmetadata', async function () {
-                    if (myToken !== streamAttemptToken) return;
-                    await kickPlayNow();
-                    if (myToken !== streamAttemptToken) return;
-                    hideOverlaysSafely();
-                    startWarmupBlurAfterConnect();
-                }, { once: true });
-            } else {
-                showStreamError(
-                    'Stream Not Working',
-                    'Unsupported stream format on this device. Please try another server.',
-                    myToken
+            if (!alreadyProxied && hasCustomHeaders && socket) {
+                const proxiedUrl = await requestHlsProxyUrlViaSocket(
+                    directLink,
+                    streamObj.user_agent || streamObj.userAgent || '',
+                    streamObj.referer || ''
                 );
+                if (myToken !== streamAttemptToken) return;
+                if (proxiedUrl) {
+                    startHlsSource(proxiedUrl, streamObj, myToken, false);
+                    return;
+                }
             }
+
+            startHlsSource(directLink, streamObj, myToken, !alreadyProxied && Boolean(socket));
         }
 
         function loadFeedServer(serverKey) {
