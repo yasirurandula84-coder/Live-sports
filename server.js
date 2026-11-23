@@ -781,6 +781,22 @@ io.on('connection', (socket) => {
         io.to(matchId).emit('chatMessage', messageData);
     });
 
+    socket.on('sendReaction', (payload) => {
+        const matchId = socket.currentMatch;
+        if (!matchId) return;
+
+        const emoji = String((payload && payload.emoji) || '').trim().slice(0, 12);
+        const label = String((payload && payload.label) || '').trim().slice(0, 24);
+        if (!emoji) return;
+
+        io.to(matchId).emit('stadiumReaction', {
+            id: 'rx_' + Date.now() + Math.random().toString(36).substring(2, 6),
+            emoji,
+            label,
+            username: socket.username || 'Fan'
+        });
+    });
+
     socket.on('disconnect', () => {
         if (socket.currentMatch && matchViewers[socket.currentMatch]) {
             matchViewers[socket.currentMatch]--;
