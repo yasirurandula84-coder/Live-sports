@@ -127,57 +127,6 @@
             width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; z-index: 2;
         }
 
-        /* Floating Stadium Emoji Reactions Layer */
-        .stadium-reactions-layer {
-            position: absolute;
-            inset: 0;
-            z-index: 19;
-            pointer-events: none;
-            overflow: hidden;
-        }
-        .floating-reaction {
-            position: absolute;
-            bottom: 56px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 2px;
-            animation: floatUpReaction 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-            will-change: transform, opacity;
-            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.65));
-        }
-        .floating-reaction .rx-emoji {
-            font-size: 32px;
-            line-height: 1;
-        }
-        .floating-reaction .rx-tag {
-            font-size: 10px;
-            font-weight: 800;
-            color: #fff;
-            background: rgba(15, 16, 26, 0.78);
-            border: 1px solid rgba(255, 255, 255, 0.16);
-            padding: 2px 7px;
-            border-radius: 999px;
-            white-space: nowrap;
-        }
-        @keyframes floatUpReaction {
-            0% {
-                opacity: 0;
-                transform: translateY(18px) scale(0.65);
-            }
-            15% {
-                opacity: 1;
-                transform: translateY(-10px) scale(1.08);
-            }
-            75% {
-                opacity: 1;
-            }
-            100% {
-                opacity: 0;
-                transform: translateY(-230px) scale(0.95);
-            }
-        }
-
         .player-thumb-overlay {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover; background: #000; z-index: 15; transition: opacity 0.2s ease;
@@ -635,30 +584,32 @@
             color: #a5b4fc;
         }
 
-        /* Clean, neat server buttons */
+        /* Enhanced Stylish Server Buttons */
         .server-selector {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
             gap: 10px;
             margin: 14px 0;
-            max-height: 142px;
+            max-height: 150px;
             overflow-y: auto;
-            padding: 6px;
-            background: rgba(255, 255, 255, 0.02);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
+            padding: 10px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+            border: 1px solid rgba(255, 255, 255, 0.09);
+            border-radius: 16px;
+            box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
         }
         .server-selector button {
-            background: linear-gradient(145deg, #171720, #121218);
+            position: relative;
+            background: linear-gradient(145deg, #191a24, #111218);
             color: #e2e8f0;
-            border: 1px solid rgba(255, 255, 255, 0.09);
+            border: 1px solid rgba(255, 255, 255, 0.1);
             padding: 10px 12px;
-            border-radius: 11px;
+            border-radius: 12px;
             cursor: pointer;
             font-weight: 700;
             font-size: 12px;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.28);
+            transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.05);
             display: flex;
             align-items: center;
             gap: 8px;
@@ -669,10 +620,13 @@
             flex-shrink: 0;
             font-size: 10px;
             font-weight: 800;
-            padding: 2px 6px;
-            border-radius: 6px;
-            background: rgba(255, 255, 255, 0.07);
-            color: #a5b4fc;
+            letter-spacing: 0.3px;
+            padding: 3px 7px;
+            border-radius: 7px;
+            background: rgba(99, 102, 241, 0.14);
+            border: 1px solid rgba(165, 180, 252, 0.22);
+            color: #c7d2fe;
+            transition: all 0.2s ease;
         }
         .server-selector button span.srv-label {
             overflow: hidden;
@@ -680,20 +634,40 @@
             white-space: nowrap;
             flex: 1;
         }
+        .server-selector button .srv-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(148, 163, 184, 0.45);
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+        }
         .server-selector button:hover {
-            border-color: rgba(99, 102, 241, 0.6);
+            transform: translateY(-2px);
+            border-color: rgba(129, 140, 248, 0.65);
             color: #fff;
-            background: linear-gradient(145deg, #1e1e2b, #161620);
+            background: linear-gradient(145deg, #212333, #151620);
+            box-shadow: 0 8px 18px rgba(79, 70, 229, 0.22);
+        }
+        .server-selector button:hover .srv-dot {
+            background: #a5b4fc;
+            box-shadow: 0 0 8px #a5b4fc;
         }
         .server-selector button.active-server {
-            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
-            border-color: rgba(165, 180, 252, 0.55);
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 55%, #4338ca 100%);
+            border-color: rgba(199, 210, 254, 0.72);
             color: #fff;
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.42);
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(99, 102, 241, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.25);
         }
         .server-selector button.active-server .srv-badge {
-            background: rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.22);
+            border-color: rgba(255, 255, 255, 0.35);
             color: #fff;
+        }
+        .server-selector button.active-server .srv-dot {
+            background: #4ade80;
+            box-shadow: 0 0 9px #4ade80;
         }
 
         .match-info-bar {
@@ -713,23 +687,23 @@
         }
         @media (max-width: 900px) { .watch-container { grid-template-columns: 1fr; } }
 
-        .chat-column {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
+        /* Chat Box + Top-to-Bottom YouTube-Style Reaction Menu + Chat-Scoped Floating Emojis */
         .chat-box {
+            position: relative;
             background: var(--card-bg); border: 1px solid var(--border-color);
             border-radius: 18px; display: flex; flex-direction: column;
             height: 530px; overflow: hidden; box-shadow: 0 15px 35px rgba(0,0,0,0.5);
         }
         .chat-header {
+            position: relative;
+            z-index: 6;
             background: rgba(255, 255, 255, 0.02); padding: 16px; font-weight: 700;
             font-size: 15px; border-bottom: 1px solid var(--border-color); color: #fff;
             display: flex; align-items: center; gap: 8px;
         }
         .chat-messages {
+            position: relative;
+            z-index: 2;
             flex: 1; padding: 16px; overflow-y: auto; display: flex;
             flex-direction: column; gap: 12px;
         }
@@ -739,9 +713,161 @@
             animation: fadeIn 0.3s ease;
         }
         .msg-user { font-weight: 700; margin-bottom: 4px; }
+
+        /* Chat-Scoped Reactions Floating Layer (Only inside .chat-box, never over video) */
+        .chat-box-reactions-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 8;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .chat-floating-emoji {
+            position: absolute;
+            bottom: 62px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            animation: floatUpInsideChat 2.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            will-change: transform, opacity;
+            filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.65));
+        }
+        .chat-floating-emoji .rx-glyph {
+            font-size: 26px;
+            line-height: 1;
+        }
+        .chat-floating-emoji .rx-badge {
+            font-size: 9.5px;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(20, 21, 34, 0.86);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            padding: 1px 6px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        @keyframes floatUpInsideChat {
+            0% {
+                opacity: 0;
+                transform: translateY(12px) scale(0.7);
+            }
+            16% {
+                opacity: 1;
+                transform: translateY(-6px) scale(1.06);
+            }
+            75% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-340px) scale(0.92);
+            }
+        }
+
+        /* Wrapper above Chat Send Button for Reactions Button + Top-to-Bottom Dropdown Menu */
+        .chat-composer-wrap {
+            position: relative;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.25);
+            border-top: 1px solid var(--border-color);
+        }
+        .chat-action-strip {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 8px 14px 0 14px;
+            position: relative;
+        }
+        .reactions-trigger-btn {
+            background: rgba(99, 102, 241, 0.14);
+            border: 1px solid rgba(165, 180, 252, 0.35);
+            color: #e0e7ff;
+            padding: 5px 11px;
+            border-radius: 9px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .reactions-trigger-btn:hover,
+        .reactions-trigger-btn.open {
+            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+            color: #fff;
+            border-color: rgba(199, 210, 254, 0.65);
+        }
+
+        /* YouTube-Style Dropdown Menu: Animates Top-to-Bottom (scaleY / max-height from top) */
+        .yt-reaction-dropdown {
+            position: absolute;
+            right: 14px;
+            top: calc(100% + 4px);
+            width: 176px;
+            background: rgba(20, 21, 31, 0.98);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 12px;
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.72);
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            transform-origin: top center;
+            transform: scaleY(0) translateY(-8px);
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+            transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.18s ease, visibility 0.18s ease;
+            z-index: 30;
+        }
+        .yt-reaction-dropdown.open {
+            transform: scaleY(1) translateY(0);
+            opacity: 1;
+            visibility: visible;
+            pointer-events: auto;
+        }
+        .yt-reaction-item {
+            background: transparent;
+            border: none;
+            color: #e5e7eb;
+            padding: 7px 10px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            text-align: left;
+            transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+        }
+        .yt-reaction-item:hover {
+            background: rgba(99, 102, 241, 0.24);
+            color: #fff;
+            transform: translateX(2px);
+        }
+        .yt-reaction-item .rx-item-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .yt-reaction-item .rx-item-emoji {
+            font-size: 16px;
+            line-height: 1;
+        }
+        .yt-reaction-item .rx-item-tag {
+            font-size: 10px;
+            color: #a5b4fc;
+            font-weight: 800;
+        }
+
         .chat-input-area {
-            display: flex; padding: 14px; background: rgba(0, 0, 0, 0.2);
-            border-top: 1px solid var(--border-color); gap: 10px;
+            display: flex; padding: 10px 14px 14px 14px;
+            gap: 10px;
         }
         .chat-input-area input {
             flex: 1; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
@@ -755,51 +881,6 @@
             cursor: pointer; transition: filter 0.3s;
         }
         .chat-input-area button:hover { filter: brightness(1.1); }
-
-        /* Stadium Reactions Bar Below Chat Box */
-        .stadium-reactions-bar {
-            background: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 14px;
-            padding: 10px 12px;
-            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-        }
-        .stadium-reactions-title {
-            font-size: 11px;
-            font-weight: 700;
-            color: #9ca3af;
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .stadium-reactions-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
-        .reaction-chip-btn {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #f3f4f6;
-            padding: 6px 10px;
-            border-radius: 999px;
-            font-size: 11.5px;
-            font-weight: 700;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-            transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
-        }
-        .reaction-chip-btn:hover {
-            background: rgba(99, 102, 241, 0.22);
-            border-color: rgba(165, 180, 252, 0.5);
-            transform: translateY(-1px);
-        }
-        .reaction-chip-btn:active {
-            transform: scale(0.94);
-        }
 
         /* Copyright & Rights Attribution Notice at Bottom */
         .copyright-notice-box {
@@ -954,8 +1035,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <div id="stadiumReactionsLayer" class="stadium-reactions-layer" aria-hidden="true"></div>
                     
                     <video id="hlsPlayer" playsinline autoplay></video>
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
@@ -1030,29 +1109,50 @@
                 </div>
             </div>
 
-            <!-- Live Chat Box + Stadium Reactions Below Chat -->
-            <div class="chat-column">
-                <div class="chat-box">
-                    <div class="chat-header"><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Live Fan Chat</div>
-                    <div class="chat-messages" id="chatMessages"></div>
+            <!-- Live Chat Box with Reactions Above Send Button & Reactions Floating Inside Chat Box Only -->
+            <div class="chat-box" id="chatBox">
+                <div class="chat-header"><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Live Fan Chat</div>
+
+                <!-- Reactions float only inside chat box from bottom of chat box to top of chat box -->
+                <div id="chatBoxReactionsLayer" class="chat-box-reactions-layer" aria-hidden="true"></div>
+
+                <div class="chat-messages" id="chatMessages"></div>
+
+                <div class="chat-composer-wrap">
+                    <div class="chat-action-strip">
+                        <button type="button" class="reactions-trigger-btn" id="reactionsMenuBtn" aria-expanded="false" aria-controls="ytReactionDropdown">
+                            <i class="fa-regular fa-face-smile-beam"></i> Reactions <i class="fa-solid fa-chevron-down" style="font-size: 10px;"></i>
+                        </button>
+
+                        <!-- YouTube-style top-to-bottom dropdown menu -->
+                        <div class="yt-reaction-dropdown" id="ytReactionDropdown" role="menu">
+                            <button type="button" class="yt-reaction-item" data-emoji="🏏" data-label="SIX!">
+                                <span class="rx-item-left"><span class="rx-item-emoji">🏏</span><span>Six</span></span>
+                                <span class="rx-item-tag">SIX!</span>
+                            </button>
+                            <button type="button" class="yt-reaction-item" data-emoji="🔥" data-label="GOAL!">
+                                <span class="rx-item-left"><span class="rx-item-emoji">🔥</span><span>Goal</span></span>
+                                <span class="rx-item-tag">GOAL!</span>
+                            </button>
+                            <button type="button" class="yt-reaction-item" data-emoji="👏" data-label="WICKET!">
+                                <span class="rx-item-left"><span class="rx-item-emoji">👏</span><span>Wicket</span></span>
+                                <span class="rx-item-tag">OUT!</span>
+                            </button>
+                            <button type="button" class="yt-reaction-item" data-emoji="❤️" data-label="LOVE!">
+                                <span class="rx-item-left"><span class="rx-item-emoji">❤️</span><span>Cheer</span></span>
+                                <span class="rx-item-tag">LOVE</span>
+                            </button>
+                            <button type="button" class="yt-reaction-item" data-emoji="⚡" data-label="WOW!">
+                                <span class="rx-item-left"><span class="rx-item-emoji">⚡</span><span>Shock</span></span>
+                                <span class="rx-item-tag">WOW!</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <form class="chat-input-area" id="chatForm">
                         <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
                         <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
                     </form>
-                </div>
-
-                <div class="stadium-reactions-bar" id="stadiumReactionsBar">
-                    <div class="stadium-reactions-title">
-                        <span><i class="fa-solid fa-bolt" style="color: #facc15;"></i> Stadium Reactions</span>
-                        <span id="reactionStatusHint">Tap to cheer</span>
-                    </div>
-                    <div class="stadium-reactions-grid">
-                        <button type="button" class="reaction-chip-btn" data-emoji="🏏" data-label="SIX!">🏏 SIX</button>
-                        <button type="button" class="reaction-chip-btn" data-emoji="🔥" data-label="GOAL!">🔥 GOAL</button>
-                        <button type="button" class="reaction-chip-btn" data-emoji="👏" data-label="WICKET!">👏 WICKET</button>
-                        <button type="button" class="reaction-chip-btn" data-emoji="❤️" data-label="LOVE!">❤️ LOVE</button>
-                        <button type="button" class="reaction-chip-btn" data-emoji="⚡" data-label="WOW!">⚡ WOW</button>
-                    </div>
                 </div>
             </div>
         </div>
@@ -1233,8 +1333,9 @@
 
         const shareMatchBtn = document.getElementById('shareMatchBtn');
         const shareFeedback = document.getElementById('shareFeedback');
-        const stadiumReactionsLayer = document.getElementById('stadiumReactionsLayer');
-        const reactionStatusHint = document.getElementById('reactionStatusHint');
+        const chatBoxReactionsLayer = document.getElementById('chatBoxReactionsLayer');
+        const reactionsMenuBtn = document.getElementById('reactionsMenuBtn');
+        const ytReactionDropdown = document.getElementById('ytReactionDropdown');
         
         const qualityWrapper = document.getElementById('qualityWrapper');
         const qualityBtn = document.getElementById('qualityBtn');
@@ -1315,41 +1416,63 @@
             });
         }
 
-        // Stadium Floating Emoji Reactions
-        function spawnFloatingReaction(data) {
-            if (!stadiumReactionsLayer || !data || !data.emoji) return;
-            const el = document.createElement('div');
-            el.className = 'floating-reaction';
-            const leftPct = 10 + Math.floor(Math.random() * 72);
-            el.style.left = `${leftPct}%`;
-
-            const tagText = data.label ? `${data.emoji} ${data.label}` : data.emoji;
-            el.innerHTML = `
-                <span class="rx-emoji">${data.emoji}</span>
-                <span class="rx-tag">${tagText}</span>
-            `;
-            stadiumReactionsLayer.appendChild(el);
-            setTimeout(() => {
-                el.remove();
-            }, 2500);
+        // YouTube-Style Reaction Dropdown Toggle (Top-to-Bottom)
+        function setReactionDropdownOpen(open) {
+            if (!ytReactionDropdown || !reactionsMenuBtn) return;
+            ytReactionDropdown.classList.toggle('open', open);
+            reactionsMenuBtn.classList.toggle('open', open);
+            reactionsMenuBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
         }
 
-        document.querySelectorAll('.reaction-chip-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const now = Date.now();
-                if (now - lastReactionSentAt < 650) {
-                    if (reactionStatusHint) reactionStatusHint.innerText = 'Wait a sec...';
-                    return;
-                }
-                lastReactionSentAt = now;
-                if (reactionStatusHint) reactionStatusHint.innerText = 'Sent!';
-                setTimeout(() => {
-                    if (reactionStatusHint) reactionStatusHint.innerText = 'Tap to cheer';
-                }, 900);
+        if (reactionsMenuBtn) {
+            reactionsMenuBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = ytReactionDropdown && ytReactionDropdown.classList.contains('open');
+                setReactionDropdownOpen(!isOpen);
+            });
+        }
 
-                const emoji = btn.getAttribute('data-emoji') || '🔥';
-                const label = btn.getAttribute('data-label') || '';
-                spawnFloatingReaction({ emoji, label });
+        // Float ONLY inside Chat Box (from touched point/bottom up to the top of the chat box, never over video)
+        function spawnChatBoxReaction(data, customLeftPct) {
+            if (!chatBoxReactionsLayer || !data || !data.emoji) return;
+            const el = document.createElement('div');
+            el.className = 'chat-floating-emoji';
+            const leftPct = typeof customLeftPct === 'number'
+                ? Math.max(8, Math.min(76, customLeftPct))
+                : (12 + Math.floor(Math.random() * 66));
+            el.style.left = `${leftPct}%`;
+
+            const badgeLabel = data.label ? `${data.emoji} ${data.label}` : data.emoji;
+            el.innerHTML = `
+                <span class="rx-glyph">${data.emoji}</span>
+                <span class="rx-badge">${badgeLabel}</span>
+            `;
+            chatBoxReactionsLayer.appendChild(el);
+            setTimeout(() => {
+                el.remove();
+            }, 2300);
+        }
+
+        document.querySelectorAll('.yt-reaction-item').forEach(itemBtn => {
+            itemBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const now = Date.now();
+                if (now - lastReactionSentAt < 550) return;
+                lastReactionSentAt = now;
+
+                const emoji = itemBtn.getAttribute('data-emoji') || '🔥';
+                const label = itemBtn.getAttribute('data-label') || '';
+
+                // Compute horizontal position inside chat box near where emoji was touched
+                let pct = 38;
+                const chatBoxEl = document.getElementById('chatBox');
+                if (chatBoxEl && e.clientX) {
+                    const rect = chatBoxEl.getBoundingClientRect();
+                    pct = ((e.clientX - rect.left) / Math.max(1, rect.width)) * 100;
+                }
+
+                spawnChatBoxReaction({ emoji, label }, pct);
+                setReactionDropdownOpen(false);
 
                 if (socket) {
                     socket.emit('sendReaction', { emoji, label });
@@ -1679,7 +1802,7 @@
         function renderDynamicServerButtons(validStreams, selectedKey) {
             if (!serverSelectorEl) return;
             if (!validStreams || validStreams.length === 0) {
-                serverSelectorEl.innerHTML = `<button type="button" id="btnServer1" class="active-server" onclick="switchServer('server1')"><span class="srv-badge">S1</span><span class="srv-label">Server 1</span></button>`;
+                serverSelectorEl.innerHTML = `<button type="button" id="btnServer1" class="active-server" onclick="switchServer('server1')"><span class="srv-badge">S1</span><span class="srv-label">Server 1</span><span class="srv-dot"></span></button>`;
                 return;
             }
 
@@ -1688,7 +1811,7 @@
                 const fullLabel = formatChannelLabel(sObj, idx);
                 const safeTitle = fullLabel.replace(/"/g, '&quot;');
                 const isActive = key === selectedKey ? 'active-server' : '';
-                return `<button type="button" id="btnServer${idx + 1}" class="${isActive}" title="${safeTitle}" onclick="switchServer('${key}')"><span class="srv-badge">S${idx + 1}</span><span class="srv-label">${safeTitle}</span></button>`;
+                return `<button type="button" id="btnServer${idx + 1}" class="${isActive}" title="${safeTitle}" onclick="switchServer('${key}')"><span class="srv-badge">S${idx + 1}</span><span class="srv-label">${safeTitle}</span><span class="srv-dot"></span></button>`;
             }).join('');
         }
 
@@ -2249,7 +2372,7 @@
             });
 
             socket.on('stadiumReaction', (data) => {
-                spawnFloatingReaction(data);
+                spawnChatBoxReaction(data);
             });
         }
 
@@ -2268,7 +2391,10 @@
             e.stopPropagation();
             qualityMenu.classList.toggle('active');
         });
-        window.addEventListener('click', () => { qualityMenu.classList.remove('active'); });
+        window.addEventListener('click', () => {
+            qualityMenu.classList.remove('active');
+            setReactionDropdownOpen(false);
+        });
 
         playPauseBtn.addEventListener('click', () => {
             if (video.paused) {
