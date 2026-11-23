@@ -53,7 +53,7 @@
             color: #f3f4f6;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             margin: 0;
-            padding-bottom: 50px;
+            padding-bottom: 30px;
             overflow-x: hidden;
         }
 
@@ -110,12 +110,72 @@
             overflow: hidden; border-radius: 18px; border: 1px solid var(--border-color);
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.6);
         }
+        .custom-video-container:fullscreen,
+        .custom-video-container:-webkit-full-screen {
+            width: 100vw;
+            height: 100vh;
+            max-height: none;
+            aspect-ratio: auto;
+            border-radius: 0;
+            border: none;
+        }
         .custom-video-container video {
             width: 100%; height: 100%; object-fit: contain; position: absolute; top: 0; left: 0; z-index: 2;
         }
 
         #youtubePlayer {
             width: 100%; height: 100%; position: absolute; top: 0; left: 0; border: none; z-index: 2;
+        }
+
+        /* Floating Stadium Emoji Reactions Layer */
+        .stadium-reactions-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 19;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .floating-reaction {
+            position: absolute;
+            bottom: 56px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            animation: floatUpReaction 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            will-change: transform, opacity;
+            filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.65));
+        }
+        .floating-reaction .rx-emoji {
+            font-size: 32px;
+            line-height: 1;
+        }
+        .floating-reaction .rx-tag {
+            font-size: 10px;
+            font-weight: 800;
+            color: #fff;
+            background: rgba(15, 16, 26, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            padding: 2px 7px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        @keyframes floatUpReaction {
+            0% {
+                opacity: 0;
+                transform: translateY(18px) scale(0.65);
+            }
+            15% {
+                opacity: 1;
+                transform: translateY(-10px) scale(1.08);
+            }
+            75% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(-230px) scale(0.95);
+            }
         }
 
         .player-thumb-overlay {
@@ -308,7 +368,7 @@
         .video-controls-overlay {
             position: absolute; bottom: 0; left: 0; width: 100%; max-width: 100%;
             background: linear-gradient(to top, rgba(0,0,0,0.88), transparent);
-            padding: 12px 16px; z-index: 20; display: flex; flex-direction: column; gap: 8px;
+            padding: 12px 16px; z-index: 24; display: flex; flex-direction: column; gap: 8px;
             transition: opacity 0.3s ease;
         }
         .video-controls-overlay.hidden { opacity: 0; pointer-events: none; }
@@ -357,6 +417,124 @@
         }
         .control-btn:hover {
             background: rgba(255, 255, 255, 0.22);
+        }
+        .control-btn.active-toggle {
+            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+            border-color: rgba(165, 180, 252, 0.6);
+            color: #fff;
+        }
+
+        #fsChatToggleBtn {
+            display: none;
+        }
+        .custom-video-container:fullscreen #fsChatToggleBtn,
+        .custom-video-container:-webkit-full-screen #fsChatToggleBtn {
+            display: inline-flex;
+        }
+
+        /* Fullscreen Right-Side Live Chat Drawer */
+        .fs-chat-drawer {
+            display: none;
+            position: absolute;
+            top: 14px;
+            right: 14px;
+            bottom: 72px;
+            width: min(360px, 42vw);
+            z-index: 26;
+            background: rgba(13, 14, 21, 0.84);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 16px;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.72);
+            transform: translateX(28px);
+            opacity: 0;
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            pointer-events: none;
+        }
+        .custom-video-container:fullscreen .fs-chat-drawer.open,
+        .custom-video-container:-webkit-full-screen .fs-chat-drawer.open {
+            display: flex;
+            transform: translateX(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+        @media (max-width: 640px) {
+            .fs-chat-drawer {
+                width: min(310px, 84vw);
+                bottom: 66px;
+            }
+        }
+        .fs-chat-header {
+            padding: 11px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.03);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .fs-chat-close {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #e2e8f0;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        .fs-chat-messages {
+            flex: 1;
+            padding: 12px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .fs-chat-msg {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            line-height: 1.35;
+            animation: fadeIn 0.2s ease;
+        }
+        .fs-chat-form {
+            display: flex;
+            gap: 8px;
+            padding: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.35);
+        }
+        .fs-chat-form input {
+            flex: 1;
+            min-width: 0;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #fff;
+            padding: 8px 11px;
+            border-radius: 8px;
+            font-size: 12px;
+            outline: none;
+        }
+        .fs-chat-form button {
+            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+            border: none;
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 700;
         }
 
         #volumeSlider {
@@ -419,12 +597,50 @@
         .ping-dot.fair { background: #eab308; box-shadow: 0 0 8px #eab308; }
         .ping-dot.poor { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
 
+        /* Share Bar Below Player */
+        .player-share-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        .share-btn {
+            background: linear-gradient(135deg, var(--primary-color), #4f46e5);
+            color: #fff;
+            border: 1px solid rgba(165, 180, 252, 0.45);
+            padding: 8px 15px;
+            border-radius: 10px;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.32);
+            transition: transform 0.15s ease, filter 0.2s ease;
+        }
+        .share-btn:hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+        }
+        .share-feedback {
+            font-size: 12px;
+            font-weight: 600;
+            color: #a5b4fc;
+        }
+
         /* Clean, neat server buttons */
         .server-selector {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
             gap: 10px;
-            margin: 15px 0;
+            margin: 14px 0;
             max-height: 142px;
             overflow-y: auto;
             padding: 6px;
@@ -497,6 +713,12 @@
         }
         @media (max-width: 900px) { .watch-container { grid-template-columns: 1fr; } }
 
+        .chat-column {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
         .chat-box {
             background: var(--card-bg); border: 1px solid var(--border-color);
             border-radius: 18px; display: flex; flex-direction: column;
@@ -533,6 +755,76 @@
             cursor: pointer; transition: filter 0.3s;
         }
         .chat-input-area button:hover { filter: brightness(1.1); }
+
+        /* Stadium Reactions Bar Below Chat Box */
+        .stadium-reactions-bar {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 10px 12px;
+            box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+        }
+        .stadium-reactions-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #9ca3af;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .stadium-reactions-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .reaction-chip-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #f3f4f6;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: transform 0.15s ease, background 0.2s ease, border-color 0.2s ease;
+        }
+        .reaction-chip-btn:hover {
+            background: rgba(99, 102, 241, 0.22);
+            border-color: rgba(165, 180, 252, 0.5);
+            transform: translateY(-1px);
+        }
+        .reaction-chip-btn:active {
+            transform: scale(0.94);
+        }
+
+        /* Copyright & Rights Attribution Notice at Bottom */
+        .copyright-notice-box {
+            margin-top: 28px;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.025);
+            border: 1px solid var(--border-color);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 14px;
+            color: #9ca3af;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .copyright-notice-title {
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #e2e8f0;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+        }
+        .copyright-notice-text {
+            margin: 0;
+        }
 
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -662,9 +954,24 @@
                             </div>
                         </div>
                     </div>
+
+                    <div id="stadiumReactionsLayer" class="stadium-reactions-layer" aria-hidden="true"></div>
                     
                     <video id="hlsPlayer" playsinline autoplay></video>
                     <iframe id="youtubePlayer" src="" title="Live Player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen style="display: none;"></iframe>
+
+                    <!-- Fullscreen Right-Side Live Chat Drawer -->
+                    <div class="fs-chat-drawer" id="fsChatDrawer">
+                        <div class="fs-chat-header">
+                            <span><i class="fa-solid fa-comments" style="color: #a5b4fc;"></i> Live Chat</span>
+                            <button type="button" class="fs-chat-close" id="fsChatCloseBtn" title="Close Chat"><i class="fa-solid fa-xmark"></i></button>
+                        </div>
+                        <div class="fs-chat-messages" id="fsChatMessages"></div>
+                        <form class="fs-chat-form" id="fsChatForm">
+                            <input type="text" id="fsMsgInput" placeholder="Message in live..." autocomplete="off">
+                            <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+                        </form>
+                    </div>
                     
                     <div class="video-controls-overlay" id="controlsOverlay">
                         <div class="progress-bar-container" id="progressContainer" style="display: block;">
@@ -689,11 +996,20 @@
                                     <button type="button" class="control-btn" id="qualityBtn" title="Select Quality"><i class="fa-solid fa-gear"></i></button>
                                     <ul class="quality-menu" id="qualityMenu"></ul>
                                 </div>
+                                <button type="button" class="control-btn" id="fsChatToggleBtn" title="Toggle Live Chat"><i class="fa-solid fa-comments"></i> Chat</button>
                                 <button type="button" class="control-btn" id="pipBtn" title="Picture-in-Picture"><i class="fa-solid fa-clone"></i></button>
                                 <button type="button" class="control-btn" id="fullscreenBtn" title="Fullscreen"><i class="fa-solid fa-expand"></i></button>
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <!-- Share Button Below Player (Clean Match Link Only) -->
+                <div class="player-share-bar">
+                    <button type="button" class="share-btn" id="shareMatchBtn">
+                        <i class="fa-solid fa-share-nodes"></i> Share Match
+                    </button>
+                    <span class="share-feedback" id="shareFeedback">Share clean match link with friends</span>
                 </div>
 
                 <!-- Dynamic Server Select Buttons -->
@@ -714,22 +1030,52 @@
                 </div>
             </div>
 
-            <!-- Live Chat Box -->
-            <div class="chat-box">
-                <div class="chat-header"><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Live Fan Chat</div>
-                <div class="chat-messages" id="chatMessages"></div>
-                <form class="chat-input-area" id="chatForm">
-                    <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
-                    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
-                </form>
+            <!-- Live Chat Box + Stadium Reactions Below Chat -->
+            <div class="chat-column">
+                <div class="chat-box">
+                    <div class="chat-header"><i class="fa-solid fa-comments" style="color: var(--primary-color);"></i> Live Fan Chat</div>
+                    <div class="chat-messages" id="chatMessages"></div>
+                    <form class="chat-input-area" id="chatForm">
+                        <input type="text" id="msgInput" placeholder="Type a message..." autocomplete="off">
+                        <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
+                    </form>
+                </div>
+
+                <div class="stadium-reactions-bar" id="stadiumReactionsBar">
+                    <div class="stadium-reactions-title">
+                        <span><i class="fa-solid fa-bolt" style="color: #facc15;"></i> Stadium Reactions</span>
+                        <span id="reactionStatusHint">Tap to cheer</span>
+                    </div>
+                    <div class="stadium-reactions-grid">
+                        <button type="button" class="reaction-chip-btn" data-emoji="🏏" data-label="SIX!">🏏 SIX</button>
+                        <button type="button" class="reaction-chip-btn" data-emoji="🔥" data-label="GOAL!">🔥 GOAL</button>
+                        <button type="button" class="reaction-chip-btn" data-emoji="👏" data-label="WICKET!">👏 WICKET</button>
+                        <button type="button" class="reaction-chip-btn" data-emoji="❤️" data-label="LOVE!">❤️ LOVE</button>
+                        <button type="button" class="reaction-chip-btn" data-emoji="⚡" data-label="WOW!">⚡ WOW</button>
+                    </div>
+                </div>
             </div>
         </div>
+
+        <!-- Copyright & Broadcaster Credit Disclaimer at Bottom -->
+        <footer class="copyright-notice-box" aria-label="Copyright and Broadcaster Attribution">
+            <div class="copyright-notice-title">
+                <i class="fa-regular fa-copyright" style="color: #a5b4fc;"></i> Copyright &amp; Broadcast Rights Notice
+            </div>
+            <p class="copyright-notice-text">
+                StreamX does not host, record, or store any live video broadcasts on its own servers.<br>
+                All broadcast feeds, channel names, logos, and match coverage belong exclusively to their respective rights holders and official broadcasters (including Willow, FanCode, and other partners).<br>
+                Full credit, trademark ownership, and broadcasting rights remain solely with the original content owners.<br>
+                If you are a rights holder and have concerns regarding any stream link, please contact us for prompt review.
+            </p>
+        </footer>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
         const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+        const CANONICAL_SITE_ORIGIN = "https://www.streamx.website";
 
         const TEAM_COUNTRY_CODES = {
             "india": "in",
@@ -877,6 +1223,18 @@
         const volumeSlider = document.getElementById('volumeSlider');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
         const progressBar = document.getElementById('progressBar');
+
+        const fsChatToggleBtn = document.getElementById('fsChatToggleBtn');
+        const fsChatDrawer = document.getElementById('fsChatDrawer');
+        const fsChatCloseBtn = document.getElementById('fsChatCloseBtn');
+        const fsChatMessages = document.getElementById('fsChatMessages');
+        const fsChatForm = document.getElementById('fsChatForm');
+        const fsMsgInput = document.getElementById('fsMsgInput');
+
+        const shareMatchBtn = document.getElementById('shareMatchBtn');
+        const shareFeedback = document.getElementById('shareFeedback');
+        const stadiumReactionsLayer = document.getElementById('stadiumReactionsLayer');
+        const reactionStatusHint = document.getElementById('reactionStatusHint');
         
         const qualityWrapper = document.getElementById('qualityWrapper');
         const qualityBtn = document.getElementById('qualityBtn');
@@ -903,11 +1261,101 @@
         let replyingTo = null;
         let countdownInterval = null;
         let pendingMessage = null;
+        let lastReactionSentAt = 0;
 
         let warmupFallbackTimer = null;
         let warmupActive = false;
         let lastSmoothVideoTime = -1;
         let smoothAdvanceTicks = 0;
+
+        // Clean Share Link (no stream URL, token, or extra query params)
+        function getCleanShareUrl() {
+            const baseOrigin = window.location.hostname.includes('streamx.website')
+                ? CANONICAL_SITE_ORIGIN
+                : window.location.origin;
+            const cleanUrl = new URL('/match', baseOrigin);
+            cleanUrl.searchParams.set('id', matchId || 'default-match');
+            return cleanUrl.toString();
+        }
+
+        if (shareMatchBtn) {
+            shareMatchBtn.addEventListener('click', async () => {
+                const shareUrl = getCleanShareUrl();
+                const shareTitle = document.getElementById('matchTitle')?.innerText || 'Live Match - StreamX';
+
+                if (navigator.share) {
+                    try {
+                        await navigator.share({
+                            title: shareTitle,
+                            text: `Watch ${shareTitle} live on StreamX`,
+                            url: shareUrl
+                        });
+                        if (shareFeedback) shareFeedback.innerText = 'Shared clean match link!';
+                        return;
+                    } catch (err) {
+                        if (err && err.name === 'AbortError') return;
+                    }
+                }
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        await navigator.clipboard.writeText(shareUrl);
+                    } else {
+                        const tmp = document.createElement('input');
+                        tmp.value = shareUrl;
+                        document.body.appendChild(tmp);
+                        tmp.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(tmp);
+                    }
+                    if (shareFeedback) shareFeedback.innerText = `Copied: ${shareUrl}`;
+                } catch (e) {
+                    if (shareFeedback) shareFeedback.innerText = shareUrl;
+                }
+            });
+        }
+
+        // Stadium Floating Emoji Reactions
+        function spawnFloatingReaction(data) {
+            if (!stadiumReactionsLayer || !data || !data.emoji) return;
+            const el = document.createElement('div');
+            el.className = 'floating-reaction';
+            const leftPct = 10 + Math.floor(Math.random() * 72);
+            el.style.left = `${leftPct}%`;
+
+            const tagText = data.label ? `${data.emoji} ${data.label}` : data.emoji;
+            el.innerHTML = `
+                <span class="rx-emoji">${data.emoji}</span>
+                <span class="rx-tag">${tagText}</span>
+            `;
+            stadiumReactionsLayer.appendChild(el);
+            setTimeout(() => {
+                el.remove();
+            }, 2500);
+        }
+
+        document.querySelectorAll('.reaction-chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const now = Date.now();
+                if (now - lastReactionSentAt < 650) {
+                    if (reactionStatusHint) reactionStatusHint.innerText = 'Wait a sec...';
+                    return;
+                }
+                lastReactionSentAt = now;
+                if (reactionStatusHint) reactionStatusHint.innerText = 'Sent!';
+                setTimeout(() => {
+                    if (reactionStatusHint) reactionStatusHint.innerText = 'Tap to cheer';
+                }, 900);
+
+                const emoji = btn.getAttribute('data-emoji') || '🔥';
+                const label = btn.getAttribute('data-label') || '';
+                spawnFloatingReaction({ emoji, label });
+
+                if (socket) {
+                    socket.emit('sendReaction', { emoji, label });
+                }
+            });
+        });
 
         function syncAudioUiState() {
             if (!video) return;
@@ -1696,7 +2144,6 @@
                         );
                     });
 
-                    // Fast startup & low-latency live buffering + ABR & DRM configuration
                     const shakaConfig = {
                         streaming: {
                             rebufferingGoal: 1.5,
@@ -1752,7 +2199,6 @@
                 }
             }
 
-            // .m3u8 / HLS streams: custom user_agent or referer thiyenawanam proxy haraha, nathnam direct try karala error unoth proxy fallback
             const hasCustomHeaders = Boolean(streamObj.user_agent || streamObj.userAgent || streamObj.referer);
             const alreadyProxied = directLink.includes('/hls-proxy');
 
@@ -1800,6 +2246,10 @@
                     return;
                 }
                 await playStreamItem({ stream_url: directLink });
+            });
+
+            socket.on('stadiumReaction', (data) => {
+                spawnFloatingReaction(data);
             });
         }
 
@@ -1850,6 +2300,34 @@
             syncAudioUiState();
         });
 
+        // Fullscreen Chat Drawer Toggle
+        function setFullscreenChatOpen(open) {
+            if (!fsChatDrawer || !fsChatToggleBtn) return;
+            if (open) {
+                fsChatDrawer.classList.add('open');
+                fsChatToggleBtn.classList.add('active-toggle');
+                fsChatMessages.scrollTop = fsChatMessages.scrollHeight;
+            } else {
+                fsChatDrawer.classList.remove('open');
+                fsChatToggleBtn.classList.remove('active-toggle');
+            }
+        }
+
+        if (fsChatToggleBtn) {
+            fsChatToggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isOpen = fsChatDrawer && fsChatDrawer.classList.contains('open');
+                setFullscreenChatOpen(!isOpen);
+            });
+        }
+
+        if (fsChatCloseBtn) {
+            fsChatCloseBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                setFullscreenChatOpen(false);
+            });
+        }
+
         fullscreenBtn.addEventListener('click', () => {
             if (!document.fullscreenElement) {
                 playerContainer.requestFullscreen().catch(err => alert(err.message));
@@ -1863,6 +2341,7 @@
         document.addEventListener('fullscreenchange', () => {
             if (!document.fullscreenElement) {
                 fullscreenBtn.innerHTML = '<i class="fa-solid fa-expand"></i>';
+                setFullscreenChatOpen(false);
             } else {
                 fullscreenBtn.innerHTML = '<i class="fa-solid fa-compress"></i>';
             }
@@ -1950,11 +2429,12 @@
                 socket.emit('joinMatch', { matchId, username });
             }
 
-            const msgToSend = pendingMessage || msgInput.value.trim();
+            const msgToSend = pendingMessage || msgInput.value.trim() || fsMsgInput.value.trim();
             pendingMessage = null;
             if (msgToSend) {
                 sendChatMessage(msgToSend);
                 msgInput.value = '';
+                fsMsgInput.value = '';
             }
         }
 
@@ -1965,6 +2445,21 @@
                 saveUsernameAndSend();
             }
         });
+
+        function appendFullscreenMessage(data) {
+            if (!fsChatMessages) return;
+            const userColor = getUsernameColor(data.username || 'User');
+            const item = document.createElement('div');
+            item.className = 'fs-chat-msg';
+            item.innerHTML = `
+                <div style="font-weight: 700; color: ${userColor}; margin-bottom: 2px;">
+                    ${data.username} <span style="font-weight: 400; font-size: 10px; color: #9ca3af; float: right;">${data.time || ''}</span>
+                </div>
+                <div style="color: #e5e7eb; word-break: break-word;">${data.message}</div>
+            `;
+            fsChatMessages.appendChild(item);
+            fsChatMessages.scrollTop = fsChatMessages.scrollHeight;
+        }
 
         function renderMessage(data) {
             let replyHtml = '';
@@ -2003,6 +2498,7 @@
                 </div>
             `;
             chatMessages.scrollTop = chatMessages.scrollHeight;
+            appendFullscreenMessage(data);
         }
 
         if (socket) {
@@ -2012,6 +2508,7 @@
 
             socket.on('chatHistory', (history) => {
                 chatMessages.innerHTML = '';
+                if (fsChatMessages) fsChatMessages.innerHTML = '';
                 history.forEach(data => renderMessage(data));
             });
 
@@ -2033,6 +2530,7 @@
                 });
             }
             msgInput.value = '';
+            if (fsMsgInput) fsMsgInput.value = '';
             cancelReply();
         }
 
@@ -2048,6 +2546,24 @@
 
             sendChatMessage(msg);
         });
+
+        if (fsChatForm) {
+            fsChatForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const msg = fsMsgInput.value.trim();
+                if (!msg) return;
+
+                if (!username) {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen().catch(() => {});
+                    }
+                    openUsernameModal(msg);
+                    return;
+                }
+
+                sendChatMessage(msg);
+            });
+        }
 
         function toggleMsgMenu(msgId) {
             const menu = document.getElementById(`menu-${msgId}`);
