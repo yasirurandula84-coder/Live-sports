@@ -25,6 +25,7 @@ function isAuthorizedAdmin(req) {
 
 const TAPMAD_PLAYLIST_URL = 'http://2nd.sm-monirul.top/@sm_iptv_bd/exp.php?tapmad=getPlaylist&sm=.m3u';
 let tapmadCache = { data: null, expiresAt: 0 };
+const approvedStreamUrls = new Set();
 
 const CRICBUZZ_API_URL = (process.env.CRICBUZZ_API_URL || 'https://cricbuzz-scraper-kkkw.onrender.com').replace(/\/+$/, '');
 let cricbuzzLiveCache = { data: null, expiresAt: 0 };
@@ -45,18 +46,47 @@ const ALLOWED_STREAM_HOSTS = ['localhost', '127.0.0.1', 'streamx.website', 'www.
 function hasAllowedReferer(req) {
     const referer = req.get('referer') || '';
     if (!referer) return false;
-    const lowerRef = referer.toLowerCase();
-    return ALLOWED_STREAM_HOSTS.some(host => lowerRef.includes(host));
+    try {
+        const parsed = new URL(referer);
+        const host = (parsed.hostname || '').toLowerCase();
+        return ALLOWED_STREAM_HOSTS.includes(host);
+    } catch (e) {
+        return false;
+    }
 }
 
-// Short-Lived Stream Token Store (TTL: 90s)
+// Stream Token Store (TTL: 5 minutes so long live sessions don't drop/lag on token expiry)
 const STREAM_TOKEN_SECRET = process.env.STREAM_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-const STREAM_TOKEN_TTL_MS = 90 * 1000;
+const STREAM_TOKEN_TTL_MS = 5 * 60 * 1000;
 const streamTokenRegistry = new Map(); // token -> { url, expiresAt, userAgent, referer }
+
+function registerApprovedStreamUrl(url) {
+    const clean = String(url || '').trim();
+    if (/^https?:\/\//i.test(clean)) {
+        approvedStreamUrls.add(clean);
+    }
+}
+
+function isApprovedStreamUrl(url) {
+    const clean = String(url || '').trim();
+    if (!/^https?:\/\//i.test(clean)) return false;
+    if (approvedStreamUrls.has(clean)) return true;
+    try {
+        const targetOrigin = new URL(clean).origin;
+        for (const allowed of approvedStreamUrls) {
+            if (allowed === clean || allowed.startsWith(targetOrigin)) {
+                return true;
+            }
+        }
+    } catch (e) {}
+    return false;
+}
 
 function createStreamToken(targetUrl, extraHeaders = {}) {
     const cleanUrl = String(targetUrl || '').trim();
     if (!cleanUrl) return null;
+
+    registerApprovedStreamUrl(cleanUrl);
 
     const now = Date.now();
     for (const [key, entry] of streamTokenRegistry.entries()) {
@@ -91,6 +121,8 @@ function resolveStreamToken(token) {
         streamTokenRegistry.delete(token);
         return null;
     }
+    // Sliding refresh while actively streaming so playback never lags out mid-stream
+    entry.expiresAt = Date.now() + STREAM_TOKEN_TTL_MS;
     return entry.url;
 }
 
@@ -101,7 +133,8 @@ async function getMatchesDataFromGitHub() {
             headers: {
                 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
                 'Accept': 'application/vnd.github.v3.raw'
-            }
+            },
+            signal: AbortSignal.timeout(12000)
         });
 
         if (!response.ok) throw new Error('Failed to fetch from GitHub');
@@ -157,6 +190,8 @@ function parseM3uPlaylist(rawText) {
             }
         } else if (!line.startsWith('#')) {
             const rawStreamUrl = line.trim();
+            registerApprovedStreamUrl(rawStreamUrl);
+
             const titleName = pendingName || `Channel ${channels.length + 1}`;
             const streamToken = createStreamToken(rawStreamUrl, {
                 userAgent: pendingUserAgent,
@@ -167,17 +202,14 @@ function parseM3uPlaylist(rawText) {
                 ? `/mpd-proxy?token=${encodeURIComponent(streamToken)}`
                 : `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
 
+            // Keep sensitive DRM keys & upstream headers strictly server-side
             channels.push({
                 id: `tv-${channels.length + 1}`,
                 name: titleName,
                 title: titleName,
                 logo: pendingLogo,
                 group: pendingGroup,
-                stream_url: streamUrl,
-                kid: pendingKid,
-                key: pendingKey,
-                referer: pendingReferer,
-                userAgent: pendingUserAgent
+                stream_url: streamUrl
             });
 
             pendingName = '';
@@ -427,10 +459,14 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
     try {
         const response = await fetch(TAPMAD_PLAYLIST_URL, {
-            headers: UPSTREAM_STREAM_HEADERS
+            headers: UPSTREAM_STREAM_HEADERS,
+            signal: AbortSignal.timeout(12000)
         });
 
         if (!response.ok) {
+            if (tapmadCache.data) {
+                return res.json({ ...tapmadCache.data, stale: true });
+            }
             return res.status(502).json({
                 ok: false,
                 error: `Upstream playlist returned ${response.status}`,
@@ -449,12 +485,15 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 30 * 1000
+            expiresAt: now + 120 * 1000
         };
 
         return res.json(payload);
     } catch (error) {
         console.error('Tapmad playlist error:', error);
+        if (tapmadCache.data) {
+            return res.json({ ...tapmadCache.data, stale: true });
+        }
         return res.status(500).json({
             ok: false,
             error: 'Failed to fetch playlist',
@@ -478,7 +517,8 @@ app.get('/img-proxy', async (req, res) => {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                 'Referer': 'https://www.sofascore.com/'
-            }
+            },
+            signal: AbortSignal.timeout(10000)
         });
 
         if (!response.ok) {
@@ -498,25 +538,29 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
-// --- Fast DASH (.mpd) Manifest Proxy Route ---
+// --- Fast DASH (.mpd) Manifest Proxy Route (Referer Guard + Token Required) ---
 app.get('/mpd-proxy', async (req, res) => {
+    if (!hasAllowedReferer(req)) {
+        return res.status(403).send('Forbidden');
+    }
+
     const token = req.query.token;
-    const directUrl = String(req.query.url || '').trim();
-    const targetUrl = token ? resolveStreamToken(token) : directUrl;
+    const targetUrl = resolveStreamToken(token);
 
     if (!targetUrl) {
         return res.status(403).send('Stream token expired or invalid');
     }
 
     try {
+        const tokenEntry = streamTokenRegistry.get(token);
         const response = await fetch(targetUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                'User-Agent': (tokenEntry && tokenEntry.userAgent) || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Accept': 'application/dash+xml,application/xml,text/xml,*/*',
-                'Referer': new URL(targetUrl).origin + '/'
+                'Referer': (tokenEntry && tokenEntry.referer) || (new URL(targetUrl).origin + '/')
             },
             redirect: 'follow',
-            signal: AbortSignal.timeout(10000)
+            signal: AbortSignal.timeout(12000)
         });
 
         if (!response.ok) {
@@ -575,7 +619,7 @@ app.get('/hls-proxy', async (req, res) => {
         const response = await fetch(targetUrl, {
             headers: upstreamHeaders,
             redirect: 'follow',
-            signal: AbortSignal.timeout(15000)
+            signal: AbortSignal.timeout(20000)
         });
 
         const contentType = response.headers.get('content-type') || '';
@@ -644,7 +688,7 @@ app.get('/hls-proxy', async (req, res) => {
     } catch (error) {
         console.error('[HLS-PROXY] Catch error:', error);
         if (!res.headersSent) {
-            res.status(500).send('Proxy error: ' + error.message);
+            res.status(502).send('Proxy error: ' + error.message);
         } else {
             res.end();
         }
@@ -678,8 +722,8 @@ io.on('connection', (socket) => {
 
     socket.on('requestHlsToken', ({ url, userAgent, referer }) => {
         const cleanUrl = String(url || '').trim();
-        if (!cleanUrl) {
-            socket.emit('hlsProxyToken', { error: 'Missing URL' });
+        if (!cleanUrl || !isApprovedStreamUrl(cleanUrl)) {
+            socket.emit('hlsProxyToken', { error: 'Unauthorized or invalid stream URL' });
             return;
         }
         const token = createStreamToken(cleanUrl, { userAgent, referer });
@@ -713,6 +757,7 @@ io.on('connection', (socket) => {
 
         let finalLink = directLink;
         if (directLink) {
+            registerApprovedStreamUrl(directLink);
             const streamToken = createStreamToken(directLink);
             if (directLink.toLowerCase().includes('.mpd')) {
                 finalLink = `/mpd-proxy?token=${encodeURIComponent(streamToken)}`;
