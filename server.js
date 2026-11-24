@@ -55,9 +55,9 @@ function hasAllowedReferer(req) {
     }
 }
 
-// Stream Token Store (TTL: 5 minutes so long live sessions don't drop/lag on token expiry)
+// Short-Lived Stream Token Store (TTL: 90s)
 const STREAM_TOKEN_SECRET = process.env.STREAM_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-const STREAM_TOKEN_TTL_MS = 5 * 60 * 1000;
+const STREAM_TOKEN_TTL_MS = 90 * 1000;
 const streamTokenRegistry = new Map(); // token -> { url, expiresAt, userAgent, referer }
 
 function registerApprovedStreamUrl(url) {
@@ -121,8 +121,6 @@ function resolveStreamToken(token) {
         streamTokenRegistry.delete(token);
         return null;
     }
-    // Sliding refresh while actively streaming so playback never lags out mid-stream
-    entry.expiresAt = Date.now() + STREAM_TOKEN_TTL_MS;
     return entry.url;
 }
 
@@ -133,8 +131,7 @@ async function getMatchesDataFromGitHub() {
             headers: {
                 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
                 'Accept': 'application/vnd.github.v3.raw'
-            },
-            signal: AbortSignal.timeout(12000)
+            }
         });
 
         if (!response.ok) throw new Error('Failed to fetch from GitHub');
@@ -459,14 +456,10 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
     try {
         const response = await fetch(TAPMAD_PLAYLIST_URL, {
-            headers: UPSTREAM_STREAM_HEADERS,
-            signal: AbortSignal.timeout(12000)
+            headers: UPSTREAM_STREAM_HEADERS
         });
 
         if (!response.ok) {
-            if (tapmadCache.data) {
-                return res.json({ ...tapmadCache.data, stale: true });
-            }
             return res.status(502).json({
                 ok: false,
                 error: `Upstream playlist returned ${response.status}`,
@@ -485,15 +478,12 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 120 * 1000
+            expiresAt: now + 30 * 1000
         };
 
         return res.json(payload);
     } catch (error) {
         console.error('Tapmad playlist error:', error);
-        if (tapmadCache.data) {
-            return res.json({ ...tapmadCache.data, stale: true });
-        }
         return res.status(500).json({
             ok: false,
             error: 'Failed to fetch playlist',
@@ -517,8 +507,7 @@ app.get('/img-proxy', async (req, res) => {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                 'Referer': 'https://www.sofascore.com/'
-            },
-            signal: AbortSignal.timeout(10000)
+            }
         });
 
         if (!response.ok) {
@@ -560,7 +549,7 @@ app.get('/mpd-proxy', async (req, res) => {
                 'Referer': (tokenEntry && tokenEntry.referer) || (new URL(targetUrl).origin + '/')
             },
             redirect: 'follow',
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(10000)
         });
 
         if (!response.ok) {
@@ -619,7 +608,7 @@ app.get('/hls-proxy', async (req, res) => {
         const response = await fetch(targetUrl, {
             headers: upstreamHeaders,
             redirect: 'follow',
-            signal: AbortSignal.timeout(20000)
+            signal: AbortSignal.timeout(15000)
         });
 
         const contentType = response.headers.get('content-type') || '';
@@ -688,7 +677,7 @@ app.get('/hls-proxy', async (req, res) => {
     } catch (error) {
         console.error('[HLS-PROXY] Catch error:', error);
         if (!res.headersSent) {
-            res.status(502).send('Proxy error: ' + error.message);
+            res.status(500).send('Proxy error: ' + error.message);
         } else {
             res.end();
         }
