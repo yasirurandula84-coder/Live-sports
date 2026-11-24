@@ -1463,7 +1463,6 @@
                 const emoji = itemBtn.getAttribute('data-emoji') || '🔥';
                 const label = itemBtn.getAttribute('data-label') || '';
 
-                // Compute horizontal position inside chat box near where emoji was touched
                 let pct = 38;
                 const chatBoxEl = document.getElementById('chatBox');
                 if (chatBoxEl && e.clientX) {
@@ -1799,6 +1798,12 @@
             );
         }
 
+        function isAkamaiOrSonyStream(url, streamObj) {
+            const u = String(url || '').toLowerCase();
+            const n = String((streamObj && (streamObj.channel_name || streamObj.name)) || '').toLowerCase();
+            return u.includes('akamaized.net') || u.includes('sonyliv') || n.includes('sonyliv');
+        }
+
         function renderDynamicServerButtons(validStreams, selectedKey) {
             if (!serverSelectorEl) return;
             if (!validStreams || validStreams.length === 0) {
@@ -1848,38 +1853,49 @@
             });
         }
 
-        function startHlsSource(sourceUrl, streamObj, myToken, allowProxyFallback) {
+        function startHlsSource(sourceUrl, streamObj, myToken, allowFallback) {
             if (currentHls) {
                 try { currentHls.destroy(); } catch (e) {}
                 currentHls = null;
             }
 
-            let proxyFallbackTriggered = false;
-            const triggerProxyFallback = async () => {
-                if (!allowProxyFallback || proxyFallbackTriggered || myToken !== streamAttemptToken) {
+            let fallbackTriggered = false;
+            const triggerFallback = async () => {
+                if (!allowFallback || fallbackTriggered || myToken !== streamAttemptToken) {
                     showStreamError(
                         'Stream Not Working',
-                        'This server is offline or blocked. Please try another server.',
+                        'This server is offline, expired, or blocked. Please try another server.',
                         myToken
                     );
                     return;
                 }
-                proxyFallbackTriggered = true;
-                const proxiedUrl = await requestHlsProxyUrlViaSocket(
-                    streamObj.stream_url.trim(),
-                    streamObj.user_agent || streamObj.userAgent || '',
-                    streamObj.referer || ''
-                );
-                if (myToken !== streamAttemptToken) return;
-                if (proxiedUrl) {
-                    startHlsSource(proxiedUrl, streamObj, myToken, false);
-                } else {
-                    showStreamError(
-                        'Stream Not Working',
-                        'This server is offline or blocked. Please try another server.',
-                        myToken
+                fallbackTriggered = true;
+
+                const rawUrl = streamObj.stream_url.trim();
+                const isCurrentlyProxied = sourceUrl.includes('/hls-proxy');
+
+                if (!isCurrentlyProxied && socket) {
+                    const proxiedUrl = await requestHlsProxyUrlViaSocket(
+                        rawUrl,
+                        streamObj.user_agent || streamObj.userAgent || '',
+                        streamObj.referer || ''
                     );
+                    if (myToken !== streamAttemptToken) return;
+                    if (proxiedUrl) {
+                        startHlsSource(proxiedUrl, streamObj, myToken, false);
+                        return;
+                    }
+                } else if (isCurrentlyProxied) {
+                    // If proxied URL failed, try direct raw URL once as secondary fallback
+                    startHlsSource(rawUrl, streamObj, myToken, false);
+                    return;
                 }
+
+                showStreamError(
+                    'Stream Not Working',
+                    'This server is offline, expired, or blocked. Please try another server.',
+                    myToken
+                );
             };
 
             if (window.Hls && Hls.isSupported()) {
@@ -1903,7 +1919,7 @@
                 hls.on(Hls.Events.ERROR, function (event, data) {
                     if (myToken !== streamAttemptToken) return;
                     if (data && data.fatal) {
-                        triggerProxyFallback();
+                        triggerFallback();
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -1917,7 +1933,7 @@
                 }, { once: true });
                 video.addEventListener('error', function () {
                     if (myToken !== streamAttemptToken) return;
-                    triggerProxyFallback();
+                    triggerFallback();
                 }, { once: true });
             } else {
                 showStreamError(
@@ -2324,16 +2340,17 @@
 
             const hasCustomHeaders = Boolean(streamObj.user_agent || streamObj.userAgent || streamObj.referer);
             const alreadyProxied = directLink.includes('/hls-proxy');
+            const preferProxyFirst = !alreadyProxied && isAkamaiOrSonyStream(directLink, streamObj) && Boolean(socket);
 
-            if (!alreadyProxied && hasCustomHeaders && socket) {
+            if (!alreadyProxied && (hasCustomHeaders || preferProxyFirst) && socket) {
                 const proxiedUrl = await requestHlsProxyUrlViaSocket(
                     directLink,
                     streamObj.user_agent || streamObj.userAgent || '',
-                    streamObj.referer || ''
+                    streamObj.referer || 'https://www.sonyliv.com/'
                 );
                 if (myToken !== streamAttemptToken) return;
                 if (proxiedUrl) {
-                    startHlsSource(proxiedUrl, streamObj, myToken, false);
+                    startHlsSource(proxiedUrl, streamObj, myToken, true);
                     return;
                 }
             }
