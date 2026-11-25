@@ -12,7 +12,7 @@ app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] })
 
 const matchViewers = {};
 const matchTotalViews = {};
-const matchChatHistories = {}; // මැච් අනුව චැට් හිස්ට්‍රි ගබඩා කරගැනීමට
+const matchChatHistories = {};
 
 const ADMIN_STATS_KEY = process.env.ADMIN_PANEL_KEY || 'streamx-admin-2026';
 
@@ -55,10 +55,9 @@ function hasAllowedReferer(req) {
     }
 }
 
-// Stream Token Store (TTL: 5 minutes so long live sessions don't drop/lag on token expiry)
 const STREAM_TOKEN_SECRET = process.env.STREAM_TOKEN_SECRET || crypto.randomBytes(32).toString('hex');
-const STREAM_TOKEN_TTL_MS = 5 * 60 * 1000;
-const streamTokenRegistry = new Map(); // token -> { url, expiresAt, userAgent, referer }
+const STREAM_TOKEN_TTL_MS = 90 * 1000;
+const streamTokenRegistry = new Map();
 
 function registerApprovedStreamUrl(url) {
     const clean = String(url || '').trim();
@@ -104,11 +103,16 @@ function createStreamToken(targetUrl, extraHeaders = {}) {
 
     const token = `${randomPart}.${sigPart}`;
     const expiresAt = now + STREAM_TOKEN_TTL_MS;
+    const cleanKid = String(extraHeaders.kid || '').trim().replace(/-/g, '').toLowerCase();
+    const cleanKey = String(extraHeaders.key || '').trim().replace(/-/g, '').toLowerCase();
+
     streamTokenRegistry.set(token, {
         url: cleanUrl,
         expiresAt,
         userAgent: String(extraHeaders.userAgent || '').trim(),
-        referer: String(extraHeaders.referer || '').trim()
+        referer: String(extraHeaders.referer || '').trim(),
+        kid: cleanKid,
+        key: cleanKey
     });
     return token;
 }
@@ -121,20 +125,16 @@ function resolveStreamToken(token) {
         streamTokenRegistry.delete(token);
         return null;
     }
-    // Sliding refresh while actively streaming so playback never lags out mid-stream
-    entry.expiresAt = Date.now() + STREAM_TOKEN_TTL_MS;
     return entry.url;
 }
 
-// GitHub Private Repo එකෙන් මුළු matches.json එකම fetch කරගැනීම
 async function getMatchesDataFromGitHub() {
     try {
         const response = await fetch('https://api.github.com/repos/yasirurandula84-coder/Datay/contents/matches.json', {
             headers: {
                 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
                 'Accept': 'application/vnd.github.v3.raw'
-            },
-            signal: AbortSignal.timeout(12000)
+            }
         });
 
         if (!response.ok) throw new Error('Failed to fetch from GitHub');
@@ -195,14 +195,15 @@ function parseM3uPlaylist(rawText) {
             const titleName = pendingName || `Channel ${channels.length + 1}`;
             const streamToken = createStreamToken(rawStreamUrl, {
                 userAgent: pendingUserAgent,
-                referer: pendingReferer
+                referer: pendingReferer,
+                kid: pendingKid,
+                key: pendingKey
             });
-            const isMpd = rawStreamUrl.toLowerCase().includes('.mpd');
+            const isMpd = rawStreamUrl.toLowerCase().includes('.mpd') || Boolean(pendingKid && pendingKey);
             const streamUrl = isMpd
                 ? `/mpd-proxy?token=${encodeURIComponent(streamToken)}`
                 : `/hls-proxy?token=${encodeURIComponent(streamToken)}`;
 
-            // Keep sensitive DRM keys & upstream headers strictly server-side
             channels.push({
                 id: `tv-${channels.length + 1}`,
                 name: titleName,
@@ -225,8 +226,6 @@ function parseM3uPlaylist(rawText) {
     return channels;
 }
 
-// --- Clean Routes (URL එකෙන් .html ඉවත් කිරීම සඳහා) ---
-
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -247,7 +246,6 @@ app.get('/admin-views', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'admin-views.html'));
 });
 
-// --- Private Admin Views Stats Route ---
 app.get('/api/admin/views-stats', (req, res) => {
     if (!isAuthorizedAdmin(req)) {
         return res.status(401).json({ ok: false, error: 'Unauthorized' });
@@ -293,7 +291,6 @@ app.get('/api/admin/views-stats', (req, res) => {
     });
 });
 
-// --- Football Live Scores API Route ---
 app.get('/api/football/live', async (req, res) => {
     const tz = String(req.query.timezone || 'Asia/Colombo');
     const now = Date.now();
@@ -368,7 +365,6 @@ app.get('/api/football/live', async (req, res) => {
     }
 });
 
-// --- Cricbuzz Live Scores API Route ---
 app.get('/api/cricbuzz-live', async (req, res) => {
     const now = Date.now();
     if (cricbuzzLiveCache.data && now < cricbuzzLiveCache.expiresAt) {
@@ -377,9 +373,7 @@ app.get('/api/cricbuzz-live', async (req, res) => {
 
     try {
         const response = await fetch(`${CRICBUZZ_API_URL}/matches/live`, {
-            headers: {
-                'Accept': 'application/json'
-            },
+            headers: { 'Accept': 'application/json' },
             signal: AbortSignal.timeout(20000)
         });
 
@@ -406,7 +400,6 @@ app.get('/api/cricbuzz-live', async (req, res) => {
     }
 });
 
-// --- Cricbuzz Rankings API Route ---
 app.get('/api/cricbuzz-rankings', async (req, res) => {
     const category = String(req.query.category || 'batting').trim().toLowerCase() || 'batting';
     const gender = String(req.query.gender || 'men').trim().toLowerCase() || 'men';
@@ -421,9 +414,7 @@ app.get('/api/cricbuzz-rankings', async (req, res) => {
     try {
         const upstreamUrl = `${CRICBUZZ_API_URL}/rankings?category=${encodeURIComponent(category)}&gender=${encodeURIComponent(gender)}`;
         const response = await fetch(upstreamUrl, {
-            headers: {
-                'Accept': 'application/json'
-            },
+            headers: { 'Accept': 'application/json' },
             signal: AbortSignal.timeout(25000)
         });
 
@@ -450,7 +441,6 @@ app.get('/api/cricbuzz-rankings', async (req, res) => {
     }
 });
 
-// --- Tapmad / M3U Playlist API Route ---
 app.get('/api/tapmad-playlist', async (req, res) => {
     const now = Date.now();
     if (tapmadCache.data && now < tapmadCache.expiresAt) {
@@ -460,13 +450,10 @@ app.get('/api/tapmad-playlist', async (req, res) => {
     try {
         const response = await fetch(TAPMAD_PLAYLIST_URL, {
             headers: UPSTREAM_STREAM_HEADERS,
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(15000)
         });
 
         if (!response.ok) {
-            if (tapmadCache.data) {
-                return res.json({ ...tapmadCache.data, stale: true });
-            }
             return res.status(502).json({
                 ok: false,
                 error: `Upstream playlist returned ${response.status}`,
@@ -485,15 +472,12 @@ app.get('/api/tapmad-playlist', async (req, res) => {
 
         tapmadCache = {
             data: payload,
-            expiresAt: now + 120 * 1000
+            expiresAt: now + 30 * 1000
         };
 
         return res.json(payload);
     } catch (error) {
         console.error('Tapmad playlist error:', error);
-        if (tapmadCache.data) {
-            return res.json({ ...tapmadCache.data, stale: true });
-        }
         return res.status(500).json({
             ok: false,
             error: 'Failed to fetch playlist',
@@ -502,7 +486,6 @@ app.get('/api/tapmad-playlist', async (req, res) => {
     }
 });
 
-// --- Image Proxy Route ---
 app.get('/img-proxy', async (req, res) => {
     const rawUrl = req.query.url;
     if (!rawUrl) {
@@ -517,8 +500,7 @@ app.get('/img-proxy', async (req, res) => {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                 'Referer': 'https://www.sofascore.com/'
-            },
-            signal: AbortSignal.timeout(10000)
+            }
         });
 
         if (!response.ok) {
@@ -538,7 +520,7 @@ app.get('/img-proxy', async (req, res) => {
     }
 });
 
-// --- Fast DASH (.mpd) Manifest Proxy Route (Referer Guard + Token Required) ---
+// --- Fast DASH (.mpd) Manifest Proxy Route (Referer Guard + Token Required + DRM Key Header) ---
 app.get('/mpd-proxy', async (req, res) => {
     if (!hasAllowedReferer(req)) {
         return res.status(403).send('Forbidden');
@@ -560,7 +542,7 @@ app.get('/mpd-proxy', async (req, res) => {
                 'Referer': (tokenEntry && tokenEntry.referer) || (new URL(targetUrl).origin + '/')
             },
             redirect: 'follow',
-            signal: AbortSignal.timeout(12000)
+            signal: AbortSignal.timeout(15000)
         });
 
         if (!response.ok) {
@@ -583,6 +565,11 @@ app.get('/mpd-proxy', async (req, res) => {
                 /<Period([^>]*)>/i,
                 `<Period$1>\n    <BaseURL>${baseDir}</BaseURL>`
             );
+        }
+
+        if (tokenEntry && tokenEntry.kid && tokenEntry.key) {
+            res.setHeader('X-Stream-Drm', `${tokenEntry.kid}:${tokenEntry.key}`);
+            res.setHeader('Access-Control-Expose-Headers', 'X-Stream-Drm');
         }
 
         res.setHeader('Content-Type', 'application/dash+xml; charset=utf-8');
