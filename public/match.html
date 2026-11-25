@@ -2823,7 +2823,7 @@
         playerContainer.addEventListener('mousemove', showControls);
         playerContainer.addEventListener('touchstart', showControls);
 
-        // Chat & Room Logic with Member Avatar, Name Color & Verified Badge
+        // Chat & Room Logic with Duplicate Join Guard + Reconnect Sync
         const modal = document.getElementById('usernameModal');
         const usernameInput = document.getElementById('usernameInput');
         const joinBtn = document.getElementById('joinChatBtn');
@@ -2833,6 +2833,7 @@
         const chatMessages = document.getElementById('chatMessages');
 
         let hasJoinedRoom = false;
+        let lastJoinedSignature = '';
         let lastSentMessageMeta = null;
 
         window.resetGuestUsername = function () {
@@ -2864,6 +2865,13 @@
             if (!socket) return;
             const sender = getCurrentSenderPayload();
             const labelToUse = sender.verified ? sender.name : (userLabel || sender.username || 'Guest');
+            const sig = `${matchId}|${labelToUse}|${sender.verified}|${sender.nameColor}|${sender.avatar}`;
+
+            if (sig === lastJoinedSignature && socket.connected && hasJoinedRoom) {
+                return;
+            }
+            lastJoinedSignature = sig;
+
             socket.emit('joinMatch', {
                 matchId,
                 username: labelToUse,
@@ -2872,6 +2880,13 @@
                 verified: sender.verified
             });
             hasJoinedRoom = true;
+        }
+
+        if (socket) {
+            socket.on('connect', () => {
+                lastJoinedSignature = '';
+                joinMatchRoom(username || 'Guest');
+            });
         }
 
         window.onMemberAuthReady = function (memberProfile) {
@@ -2920,9 +2935,7 @@
             localStorage.setItem('chat_username', username);
             modal.classList.remove('active');
 
-            if (socket) {
-                socket.emit('joinMatch', { matchId, username, verified: false });
-            }
+            joinMatchRoom(username);
 
             const msgToSend = pendingMessage || msgInput.value.trim() || fsMsgInput.value.trim();
             pendingMessage = null;
