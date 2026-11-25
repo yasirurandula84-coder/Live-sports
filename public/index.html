@@ -642,6 +642,178 @@
             font-size: 12px;
         }
 
+        /* Telegram Community Banner */
+        .telegram-community-box {
+            margin-top: 28px;
+            background: linear-gradient(135deg, rgba(14, 116, 144, 0.22), rgba(37, 99, 235, 0.18), rgba(15, 23, 42, 0.94));
+            border: 1px solid rgba(56, 189, 248, 0.36);
+            border-radius: 20px;
+            padding: 18px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            flex-wrap: wrap;
+            box-shadow: 0 12px 30px rgba(2, 132, 199, 0.16);
+        }
+
+        .telegram-info {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            max-width: 640px;
+        }
+
+        .telegram-icon-badge {
+            width: 48px;
+            height: 48px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #0ea5e9, #2563eb);
+            color: #fff;
+            font-size: 22px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 8px 20px rgba(14, 165, 233, 0.38);
+        }
+
+        .telegram-title {
+            margin: 0 0 4px 0;
+            font-size: 15px;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: 0.3px;
+        }
+
+        .telegram-desc {
+            margin: 0;
+            font-size: 12.5px;
+            color: #cbd5e1;
+            line-height: 1.5;
+        }
+
+        .telegram-join-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            padding: 12px 20px;
+            border-radius: 13px;
+            background: linear-gradient(135deg, #0284c7, #38bdf8);
+            color: #fff;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+            box-shadow: 0 8px 22px rgba(14, 165, 233, 0.38);
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), filter 0.22s ease;
+            flex-shrink: 0;
+        }
+
+        .telegram-join-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.07);
+        }
+
+        .telegram-join-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        /* Privacy Policy Modal */
+        .privacy-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10001;
+            background: rgba(5, 6, 10, 0.84);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+
+        .privacy-overlay.active {
+            display: flex;
+        }
+
+        .privacy-modal {
+            width: 100%;
+            max-width: 580px;
+            max-height: 82vh;
+            background: linear-gradient(155deg, #161824, #0d0e15);
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            border-radius: 20px;
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.85);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .privacy-modal-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 16px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .privacy-modal-title {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .privacy-modal-body {
+            padding: 16px 20px 22px 20px;
+            overflow-y: auto;
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.65;
+        }
+
+        .privacy-modal-body h4 {
+            margin: 14px 0 6px 0;
+            font-size: 14px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .privacy-modal-body h4:first-child {
+            margin-top: 0;
+        }
+
+        .privacy-modal-body p {
+            margin: 0 0 10px 0;
+        }
+
+        .privacy-trigger-btn {
+            background: transparent;
+            border: none;
+            color: #a5b4fc;
+            font-size: 12.5px;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            padding: 0;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .privacy-trigger-btn:hover {
+            color: #fff;
+        }
+
         .site-footer {
             position: relative;
             z-index: 1;
@@ -747,6 +919,8 @@
         </div>
         <a href="/" class="drawer-link active"><i class="fa-solid fa-house"></i> Home</a>
         <a href="/ranking.html" class="drawer-link"><i class="fa-solid fa-trophy"></i> Cricket Ranking</a>
+        <a href="https://t.me/your_streamx_group" target="_blank" rel="noopener noreferrer" class="drawer-link"><i class="fa-brands fa-telegram" style="color: #38bdf8;"></i> Telegram Group</a>
+        <button type="button" class="drawer-link" style="width: 100%; cursor: pointer; text-align: left;" onclick="toggleRightDrawer(false); openPrivacyModal();"><i class="fa-solid fa-shield-halved" style="color: #a5b4fc;"></i> Privacy Policy</button>
     </aside>
 
     <div class="container">
@@ -819,11 +993,59 @@
             <div class="cricket-match-card" style="text-align: center; color: #9ca3af;">Loading live cricket matches...</div>
         </div>
 
+        <!-- Telegram Community Join Section -->
+        <section class="telegram-community-box" aria-label="Join StreamX Telegram Group">
+            <div class="telegram-info">
+                <div class="telegram-icon-badge">
+                    <i class="fa-brands fa-telegram"></i>
+                </div>
+                <div>
+                    <h3 class="telegram-title">JOIN OUR OFFICIAL TELEGRAM GROUP</h3>
+                    <p class="telegram-desc">Get instant live cricket &amp; sports stream alerts, backup server links, and match updates directly on Telegram.</p>
+                </div>
+            </div>
+            <a href="https://t.me/+Qycsil9v4Zo0ZDM1" target="_blank" rel="noopener noreferrer" class="telegram-join-btn">
+                <i class="fa-brands fa-telegram"></i> Join Telegram
+            </a>
+        </section>
+
+    </div>
+
+    <!-- Privacy Policy Modal -->
+    <div class="privacy-overlay" id="privacyOverlay" role="dialog" aria-modal="true" aria-labelledby="privacyOverlayTitle">
+        <div class="privacy-modal">
+            <div class="privacy-modal-head">
+                <h3 class="privacy-modal-title" id="privacyOverlayTitle">
+                    <i class="fa-solid fa-shield-halved" style="color: #a5b4fc;"></i> Privacy Policy
+                </h3>
+                <button type="button" class="tapmad-close-btn" onclick="closePrivacyModal()" aria-label="Close Privacy Policy">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="privacy-modal-body">
+                <h4>1. Information We Collect</h4>
+                <p>StreamX does not require user registration or personal accounts to browse live sports schedules. Basic technical details such as browser type, device viewport, or search queries entered on the page remain strictly functional for your session.</p>
+
+                <h4>2. Live Streams &amp; External Links</h4>
+                <p>Match feeds, team logos, and community channels (such as our Telegram group) may link to or load third-party sources. Those external platforms operate under their own privacy policies and terms.</p>
+
+                <h4>3. Cookies &amp; Local Storage</h4>
+                <p>We do not use invasive tracking cookies to sell personal data. Standard browser caching or network requests are used only to keep live match listings and channel counts up to date.</p>
+
+                <h4>4. Changes to This Policy</h4>
+                <p>We may update this Privacy Policy from time to time as StreamX evolves. Continued use of StreamX indicates acceptance of the current policy.</p>
+            </div>
+        </div>
     </div>
 
     <footer class="site-footer">
         <div class="dev-by-sl" id="devBySriLankaText" aria-label="DEVELOPER BY SRILANKA"></div>
         <p style="margin: 0;">&copy; 2026 StreamX. All rights reserved.</p>
+        <div>
+            <button type="button" class="privacy-trigger-btn" onclick="openPrivacyModal()">
+                <i class="fa-solid fa-shield-halved"></i> Privacy Policy
+            </button>
+        </div>
     </footer>
 
     <nav class="bottom-nav-bar" aria-label="Bottom Navigation">
@@ -876,6 +1098,23 @@
 
             typeNext();
         })();
+
+        function openPrivacyModal() {
+            const overlay = document.getElementById("privacyOverlay");
+            if (overlay) overlay.classList.add("active");
+        }
+
+        function closePrivacyModal() {
+            const overlay = document.getElementById("privacyOverlay");
+            if (overlay) overlay.classList.remove("active");
+        }
+
+        document.addEventListener("click", (e) => {
+            const overlay = document.getElementById("privacyOverlay");
+            if (overlay && overlay.classList.contains("active") && e.target === overlay) {
+                closePrivacyModal();
+            }
+        });
 
         function toggleRightDrawer(open) {
             const drawer = document.getElementById("rightDrawer");
