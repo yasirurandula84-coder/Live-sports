@@ -292,6 +292,43 @@
             padding: 24px 22px;
             position: relative;
         }
+        .google-signin-btn {
+            width: 100%;
+            background: #ffffff;
+            color: #0f172a;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 13.5px;
+            font-weight: 800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+        .google-signin-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.97);
+        }
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+            color: #64748b;
+            font-size: 11.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+        .auth-divider::before, .auth-divider::after {
+            content: "";
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
         .auth-tabs {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -299,15 +336,15 @@
             background: rgba(255, 255, 255, 0.04);
             padding: 5px;
             border-radius: 13px;
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
         .auth-tab-btn {
             border: none;
             background: transparent;
             color: #9ca3af;
-            padding: 9px 10px;
+            padding: 8px 10px;
             border-radius: 10px;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: 800;
             cursor: pointer;
             transition: all 0.2s ease;
@@ -318,7 +355,7 @@
             box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
         }
         .auth-field {
-            margin-bottom: 13px;
+            margin-bottom: 12px;
             text-align: left;
         }
         .auth-field label {
@@ -326,7 +363,7 @@
             font-size: 12px;
             font-weight: 700;
             color: #cbd5e1;
-            margin-bottom: 6px;
+            margin-bottom: 5px;
         }
         .auth-field input {
             width: 100%;
@@ -334,7 +371,7 @@
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.12);
             border-radius: 11px;
-            padding: 11px 13px;
+            padding: 10px 13px;
             color: #fff;
             font-size: 13.5px;
             outline: none;
@@ -347,13 +384,13 @@
             background: linear-gradient(135deg, #6366f1, #4f46e5);
             border: none;
             border-radius: 12px;
-            padding: 12px;
+            padding: 11px;
             color: #fff;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 800;
             cursor: pointer;
             box-shadow: 0 8px 20px rgba(99, 102, 241, 0.38);
-            margin-top: 4px;
+            margin-top: 2px;
         }
         .auth-submit-btn:hover {
             filter: brightness(1.08);
@@ -1109,7 +1146,7 @@
         <button type="button" class="drawer-link" style="width: 100%; cursor: pointer; text-align: left;" onclick="toggleRightDrawer(false); openPrivacyModal();"><i class="fa-solid fa-shield-halved" style="color: #a5b4fc;"></i> Privacy Policy</button>
     </aside>
 
-    <!-- Sign In / Sign Up Modal -->
+    <!-- Sign In / Sign Up Modal (Google One-Click + Email/Password) -->
     <div class="auth-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
         <div class="auth-modal">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
@@ -1121,12 +1158,19 @@
                 </button>
             </div>
 
+            <button type="button" class="google-signin-btn" id="googleSignInBtn" onclick="handleGoogleSignIn()">
+                <i class="fa-brands fa-google" style="color: #ea4335; font-size: 16px;"></i>
+                <span>Continue with Google</span>
+            </button>
+
+            <div class="auth-divider">or with email</div>
+
             <div class="auth-tabs">
                 <button type="button" class="auth-tab-btn active" id="tabLoginBtn" onclick="switchAuthTab('login')">Sign In</button>
                 <button type="button" class="auth-tab-btn" id="tabRegisterBtn" onclick="switchAuthTab('register')">Create Account</button>
             </div>
 
-            <form id="authForm" onsubmit="handleAuthSubmit(event)">
+            <form id="authForm" onsubmit="handleEmailAuthSubmit(event)">
                 <div class="auth-field" id="authNameField" style="display: none;">
                     <label for="authDisplayName">Chat Display Name</label>
                     <input type="text" id="authDisplayName" placeholder="e.g. Kasun Perera" maxlength="28">
@@ -1252,7 +1296,7 @@
                 <p>Match feeds, team logos, and community channels (such as our Telegram group) may link to or load third-party sources. Those external platforms operate under their own privacy policies and terms.</p>
 
                 <h4>3. Cookies &amp; Local Storage</h4>
-                <p>Browser storage and session data are used to keep your signed-in state, profile settings, live match listings, and channel counts up to date.</p>
+                <p>Browser storage, Firebase authentication, and Firestore profile data are used to keep your signed-in state, profile settings, live match listings, and channel counts up to date.</p>
 
                 <h4>4. Changes to This Policy</h4>
                 <p>We may update this Privacy Policy from time to time as StreamX evolves. Continued use of StreamX indicates acceptance of the current policy.</p>
@@ -1278,47 +1322,74 @@
         <a href="/category/motorsports" class="bottom-nav-item"><i class="fa-solid fa-flag-checkered"></i><span>Motorsports</span></a>
     </nav>
 
-    <script>
-        const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            GoogleAuthProvider,
+            signInWithPopup,
+            signInWithEmailAndPassword,
+            createUserWithEmailAndPassword,
+            updateProfile
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-        function getStreamXUser() {
-            try {
-                const raw = localStorage.getItem('streamx_user');
-                if (!raw) return null;
-                const parsed = JSON.parse(raw);
-                return parsed && (parsed.email || parsed.name) ? parsed : null;
-            } catch (e) {
-                return null;
+        const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgKbo_M5Nr-hCxB08LeEbnSECdqkZ8JXw",
+            authDomain: "streamx-98c47.firebaseapp.com",
+            projectId: "streamx-98c47",
+            storageBucket: "streamx-98c47.firebasestorage.app",
+            messagingSenderId: "1069598060706",
+            appId: "1:1069598060706:web:82103ec37e800884eb27fb",
+            measurementId: "G-FW8DVLR3EJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const googleProvider = new GoogleAuthProvider();
+
+        let currentAuthMode = 'login';
+
+        function syncUserCache(profile) {
+            if (!profile) {
+                localStorage.removeItem('streamx_user');
+                renderNavbarAuthState(null);
+                return;
             }
+            localStorage.setItem('streamx_user', JSON.stringify(profile));
+            if (profile.name) {
+                localStorage.setItem('chat_username', profile.name);
+            }
+            renderNavbarAuthState(profile);
         }
 
-        function setStreamXUser(userObj) {
-            if (!userObj) return;
-            localStorage.setItem('streamx_user', JSON.stringify(userObj));
-            if (userObj.name) {
-                localStorage.setItem('chat_username', userObj.name);
-            }
-            renderNavbarAuthState();
-        }
-
-        function renderNavbarAuthState() {
+        function renderNavbarAuthState(profile) {
             const signInBtn = document.getElementById('navSignInBtn');
             const userPill = document.getElementById('navUserPill');
             const userAvatar = document.getElementById('navUserAvatar');
             const userNameEl = document.getElementById('navUserName');
-            const user = getStreamXUser();
 
-            if (user) {
+            if (profile && (profile.uid || profile.email || profile.name)) {
                 if (signInBtn) signInBtn.style.display = 'none';
                 if (userPill) {
                     userPill.style.display = 'inline-flex';
                     if (userNameEl) {
-                        userNameEl.textContent = user.name || 'Member';
-                        userNameEl.style.color = user.nameColor || '#ffffff';
+                        userNameEl.textContent = profile.name || 'Member';
+                        userNameEl.style.color = profile.nameColor || '#ffffff';
                     }
                     if (userAvatar) {
-                        userAvatar.src = user.avatar || FALLBACK_FLAG;
-                        userAvatar.onerror = function () { this.src = FALLBACK_FLAG; };
+                        userAvatar.src = profile.avatar || FALLBACK_AVATAR;
+                        userAvatar.onerror = function () { this.src = FALLBACK_AVATAR; };
                     }
                 }
             } else {
@@ -1327,18 +1398,101 @@
             }
         }
 
-        let currentAuthMode = 'login';
+        async function loadOrCreateUserDoc(firebaseUser, customDisplayName = '') {
+            const userRef = doc(db, 'users', firebaseUser.uid);
+            const snap = await getDoc(userRef);
 
-        function openAuthModal(mode = 'login') {
+            const defaultName = (
+                customDisplayName ||
+                firebaseUser.displayName ||
+                (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Member')
+            ).trim();
+            const defaultAvatar = firebaseUser.photoURL || FALLBACK_AVATAR;
+
+            if (!snap.exists()) {
+                const freshDoc = {
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email || '',
+                    name: defaultName,
+                    nameColor: '#38bdf8',
+                    avatar: defaultAvatar,
+                    verified: true,
+                    totalWatched: 0,
+                    categoryCounts: {},
+                    watchHistory: [],
+                    reminders: [],
+                    createdAt: serverTimestamp(),
+                    updatedAt: serverTimestamp()
+                };
+                await setDoc(userRef, freshDoc);
+                return freshDoc;
+            }
+
+            const existing = snap.data() || {};
+            const merged = {
+                uid: firebaseUser.uid,
+                email: firebaseUser.email || existing.email || '',
+                name: existing.name || defaultName,
+                nameColor: existing.nameColor || '#38bdf8',
+                avatar: existing.avatar || defaultAvatar,
+                verified: true,
+                totalWatched: Number(existing.totalWatched || 0),
+                categoryCounts: existing.categoryCounts || {},
+                watchHistory: Array.isArray(existing.watchHistory) ? existing.watchHistory : [],
+                reminders: Array.isArray(existing.reminders) ? existing.reminders : []
+            };
+
+            await setDoc(userRef, {
+                email: merged.email,
+                name: merged.name,
+                avatar: merged.avatar,
+                verified: true,
+                updatedAt: serverTimestamp()
+            }, { merge: true });
+
+            return merged;
+        }
+
+        onAuthStateChanged(auth, async (firebaseUser) => {
+            if (!firebaseUser) {
+                syncUserCache(null);
+                return;
+            }
+
+            // Show immediate auth info while Firestore doc loads
+            syncUserCache({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email || '',
+                name: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Member'),
+                nameColor: '#38bdf8',
+                avatar: firebaseUser.photoURL || FALLBACK_AVATAR,
+                verified: true
+            });
+
+            try {
+                const fullProfile = await loadOrCreateUserDoc(firebaseUser);
+                syncUserCache(fullProfile);
+            } catch (err) {
+                console.warn('[Firestore] Profile sync fallback:', err.message);
+            }
+        });
+
+        function setAuthStatus(msg, isError = true) {
+            const el = document.getElementById('authStatusMsg');
+            if (!el) return;
+            el.style.color = isError ? '#fca5a5' : '#86efac';
+            el.textContent = msg || '';
+        }
+
+        window.openAuthModal = function (mode = 'login') {
             currentAuthMode = mode;
             const overlay = document.getElementById('authOverlay');
             const tabLogin = document.getElementById('tabLoginBtn');
             const tabRegister = document.getElementById('tabRegisterBtn');
             const nameField = document.getElementById('authNameField');
             const submitBtn = document.getElementById('authSubmitBtn');
-            const statusMsg = document.getElementById('authStatusMsg');
 
-            if (statusMsg) statusMsg.textContent = '';
+            setAuthStatus('');
             const isLogin = mode === 'login';
             if (tabLogin) tabLogin.classList.toggle('active', isLogin);
             if (tabRegister) tabRegister.classList.toggle('active', !isLogin);
@@ -1346,114 +1500,81 @@
             if (submitBtn) submitBtn.textContent = isLogin ? 'Sign In' : 'Create Account';
 
             if (overlay) overlay.classList.add('active');
-        }
+        };
 
-        function closeAuthModal() {
+        window.closeAuthModal = function () {
             const overlay = document.getElementById('authOverlay');
             if (overlay) overlay.classList.remove('active');
-        }
+        };
 
-        function switchAuthTab(mode) {
-            openAuthModal(mode);
-        }
+        window.switchAuthTab = function (mode) {
+            window.openAuthModal(mode);
+        };
 
         document.addEventListener('click', (e) => {
             const overlay = document.getElementById('authOverlay');
             if (overlay && overlay.classList.contains('active') && e.target === overlay) {
-                closeAuthModal();
+                window.closeAuthModal();
             }
         });
 
-        async function handleAuthSubmit(e) {
+        window.handleGoogleSignIn = async function () {
+            const btn = document.getElementById('googleSignInBtn');
+            setAuthStatus('Opening Google Sign-In...', false);
+            if (btn) btn.disabled = true;
+
+            try {
+                const result = await signInWithPopup(auth, googleProvider);
+                const fullProfile = await loadOrCreateUserDoc(result.user);
+                syncUserCache(fullProfile);
+                window.closeAuthModal();
+            } catch (err) {
+                console.error('[Google Sign-In]', err);
+                setAuthStatus(err.message || 'Google Sign-In failed.', true);
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        };
+
+        window.handleEmailAuthSubmit = async function (e) {
             e.preventDefault();
-            const emailEl = document.getElementById('authEmail');
-            const passEl = document.getElementById('authPassword');
-            const nameEl = document.getElementById('authDisplayName');
-            const statusEl = document.getElementById('authStatusMsg');
+            const email = (document.getElementById('authEmail')?.value || '').trim();
+            const password = document.getElementById('authPassword')?.value || '';
+            const customName = (document.getElementById('authDisplayName')?.value || '').trim();
             const submitBtn = document.getElementById('authSubmitBtn');
 
-            const email = (emailEl?.value || '').trim();
-            const password = passEl?.value || '';
-            const displayName = (nameEl?.value || '').trim();
-
             if (!email || password.length < 6) {
-                if (statusEl) statusEl.textContent = 'Enter a valid email and 6+ character password.';
+                setAuthStatus('Enter a valid email and 6+ character password.', true);
                 return;
             }
 
             if (submitBtn) submitBtn.disabled = true;
-            if (statusEl) {
-                statusEl.style.color = '#a5b4fc';
-                statusEl.textContent = 'Signing in...';
-            }
-
-            const fallbackName = displayName || email.split('@')[0] || 'Member';
-            const endpoint = currentAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+            setAuthStatus(currentAuthMode === 'register' ? 'Creating account...' : 'Signing in...', false);
 
             try {
-                const res = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, password, name: fallbackName })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    const backendUser = data.user || data;
-                    setStreamXUser({
-                        id: backendUser.id || ('usr_' + Date.now()),
-                        email: backendUser.email || email,
-                        name: backendUser.name || fallbackName,
-                        nameColor: backendUser.nameColor || '#38bdf8',
-                        avatar: backendUser.avatar || FALLBACK_FLAG,
-                        verified: true,
-                        reminders: Array.isArray(backendUser.reminders) ? backendUser.reminders : [],
-                        watchHistory: Array.isArray(backendUser.watchHistory) ? backendUser.watchHistory : [],
-                        categoryCounts: backendUser.categoryCounts || {}
-                    });
-                    closeAuthModal();
-                    return;
-                }
-
-                const errData = await res.json().catch(() => ({}));
-                if (res.status !== 404) {
-                    if (statusEl) {
-                        statusEl.style.color = '#fca5a5';
-                        statusEl.textContent = errData.error || 'Authentication failed.';
+                let cred;
+                if (currentAuthMode === 'register') {
+                    cred = await createUserWithEmailAndPassword(auth, email, password);
+                    if (customName) {
+                        await updateProfile(cred.user, { displayName: customName });
                     }
-                    if (submitBtn) submitBtn.disabled = false;
-                    return;
+                } else {
+                    cred = await signInWithEmailAndPassword(auth, email, password);
                 }
+
+                const fullProfile = await loadOrCreateUserDoc(cred.user, customName);
+                syncUserCache(fullProfile);
+                window.closeAuthModal();
             } catch (err) {
-                // Backend auth endpoint not yet added; use local session until server.js auth is added
+                console.error('[Email Auth]', err);
+                setAuthStatus(err.message || 'Authentication failed.', true);
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
             }
+        };
+    </script>
 
-            // Local fallback when /api/auth/* is not yet mounted on server.js
-            const existingUsersRaw = localStorage.getItem('streamx_local_accounts') || '{}';
-            let accounts = {};
-            try { accounts = JSON.parse(existingUsersRaw); } catch (e) { accounts = {}; }
-
-            const existing = accounts[email.toLowerCase()];
-            setStreamXUser({
-                id: existing?.id || ('usr_' + Date.now()),
-                email: email.toLowerCase(),
-                name: existing?.name || fallbackName,
-                nameColor: existing?.nameColor || '#38bdf8',
-                avatar: existing?.avatar || FALLBACK_FLAG,
-                verified: true,
-                reminders: existing?.reminders || [],
-                watchHistory: existing?.watchHistory || [],
-                categoryCounts: existing?.categoryCounts || {}
-            });
-            accounts[email.toLowerCase()] = getStreamXUser();
-            localStorage.setItem('streamx_local_accounts', JSON.stringify(accounts));
-
-            if (submitBtn) submitBtn.disabled = false;
-            closeAuthModal();
-        }
-
-        renderNavbarAuthState();
-
+    <script>
         (function startDevBySriLankaLoop() {
             const el = document.getElementById("devBySriLankaText");
             if (!el) return;
@@ -1515,6 +1636,7 @@
         }
 
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
+        const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         const TEAM_COUNTRY_CODES = {
             "india": "in", "new zealand": "nz", "sri lanka": "lk", "australia": "au",
