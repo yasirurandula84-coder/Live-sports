@@ -10,9 +10,14 @@ const io = new Server(server);
 
 app.use(express.static(path.join(__dirname, 'public'), { extensions: ['html'] }));
 
-const matchViewers = {};
+// matchId -> Set of active socket.id values
+const matchActiveSockets = {};
 const matchTotalViews = {};
 const matchChatHistories = {};
+
+function getMatchLiveCount(matchId) {
+    return matchActiveSockets[matchId] ? matchActiveSockets[matchId].size : 0;
+}
 
 const ADMIN_STATS_KEY = process.env.ADMIN_PANEL_KEY || 'streamx-admin-2026';
 
@@ -252,12 +257,12 @@ app.get('/api/admin/views-stats', (req, res) => {
     }
 
     const allMatchIds = new Set([
-        ...Object.keys(matchViewers),
+        ...Object.keys(matchActiveSockets),
         ...Object.keys(matchTotalViews)
     ]);
 
     const rows = Array.from(allMatchIds).map((matchId) => {
-        const liveNow = matchViewers[matchId] || 0;
+        const liveNow = getMatchLiveCount(matchId);
         const totalViews = matchTotalViews[matchId] || 0;
         const chatCount = Array.isArray(matchChatHistories[matchId])
             ? matchChatHistories[matchId].length
@@ -761,6 +766,19 @@ io.on('connection', (socket) => {
         const safeMatchId = String(matchId).trim();
         if (!safeMatchId) return;
 
+        // Leave previous match room if switching matches on same socket
+        if (socket.currentMatch && socket.currentMatch !== safeMatchId) {
+            const prevId = socket.currentMatch;
+            socket.leave(prevId);
+            if (matchActiveSockets[prevId]) {
+                matchActiveSockets[prevId].delete(socket.id);
+                if (matchActiveSockets[prevId].size === 0) {
+                    delete matchActiveSockets[prevId];
+                }
+                io.to(prevId).emit('viewerCount', getMatchLiveCount(prevId));
+            }
+        }
+
         socket.join(safeMatchId);
         socket.username = (username && String(username).trim()) || 'Guest';
         socket.nameColor = nameColor || '';
@@ -768,17 +786,21 @@ io.on('connection', (socket) => {
         socket.verified = Boolean(verified);
         socket.currentMatch = safeMatchId;
 
-        if (!matchViewers[safeMatchId]) {
-            matchViewers[safeMatchId] = 0;
+        if (!matchActiveSockets[safeMatchId]) {
+            matchActiveSockets[safeMatchId] = new Set();
         }
-        matchViewers[safeMatchId]++;
 
-        if (!matchTotalViews[safeMatchId]) {
-            matchTotalViews[safeMatchId] = 0;
+        const isNewSocketInMatch = !matchActiveSockets[safeMatchId].has(socket.id);
+        matchActiveSockets[safeMatchId].add(socket.id);
+
+        if (isNewSocketInMatch) {
+            if (!matchTotalViews[safeMatchId]) {
+                matchTotalViews[safeMatchId] = 0;
+            }
+            matchTotalViews[safeMatchId]++;
         }
-        matchTotalViews[safeMatchId]++;
 
-        io.to(safeMatchId).emit('viewerCount', matchViewers[safeMatchId]);
+        io.to(safeMatchId).emit('viewerCount', getMatchLiveCount(safeMatchId));
 
         if (matchChatHistories[safeMatchId] && matchChatHistories[safeMatchId].length > 0) {
             socket.emit('chatHistory', matchChatHistories[safeMatchId]);
@@ -854,11 +876,13 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        if (socket.currentMatch && matchViewers[socket.currentMatch]) {
-            matchViewers[socket.currentMatch]--;
-            if (matchViewers[socket.currentMatch] < 0) matchViewers[socket.currentMatch] = 0;
-
-            io.to(socket.currentMatch).emit('viewerCount', matchViewers[socket.currentMatch]);
+        const matchId = socket.currentMatch;
+        if (matchId && matchActiveSockets[matchId]) {
+            matchActiveSockets[matchId].delete(socket.id);
+            if (matchActiveSockets[matchId].size === 0) {
+                delete matchActiveSockets[matchId];
+            }
+            io.to(matchId).emit('viewerCount', getMatchLiveCount(matchId));
         }
         console.log('User disconnected: ' + socket.id);
     });
