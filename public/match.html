@@ -1886,7 +1886,6 @@
                         return;
                     }
                 } else if (isCurrentlyProxied) {
-                    // If proxied URL failed, try direct raw URL once as secondary fallback
                     startHlsSource(rawUrl, streamObj, myToken, false);
                     return;
                 }
@@ -2261,10 +2260,25 @@
             skipBackBtn.style.display = 'inline-flex';
             skipFwdBtn.style.display = 'inline-flex';
 
-            const isDashMpd = directLink.toLowerCase().includes('.mpd') || Boolean(kid && key);
+            const isDashMpd = directLink.toLowerCase().includes('.mpd') || directLink.includes('/mpd-proxy') || Boolean(kid && key);
 
             if (isDashMpd && window.shaka && shaka.Player.isBrowserSupported()) {
                 try {
+                    let resolvedKid = kid;
+                    let resolvedKey = key;
+
+                    if ((!resolvedKid || !resolvedKey) && directLink.includes('/mpd-proxy')) {
+                        try {
+                            const probeResp = await fetch(directLink, { method: 'GET', cache: 'no-store' });
+                            const drmHdr = probeResp.headers.get('x-stream-drm') || '';
+                            if (drmHdr.includes(':')) {
+                                const [hKid, hKey] = drmHdr.split(':');
+                                resolvedKid = (hKid || '').trim().toLowerCase();
+                                resolvedKey = (hKey || '').trim().toLowerCase();
+                            }
+                        } catch (e) {}
+                    }
+
                     const shakaPlayer = new shaka.Player();
                     await shakaPlayer.attach(video);
                     if (myToken !== streamAttemptToken) {
@@ -2290,9 +2304,9 @@
                             jumpLargeGaps: true,
                             stallEnabled: true,
                             retryParameters: {
-                                timeout: 8000,
-                                maxAttempts: 3,
-                                baseDelay: 250,
+                                timeout: 10000,
+                                maxAttempts: 4,
+                                baseDelay: 300,
                                 backoffFactor: 1.5,
                                 fuzzFactor: 0.2
                             }
@@ -2308,10 +2322,10 @@
                             defaultBandwidthEstimate: 1500000
                         }
                     };
-                    if (kid && key) {
+                    if (resolvedKid && resolvedKey) {
                         shakaConfig.drm = {
                             clearKeys: {
-                                [kid]: key
+                                [resolvedKid]: resolvedKey
                             }
                         };
                     }
