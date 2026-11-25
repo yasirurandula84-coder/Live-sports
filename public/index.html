@@ -76,6 +76,73 @@
             text-decoration: none; display: flex; align-items: center; gap: 8px;
         }
 
+        .nav-right-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+
+        .nav-signin-btn {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: 1px solid rgba(165, 180, 252, 0.5);
+            color: #fff;
+            height: 40px;
+            padding: 0 15px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 6px 18px rgba(99, 102, 241, 0.34);
+            transition: transform 0.2s ease, filter 0.2s ease, box-shadow 0.2s ease;
+            white-space: nowrap;
+        }
+        .nav-signin-btn:hover {
+            transform: translateY(-1px);
+            filter: brightness(1.08);
+            box-shadow: 0 8px 22px rgba(99, 102, 241, 0.48);
+        }
+        .nav-signin-btn:active {
+            transform: translateY(0) scale(0.98);
+        }
+
+        .nav-user-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            height: 40px;
+            padding: 0 13px 0 6px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(165, 180, 252, 0.35);
+            color: #fff;
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 800;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        .nav-user-pill:hover {
+            background: rgba(99, 102, 241, 0.2);
+            border-color: #818cf8;
+        }
+        .nav-user-avatar {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1.5px solid #818cf8;
+            background: #181824;
+        }
+        .nav-verified-icon {
+            color: #38bdf8;
+            font-size: 12px;
+        }
+
         .menu-toggle-btn {
             background: rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.14);
@@ -192,7 +259,112 @@
         }
 
         @media (max-width: 640px) {
-            .navbar { padding: 12px 16px; }
+            .navbar { padding: 12px 14px; gap: 8px; }
+            .navbar .logo { font-size: 18px; }
+            .nav-signin-btn { height: 36px; padding: 0 11px; font-size: 12px; }
+            .nav-user-pill { height: 36px; padding: 0 10px 0 5px; font-size: 12px; }
+            .menu-toggle-btn { width: 38px; height: 38px; font-size: 16px; }
+        }
+
+        /* Auth Modal */
+        .auth-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 10005;
+            background: rgba(5, 6, 10, 0.86);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+        }
+        .auth-overlay.active {
+            display: flex;
+        }
+        .auth-modal {
+            width: 100%;
+            max-width: 410px;
+            background: linear-gradient(155deg, #171a29, #0d0f17);
+            border: 1px solid rgba(99, 102, 241, 0.38);
+            border-radius: 22px;
+            box-shadow: 0 24px 64px rgba(0, 0, 0, 0.85);
+            padding: 24px 22px;
+            position: relative;
+        }
+        .auth-tabs {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.04);
+            padding: 5px;
+            border-radius: 13px;
+            margin-bottom: 18px;
+        }
+        .auth-tab-btn {
+            border: none;
+            background: transparent;
+            color: #9ca3af;
+            padding: 9px 10px;
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .auth-tab-btn.active {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+        }
+        .auth-field {
+            margin-bottom: 13px;
+            text-align: left;
+        }
+        .auth-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .auth-field input {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 11px;
+            padding: 11px 13px;
+            color: #fff;
+            font-size: 13.5px;
+            outline: none;
+        }
+        .auth-field input:focus {
+            border-color: #818cf8;
+        }
+        .auth-submit-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: none;
+            border-radius: 12px;
+            padding: 12px;
+            color: #fff;
+            font-size: 14px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.38);
+            margin-top: 4px;
+        }
+        .auth-submit-btn:hover {
+            filter: brightness(1.08);
+        }
+        .auth-status-msg {
+            margin-top: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            text-align: center;
+            min-height: 18px;
+            color: #fca5a5;
         }
 
         .container {
@@ -904,9 +1076,22 @@
 
     <nav class="navbar">
         <a href="/" class="logo"><i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 18px;"></i> STREAMX</a>
-        <button type="button" class="menu-toggle-btn" id="openDrawerBtn" onclick="toggleRightDrawer(true)" aria-label="Open Menu">
-            <i class="fa-solid fa-bars"></i>
-        </button>
+
+        <div class="nav-right-actions">
+            <button type="button" class="nav-signin-btn" id="navSignInBtn" onclick="openAuthModal('login')">
+                <i class="fa-solid fa-right-to-bracket"></i> Sign In
+            </button>
+
+            <a href="/profile.html" class="nav-user-pill" id="navUserPill" style="display: none;" title="Open Profile">
+                <img src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Avatar" class="nav-user-avatar" id="navUserAvatar">
+                <span id="navUserName">Member</span>
+                <i class="fa-solid fa-circle-check nav-verified-icon" title="Verified Member"></i>
+            </a>
+
+            <button type="button" class="menu-toggle-btn" id="openDrawerBtn" onclick="toggleRightDrawer(true)" aria-label="Open Menu">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+        </div>
     </nav>
 
     <div class="drawer-backdrop" id="drawerBackdrop" onclick="toggleRightDrawer(false)"></div>
@@ -918,10 +1103,47 @@
             </button>
         </div>
         <a href="/" class="drawer-link active"><i class="fa-solid fa-house"></i> Home</a>
+        <a href="/profile.html" class="drawer-link"><i class="fa-solid fa-user-check"></i> My Profile</a>
         <a href="/ranking.html" class="drawer-link"><i class="fa-solid fa-trophy"></i> Cricket Ranking</a>
         <a href="https://t.me/your_streamx_group" target="_blank" rel="noopener noreferrer" class="drawer-link"><i class="fa-brands fa-telegram" style="color: #38bdf8;"></i> Telegram Group</a>
         <button type="button" class="drawer-link" style="width: 100%; cursor: pointer; text-align: left;" onclick="toggleRightDrawer(false); openPrivacyModal();"><i class="fa-solid fa-shield-halved" style="color: #a5b4fc;"></i> Privacy Policy</button>
     </aside>
+
+    <!-- Sign In / Sign Up Modal -->
+    <div class="auth-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
+        <div class="auth-modal">
+            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
+                <h3 id="authModalTitle" style="margin: 0; font-size: 17px; font-weight: 800; color: #fff;">
+                    <i class="fa-solid fa-user-shield" style="color: #818cf8;"></i> StreamX Account
+                </h3>
+                <button type="button" class="tapmad-close-btn" onclick="closeAuthModal()" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="auth-tabs">
+                <button type="button" class="auth-tab-btn active" id="tabLoginBtn" onclick="switchAuthTab('login')">Sign In</button>
+                <button type="button" class="auth-tab-btn" id="tabRegisterBtn" onclick="switchAuthTab('register')">Create Account</button>
+            </div>
+
+            <form id="authForm" onsubmit="handleAuthSubmit(event)">
+                <div class="auth-field" id="authNameField" style="display: none;">
+                    <label for="authDisplayName">Chat Display Name</label>
+                    <input type="text" id="authDisplayName" placeholder="e.g. Kasun Perera" maxlength="28">
+                </div>
+                <div class="auth-field">
+                    <label for="authEmail">Email Address</label>
+                    <input type="email" id="authEmail" placeholder="you@example.com" required>
+                </div>
+                <div class="auth-field">
+                    <label for="authPassword">Password</label>
+                    <input type="password" id="authPassword" placeholder="At least 6 characters" required minlength="6">
+                </div>
+                <button type="submit" class="auth-submit-btn" id="authSubmitBtn">Sign In</button>
+                <div class="auth-status-msg" id="authStatusMsg"></div>
+            </form>
+        </div>
+    </div>
 
     <div class="container">
 
@@ -1024,13 +1246,13 @@
             </div>
             <div class="privacy-modal-body">
                 <h4>1. Information We Collect</h4>
-                <p>StreamX does not require user registration or personal accounts to browse live sports schedules. Basic technical details such as browser type, device viewport, or search queries entered on the page remain strictly functional for your session.</p>
+                <p>StreamX allows instant live sports viewing without mandatory sign-in. If you sign in with a member account, your display name, name color, profile picture, watch history, and match reminders are saved to personalize your experience.</p>
 
                 <h4>2. Live Streams &amp; External Links</h4>
                 <p>Match feeds, team logos, and community channels (such as our Telegram group) may link to or load third-party sources. Those external platforms operate under their own privacy policies and terms.</p>
 
                 <h4>3. Cookies &amp; Local Storage</h4>
-                <p>We do not use invasive tracking cookies to sell personal data. Standard browser caching or network requests are used only to keep live match listings and channel counts up to date.</p>
+                <p>Browser storage and session data are used to keep your signed-in state, profile settings, live match listings, and channel counts up to date.</p>
 
                 <h4>4. Changes to This Policy</h4>
                 <p>We may update this Privacy Policy from time to time as StreamX evolves. Continued use of StreamX indicates acceptance of the current policy.</p>
@@ -1057,6 +1279,181 @@
     </nav>
 
     <script>
+        const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+
+        function getStreamXUser() {
+            try {
+                const raw = localStorage.getItem('streamx_user');
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                return parsed && (parsed.email || parsed.name) ? parsed : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function setStreamXUser(userObj) {
+            if (!userObj) return;
+            localStorage.setItem('streamx_user', JSON.stringify(userObj));
+            if (userObj.name) {
+                localStorage.setItem('chat_username', userObj.name);
+            }
+            renderNavbarAuthState();
+        }
+
+        function renderNavbarAuthState() {
+            const signInBtn = document.getElementById('navSignInBtn');
+            const userPill = document.getElementById('navUserPill');
+            const userAvatar = document.getElementById('navUserAvatar');
+            const userNameEl = document.getElementById('navUserName');
+            const user = getStreamXUser();
+
+            if (user) {
+                if (signInBtn) signInBtn.style.display = 'none';
+                if (userPill) {
+                    userPill.style.display = 'inline-flex';
+                    if (userNameEl) {
+                        userNameEl.textContent = user.name || 'Member';
+                        userNameEl.style.color = user.nameColor || '#ffffff';
+                    }
+                    if (userAvatar) {
+                        userAvatar.src = user.avatar || FALLBACK_FLAG;
+                        userAvatar.onerror = function () { this.src = FALLBACK_FLAG; };
+                    }
+                }
+            } else {
+                if (signInBtn) signInBtn.style.display = 'inline-flex';
+                if (userPill) userPill.style.display = 'none';
+            }
+        }
+
+        let currentAuthMode = 'login';
+
+        function openAuthModal(mode = 'login') {
+            currentAuthMode = mode;
+            const overlay = document.getElementById('authOverlay');
+            const tabLogin = document.getElementById('tabLoginBtn');
+            const tabRegister = document.getElementById('tabRegisterBtn');
+            const nameField = document.getElementById('authNameField');
+            const submitBtn = document.getElementById('authSubmitBtn');
+            const statusMsg = document.getElementById('authStatusMsg');
+
+            if (statusMsg) statusMsg.textContent = '';
+            const isLogin = mode === 'login';
+            if (tabLogin) tabLogin.classList.toggle('active', isLogin);
+            if (tabRegister) tabRegister.classList.toggle('active', !isLogin);
+            if (nameField) nameField.style.display = isLogin ? 'none' : 'block';
+            if (submitBtn) submitBtn.textContent = isLogin ? 'Sign In' : 'Create Account';
+
+            if (overlay) overlay.classList.add('active');
+        }
+
+        function closeAuthModal() {
+            const overlay = document.getElementById('authOverlay');
+            if (overlay) overlay.classList.remove('active');
+        }
+
+        function switchAuthTab(mode) {
+            openAuthModal(mode);
+        }
+
+        document.addEventListener('click', (e) => {
+            const overlay = document.getElementById('authOverlay');
+            if (overlay && overlay.classList.contains('active') && e.target === overlay) {
+                closeAuthModal();
+            }
+        });
+
+        async function handleAuthSubmit(e) {
+            e.preventDefault();
+            const emailEl = document.getElementById('authEmail');
+            const passEl = document.getElementById('authPassword');
+            const nameEl = document.getElementById('authDisplayName');
+            const statusEl = document.getElementById('authStatusMsg');
+            const submitBtn = document.getElementById('authSubmitBtn');
+
+            const email = (emailEl?.value || '').trim();
+            const password = passEl?.value || '';
+            const displayName = (nameEl?.value || '').trim();
+
+            if (!email || password.length < 6) {
+                if (statusEl) statusEl.textContent = 'Enter a valid email and 6+ character password.';
+                return;
+            }
+
+            if (submitBtn) submitBtn.disabled = true;
+            if (statusEl) {
+                statusEl.style.color = '#a5b4fc';
+                statusEl.textContent = 'Signing in...';
+            }
+
+            const fallbackName = displayName || email.split('@')[0] || 'Member';
+            const endpoint = currentAuthMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password, name: fallbackName })
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    const backendUser = data.user || data;
+                    setStreamXUser({
+                        id: backendUser.id || ('usr_' + Date.now()),
+                        email: backendUser.email || email,
+                        name: backendUser.name || fallbackName,
+                        nameColor: backendUser.nameColor || '#38bdf8',
+                        avatar: backendUser.avatar || FALLBACK_FLAG,
+                        verified: true,
+                        reminders: Array.isArray(backendUser.reminders) ? backendUser.reminders : [],
+                        watchHistory: Array.isArray(backendUser.watchHistory) ? backendUser.watchHistory : [],
+                        categoryCounts: backendUser.categoryCounts || {}
+                    });
+                    closeAuthModal();
+                    return;
+                }
+
+                const errData = await res.json().catch(() => ({}));
+                if (res.status !== 404) {
+                    if (statusEl) {
+                        statusEl.style.color = '#fca5a5';
+                        statusEl.textContent = errData.error || 'Authentication failed.';
+                    }
+                    if (submitBtn) submitBtn.disabled = false;
+                    return;
+                }
+            } catch (err) {
+                // Backend auth endpoint not yet added; use local session until server.js auth is added
+            }
+
+            // Local fallback when /api/auth/* is not yet mounted on server.js
+            const existingUsersRaw = localStorage.getItem('streamx_local_accounts') || '{}';
+            let accounts = {};
+            try { accounts = JSON.parse(existingUsersRaw); } catch (e) { accounts = {}; }
+
+            const existing = accounts[email.toLowerCase()];
+            setStreamXUser({
+                id: existing?.id || ('usr_' + Date.now()),
+                email: email.toLowerCase(),
+                name: existing?.name || fallbackName,
+                nameColor: existing?.nameColor || '#38bdf8',
+                avatar: existing?.avatar || FALLBACK_FLAG,
+                verified: true,
+                reminders: existing?.reminders || [],
+                watchHistory: existing?.watchHistory || [],
+                categoryCounts: existing?.categoryCounts || {}
+            });
+            accounts[email.toLowerCase()] = getStreamXUser();
+            localStorage.setItem('streamx_local_accounts', JSON.stringify(accounts));
+
+            if (submitBtn) submitBtn.disabled = false;
+            closeAuthModal();
+        }
+
+        renderNavbarAuthState();
+
         (function startDevBySriLankaLoop() {
             const el = document.getElementById("devBySriLankaText");
             if (!el) return;
@@ -1066,13 +1463,6 @@
             const eraseStepMs = 45;
             let index = 0;
             let timerId = null;
-
-            function clearTimer() {
-                if (timerId) {
-                    clearTimeout(timerId);
-                    timerId = null;
-                }
-            }
 
             function typeNext() {
                 if (index <= phrase.length) {
@@ -1125,7 +1515,6 @@
         }
 
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
-        const FALLBACK_FLAG = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
 
         const TEAM_COUNTRY_CODES = {
             "india": "in", "new zealand": "nz", "sri lanka": "lk", "australia": "au",
