@@ -762,6 +762,7 @@
             color: #38bdf8;
             font-size: 12px;
             flex-shrink: 0;
+            margin-left: 1px;
         }
 
         /* Chat-Scoped Reactions Floating Layer (Only inside .chat-box, never over video) */
@@ -1257,6 +1258,17 @@
         let currentMemberProfile = null;
         let recordedWatchKey = "";
 
+        function clearMemberLocalState() {
+            currentMemberProfile = null;
+            try {
+                localStorage.removeItem('streamx_user');
+                localStorage.removeItem('chat_username');
+            } catch (e) {}
+            if (typeof window.resetGuestUsername === 'function') {
+                window.resetGuestUsername();
+            }
+        }
+
         function applyMatchNavbarProfile(profile) {
             const linkEl = document.getElementById('matchNavProfileLink');
             const avatarEl = document.getElementById('matchNavAvatar');
@@ -1281,34 +1293,31 @@
         }
 
         window.getActiveMemberChatProfile = function () {
+            if (!auth.currentUser) {
+                return null;
+            }
             if (currentMemberProfile && (currentMemberProfile.uid || currentMemberProfile.name)) {
                 return {
-                    uid: currentMemberProfile.uid || '',
-                    name: currentMemberProfile.name || 'Member',
+                    uid: currentMemberProfile.uid || auth.currentUser.uid,
+                    name: currentMemberProfile.name || auth.currentUser.displayName || (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Member'),
                     nameColor: currentMemberProfile.nameColor || '#38bdf8',
-                    avatar: currentMemberProfile.avatar || FALLBACK_AVATAR,
+                    avatar: currentMemberProfile.avatar || auth.currentUser.photoURL || FALLBACK_AVATAR,
                     verified: true
                 };
             }
-            try {
-                const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
-                if (cached && (cached.uid || cached.email)) {
-                    return {
-                        uid: cached.uid || '',
-                        name: cached.name || 'Member',
-                        nameColor: cached.nameColor || '#38bdf8',
-                        avatar: cached.avatar || FALLBACK_AVATAR,
-                        verified: true
-                    };
-                }
-            } catch (e) {}
-            return null;
+            return {
+                uid: auth.currentUser.uid,
+                name: auth.currentUser.displayName || (auth.currentUser.email ? auth.currentUser.email.split('@')[0] : 'Member'),
+                nameColor: '#38bdf8',
+                avatar: auth.currentUser.photoURL || FALLBACK_AVATAR,
+                verified: true
+            };
         };
 
         window.recordMatchWatchedIfSignedIn = async function (matchMeta = {}) {
-            const member = window.getActiveMemberChatProfile();
-            const uid = (auth.currentUser && auth.currentUser.uid) || (member && member.uid);
-            if (!uid) return;
+            const activeUser = auth.currentUser;
+            if (!activeUser || !activeUser.uid) return;
+            const uid = activeUser.uid;
 
             const matchKey = `${uid}::${matchMeta.matchId || ''}`;
             if (!matchMeta.matchId || recordedWatchKey === matchKey) return;
@@ -1364,8 +1373,11 @@
 
         onAuthStateChanged(auth, async (user) => {
             if (!user) {
-                currentMemberProfile = null;
+                clearMemberLocalState();
                 applyMatchNavbarProfile(null);
+                if (typeof window.onMemberSignedOut === 'function') {
+                    window.onMemberSignedOut();
+                }
                 return;
             }
 
@@ -1381,22 +1393,33 @@
             try {
                 const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
                 if (cached && cached.uid === user.uid) {
-                    profile = { ...profile, ...cached };
+                    profile = { ...profile, ...cached, uid: user.uid, verified: true };
                 }
             } catch (e) {}
 
             currentMemberProfile = profile;
-            localStorage.setItem('chat_username', profile.name);
-            applyMatchNavbarProfile(profile);
+            localStorage.setItem('streamx_user', JSON.stringify(currentMemberProfile));
+            localStorage.setItem('chat_username', currentMemberProfile.name);
+            applyMatchNavbarProfile(currentMemberProfile);
 
             if (typeof window.onMemberAuthReady === 'function') {
-                window.onMemberAuthReady(profile);
+                window.onMemberAuthReady(currentMemberProfile);
             }
 
             try {
                 const snap = await getDoc(doc(db, 'users', user.uid));
+                if (!auth.currentUser || auth.currentUser.uid !== user.uid) return;
                 if (snap.exists()) {
-                    currentMemberProfile = { ...profile, ...snap.data(), uid: user.uid, verified: true };
+                    const remoteData = snap.data() || {};
+                    currentMemberProfile = {
+                        ...profile,
+                        ...remoteData,
+                        name: remoteData.name || profile.name,
+                        nameColor: remoteData.nameColor || profile.nameColor || '#38bdf8',
+                        avatar: remoteData.avatar || profile.avatar || FALLBACK_AVATAR,
+                        uid: user.uid,
+                        verified: true
+                    };
                     localStorage.setItem('streamx_user', JSON.stringify(currentMemberProfile));
                     localStorage.setItem('chat_username', currentMemberProfile.name);
                     applyMatchNavbarProfile(currentMemberProfile);
@@ -2810,6 +2833,11 @@
         const chatMessages = document.getElementById('chatMessages');
 
         let hasJoinedRoom = false;
+        let lastSentMessageMeta = null;
+
+        window.resetGuestUsername = function () {
+            username = '';
+        };
 
         function getCurrentSenderPayload() {
             const member = typeof window.getActiveMemberChatProfile === 'function'
@@ -2823,8 +2851,9 @@
                     verified: true
                 };
             }
+            const guestName = (username || '').trim();
             return {
-                username: username || 'Guest',
+                username: guestName,
                 nameColor: '',
                 avatar: '',
                 verified: false
@@ -2835,17 +2864,6 @@
             if (!socket) return;
             const sender = getCurrentSenderPayload();
             const labelToUse = sender.verified ? sender.name : (userLabel || sender.username || 'Guest');
-            if (hasJoinedRoom) {
-                socket.emit('joinMatch', {
-                    matchId,
-                    username: labelToUse,
-                    nameColor: sender.nameColor,
-                    avatar: sender.avatar,
-                    verified: sender.verified
-                });
-                return;
-            }
-            hasJoinedRoom = true;
             socket.emit('joinMatch', {
                 matchId,
                 username: labelToUse,
@@ -2853,6 +2871,7 @@
                 avatar: sender.avatar,
                 verified: sender.verified
             });
+            hasJoinedRoom = true;
         }
 
         window.onMemberAuthReady = function (memberProfile) {
@@ -2869,6 +2888,11 @@
                     isLiveTv: false
                 });
             }
+        };
+
+        window.onMemberSignedOut = function () {
+            username = '';
+            joinMatchRoom('Guest');
         };
 
         joinMatchRoom(username || 'Guest');
@@ -2917,6 +2941,39 @@
             }
         });
 
+        function normalizeIncomingMessage(rawData) {
+            const data = { ...(rawData || {}) };
+            const member = typeof window.getActiveMemberChatProfile === 'function'
+                ? window.getActiveMemberChatProfile()
+                : null;
+
+            const isOwnRecentEcho =
+                lastSentMessageMeta &&
+                String(data.message || '') === String(lastSentMessageMeta.message || '') &&
+                Date.now() - lastSentMessageMeta.sentAt < 4000;
+
+            if (isOwnRecentEcho) {
+                if (lastSentMessageMeta.username) data.username = lastSentMessageMeta.username;
+                if (lastSentMessageMeta.nameColor) data.nameColor = lastSentMessageMeta.nameColor;
+                if (lastSentMessageMeta.avatar) data.avatar = lastSentMessageMeta.avatar;
+                data.verified = Boolean(lastSentMessageMeta.verified);
+            } else if (
+                member &&
+                (!data.username || String(data.username).trim().toLowerCase() === 'user' || String(data.username).trim().toLowerCase() === 'guest')
+            ) {
+                data.username = member.name;
+                data.nameColor = member.nameColor || '#38bdf8';
+                data.avatar = member.avatar || FALLBACK_FLAG;
+                data.verified = true;
+            }
+
+            if (!data.username || !String(data.username).trim()) {
+                data.username = 'User';
+            }
+            data.verified = Boolean(data.verified);
+            return data;
+        }
+
         function buildAuthorBadgeHtml(data) {
             const nameText = data.username || 'User';
             const userColor = data.nameColor || getUsernameColor(nameText);
@@ -2932,8 +2989,9 @@
             };
         }
 
-        function appendFullscreenMessage(data) {
+        function appendFullscreenMessage(rawData) {
             if (!fsChatMessages) return;
+            const data = normalizeIncomingMessage(rawData);
             const { leftHtml } = buildAuthorBadgeHtml(data);
             const item = document.createElement('div');
             item.className = 'fs-chat-msg';
@@ -2948,7 +3006,8 @@
             fsChatMessages.scrollTop = fsChatMessages.scrollHeight;
         }
 
-        function renderMessage(data) {
+        function renderMessage(rawData) {
+            const data = normalizeIncomingMessage(rawData);
             let replyHtml = '';
             if (data.replyTo) {
                 const replyColor = data.replyTo.nameColor || getUsernameColor(data.replyTo.username || 'User');
@@ -3007,6 +3066,15 @@
 
         function sendChatMessage(msg) {
             const sender = getCurrentSenderPayload();
+            lastSentMessageMeta = {
+                message: msg,
+                username: sender.username || 'Guest',
+                nameColor: sender.nameColor,
+                avatar: sender.avatar,
+                verified: sender.verified,
+                sentAt: Date.now()
+            };
+
             if (socket) {
                 socket.emit('chatMessage', {
                     message: msg,
@@ -3037,7 +3105,7 @@
             const member = typeof window.getActiveMemberChatProfile === 'function'
                 ? window.getActiveMemberChatProfile()
                 : null;
-            return Boolean((member && member.name) || username);
+            return Boolean((member && member.name) || (username && username.trim()));
         }
 
         chatForm.addEventListener('submit', (e) => {
