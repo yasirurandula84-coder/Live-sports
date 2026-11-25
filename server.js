@@ -756,13 +756,16 @@ io.on('connection', (socket) => {
         socket.emit('secureStreamLink', finalLink);
     });
 
-    socket.on('joinMatch', ({ matchId, username }) => {
+    socket.on('joinMatch', ({ matchId, username, nameColor, avatar, verified }) => {
         if (!matchId) return;
         const safeMatchId = String(matchId).trim();
         if (!safeMatchId) return;
 
         socket.join(safeMatchId);
-        socket.username = username;
+        socket.username = (username && String(username).trim()) || 'Guest';
+        socket.nameColor = nameColor || '';
+        socket.avatar = avatar || '';
+        socket.verified = Boolean(verified);
         socket.currentMatch = safeMatchId;
 
         if (!matchViewers[safeMatchId]) {
@@ -784,7 +787,7 @@ io.on('connection', (socket) => {
 
     socket.on('chatMessage', (data) => {
         const matchId = socket.currentMatch;
-        if (!matchId) return;
+        if (!matchId || !data || !data.message) return;
 
         const sriLankaTime = new Date().toLocaleTimeString('en-US', {
             timeZone: 'Asia/Colombo',
@@ -793,10 +796,31 @@ io.on('connection', (socket) => {
             hour12: true
         });
 
+        const senderUsername =
+            (data.username && String(data.username).trim()) ||
+            (socket.username && String(socket.username).trim()) ||
+            'Guest';
+
+        if (data.username && String(data.username).trim()) {
+            socket.username = String(data.username).trim();
+        }
+        if (typeof data.verified === 'boolean') {
+            socket.verified = data.verified;
+        }
+        if (typeof data.nameColor === 'string') {
+            socket.nameColor = data.nameColor;
+        }
+        if (typeof data.avatar === 'string') {
+            socket.avatar = data.avatar;
+        }
+
         const messageData = {
             id: 'msg_' + Date.now() + Math.random().toString(36).substring(2, 7),
-            username: socket.username,
-            message: data.message,
+            username: senderUsername,
+            nameColor: data.nameColor || socket.nameColor || '',
+            avatar: data.avatar || socket.avatar || '',
+            verified: typeof data.verified === 'boolean' ? data.verified : Boolean(socket.verified),
+            message: String(data.message),
             replyTo: data.replyTo || null,
             time: sriLankaTime
         };
