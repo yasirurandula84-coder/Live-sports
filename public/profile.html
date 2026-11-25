@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - StreamX</title>
+    <link rel="icon" type="image/jpeg" href="https://i.ibb.co/ymmmPBWw/1793782216727.jpg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #6366f1;
+            --accent-color: #ff4757;
+            --bg-dark: #07070a;
+            --border-color: rgba(255, 255, 255, 0.09);
+        }
+
+        ::-webkit-scrollbar { width: 8px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #1f1f28; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+        html, body {
+            background-color: var(--bg-dark);
+            color: #f3f4f6;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            padding-bottom: 88px;
+            overflow-x: clip;
+        }
+
+        .glow-orb-1 {
+            position: fixed; top: -110px; left: -110px; width: 420px; height: 420px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.18) 0%, transparent 70%);
+            border-radius: 50%; z-index: 0; pointer-events: none;
+        }
+        .glow-orb-2 {
+            position: fixed; top: 340px; right: -120px; width: 460px; height: 460px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.13) 0%, transparent 70%);
+            border-radius: 50%; z-index: 0; pointer-events: none;
+        }
+
+        .navbar {
+            background: rgba(11, 11, 16, 0.92);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky; top: 0; z-index: 1000;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 14px 24px; gap: 12px;
+        }
+
+        .navbar .logo {
+            letter-spacing: 1.5px; font-weight: 900; font-size: 21px;
+            background: linear-gradient(135deg, #fff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            text-decoration: none; display: flex; align-items: center; gap: 8px;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-home-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #f8fafc;
+            text-decoration: none;
+            height: 38px;
+            padding: 0 14px;
+            border-radius: 11px;
+            font-size: 12.5px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            transition: all 0.2s ease;
+        }
+        .nav-home-btn:hover {
+            background: rgba(99, 102, 241, 0.22);
+            border-color: var(--primary-color);
+        }
+
+        .logout-btn {
+            background: rgba(239, 68, 68, 0.14);
+            border: 1px solid rgba(239, 68, 68, 0.38);
+            color: #fca5a5;
+            height: 38px;
+            padding: 0 13px;
+            border-radius: 11px;
+            font-size: 12.5px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.28);
+            color: #fff;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1040px;
+            margin: 0 auto;
+            padding: 20px 18px;
+        }
+
+        /* Guest Prompt Box */
+        .guest-card {
+            background: linear-gradient(155deg, rgba(22, 27, 46, 0.94), rgba(11, 13, 22, 0.98));
+            border: 1px solid rgba(99, 102, 241, 0.32);
+            border-radius: 22px;
+            padding: 36px 22px;
+            text-align: center;
+            box-shadow: 0 18px 44px rgba(0, 0, 0, 0.6);
+            margin-top: 16px;
+        }
+        .guest-card h2 {
+            margin: 0 0 8px 0;
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+        }
+        .guest-card p {
+            margin: 0 auto 20px auto;
+            max-width: 480px;
+            color: #9ca3af;
+            font-size: 13.5px;
+            line-height: 1.6;
+        }
+        .primary-btn {
+            background: linear-gradient(135deg, #6366f1, #4f46e5);
+            border: 1px solid rgba(165, 180, 252, 0.45);
+            color: #fff;
+            border-radius: 12px;
+            padding: 11px 20px;
+            font-size: 13.5px;
+            font-weight: 800;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            box-shadow: 0 8px 22px rgba(99, 102, 241, 0.35);
+            transition: transform 0.2s ease, filter 0.2s ease;
+        }
+        .primary-btn:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.07);
+        }
+
+        /* Profile Header Banner */
+        .profile-hero {
+            background: linear-gradient(145deg, rgba(23, 28, 48, 0.95), rgba(11, 13, 21, 0.98));
+            border: 1px solid rgba(99, 102, 241, 0.28);
+            border-radius: 22px;
+            padding: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 18px;
+            flex-wrap: wrap;
+            box-shadow: 0 16px 38px rgba(0, 0, 0, 0.55);
+        }
+
+        .profile-identity {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .profile-main-avatar {
+            width: 74px;
+            height: 74px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid #818cf8;
+            background: #181824;
+            box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+            flex-shrink: 0;
+        }
+
+        .profile-name-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .profile-display-name {
+            margin: 0;
+            font-size: 22px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .verified-pill {
+            background: rgba(56, 189, 248, 0.16);
+            border: 1px solid rgba(56, 189, 248, 0.45);
+            color: #38bdf8;
+            font-size: 11px;
+            font-weight: 800;
+            padding: 3px 9px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .profile-email {
+            margin: 4px 0 0 0;
+            font-size: 12.5px;
+            color: #9ca3af;
+        }
+
+        /* Stats Row */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+
+        .stat-card {
+            background: linear-gradient(155deg, rgba(18, 21, 34, 0.92), rgba(10, 12, 19, 0.98));
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            padding: 16px 18px;
+        }
+
+        .stat-label {
+            font-size: 11.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
+            color: #9ca3af;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 900;
+            color: #fff;
+        }
+
+        .top-cats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 6px;
+        }
+
+        .top-cat-pill {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.28);
+            border-radius: 11px;
+            padding: 7px 11px;
+            font-size: 12.5px;
+            font-weight: 800;
+            color: #e0e7ff;
+            text-transform: capitalize;
+        }
+
+        /* Two Column Main Grid */
+        .main-split {
+            display: grid;
+            grid-template-columns: 1.15fr 0.85fr;
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        @media (max-width: 840px) {
+            .main-split {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel-box {
+            background: linear-gradient(155deg, rgba(17, 20, 32, 0.94), rgba(10, 11, 18, 0.98));
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 20px;
+        }
+
+        .panel-title {
+            margin: 0 0 14px 0;
+            font-size: 16px;
+            font-weight: 800;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .field-group {
+            margin-bottom: 14px;
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+
+        .text-input {
+            width: 100%;
+            box-sizing: border-box;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 11px;
+            padding: 10px 13px;
+            color: #fff;
+            font-size: 13.5px;
+            outline: none;
+        }
+        .text-input:focus {
+            border-color: #818cf8;
+        }
+
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.25);
+            cursor: pointer;
+            padding: 0;
+            transition: transform 0.15s ease;
+        }
+        .color-swatch:hover {
+            transform: scale(1.1);
+        }
+
+        .color-picker-input {
+            width: 44px;
+            height: 34px;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .preset-avatars {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 8px;
+        }
+
+        .preset-avatar-btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            padding: 0;
+            border: 2px solid rgba(255, 255, 255, 0.16);
+            background: #181824;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.18s ease, border-color 0.18s ease;
+        }
+        .preset-avatar-btn img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .preset-avatar-btn:hover {
+            transform: scale(1.07);
+            border-color: #818cf8;
+        }
+
+        /* Chat Bubble Live Preview */
+        .chat-preview-box {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px dashed rgba(165, 180, 252, 0.35);
+            border-radius: 14px;
+            padding: 12px 14px;
+            margin-top: 8px;
+            margin-bottom: 16px;
+        }
+        .chat-preview-label {
+            font-size: 11px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.6px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+        .chat-demo-msg {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 13.5px;
+            flex-wrap: wrap;
+        }
+        .chat-mini-pic {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            flex-shrink: 0;
+        }
+        .chat-demo-name {
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .chat-demo-text {
+            color: #e2e8f0;
+        }
+
+        .save-feedback {
+            margin-top: 10px;
+            font-size: 12.5px;
+            font-weight: 700;
+            min-height: 18px;
+            color: #86efac;
+        }
+
+        /* History & Reminders */
+        .history-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+
+        .history-item {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 13px;
+            padding: 11px 13px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .history-title {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .history-meta {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 3px;
+            text-transform: capitalize;
+        }
+
+        .cat-badge {
+            background: rgba(99, 102, 241, 0.18);
+            color: #c7d2fe;
+            font-size: 10.5px;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 8px;
+            text-transform: uppercase;
+            flex-shrink: 0;
+        }
+
+        .bottom-nav-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            width: 100%; height: 62px;
+            background: rgba(10, 10, 16, 0.96);
+            backdrop-filter: blur(18px);
+            -webkit-backdrop-filter: blur(18px);
+            border-top: 1px solid rgba(255, 255, 255, 0.12);
+            display: flex; justify-content: space-around; align-items: center;
+            z-index: 9999;
+        }
+
+        .bottom-nav-item {
+            flex: 1;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            gap: 3px; color: #9ca3af; text-decoration: none;
+            font-size: 11px; font-weight: 700; padding: 6px 4px;
+        }
+        .bottom-nav-item i { font-size: 16px; }
+        .bottom-nav-item.active, .bottom-nav-item:hover { color: #fff; }
+        .bottom-nav-item.active i { color: #38bdf8; }
+    </style>
+</head>
+<body>
+    <div class="glow-orb-1"></div>
+    <div class="glow-orb-2"></div>
+
+    <nav class="navbar">
+        <a href="/" class="logo"><i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 18px;"></i> STREAMX</a>
+        <div class="nav-actions">
+            <a href="/" class="nav-home-btn"><i class="fa-solid fa-house"></i> Home</a>
+            <button type="button" class="logout-btn" id="signOutBtn" style="display: none;" onclick="handleSignOut()">
+                <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="guest-card" id="guestStateBox" style="display: none;">
+            <i class="fa-solid fa-user-lock" style="font-size: 36px; color: #818cf8; margin-bottom: 12px;"></i>
+            <h2>Sign In to Access Your Profile</h2>
+            <p>Customize your chat name, name color, and mini profile picture, track total matches watched, see your top 2 categories, and manage match reminders.</p>
+            <a href="/" class="primary-btn"><i class="fa-solid fa-right-to-bracket"></i> Go to Sign In</a>
+        </div>
+
+        <div id="memberProfileContent" style="display: none;">
+            <section class="profile-hero">
+                <div class="profile-identity">
+                    <img src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Profile Avatar" class="profile-main-avatar" id="heroAvatar">
+                    <div>
+                        <div class="profile-name-row">
+                            <h1 class="profile-display-name" id="heroName">Member</h1>
+                            <span class="verified-pill"><i class="fa-solid fa-circle-check"></i> Verified</span>
+                        </div>
+                        <p class="profile-email" id="heroEmail"></p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Watch Stats & Top 2 Categories -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fa-solid fa-clapperboard" style="color: #38bdf8;"></i> Total Matches Watched</div>
+                    <div class="stat-value" id="totalWatchedCount">0</div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fa-solid fa-fire" style="color: #fb923c;"></i> Top 2 Categories</div>
+                    <div class="top-cats-list" id="topTwoCategoriesBox">
+                        <div style="color: #9ca3af; font-size: 12.5px;">No watch data yet.</div>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-label"><i class="fa-solid fa-bell" style="color: #facc15;"></i> Active Reminders</div>
+                    <div class="stat-value" id="remindersCountVal">0</div>
+                </div>
+            </div>
+
+            <div class="main-split">
+                <!-- Customization Form -->
+                <div class="panel-box">
+                    <h2 class="panel-title"><i class="fa-solid fa-sliders" style="color: #818cf8;"></i> Chat &amp; Profile Settings</h2>
+
+                    <form id="profileSettingsForm" onsubmit="handleSaveProfile(event)">
+                        <div class="field-group">
+                            <label for="displayNameInput">Chat Display Name</label>
+                            <input type="text" id="displayNameInput" class="text-input" maxlength="26" placeholder="Enter your chat name" oninput="updateLivePreview()">
+                        </div>
+
+                        <div class="field-group">
+                            <label for="nameColorInput">Chat Name Color</label>
+                            <div class="color-row">
+                                <button type="button" class="color-swatch" style="background: #38bdf8;" onclick="selectPresetColor('#38bdf8')" aria-label="Sky Blue"></button>
+                                <button type="button" class="color-swatch" style="background: #f472b6;" onclick="selectPresetColor('#f472b6')" aria-label="Pink"></button>
+                                <button type="button" class="color-swatch" style="background: #4ade80;" onclick="selectPresetColor('#4ade80')" aria-label="Green"></button>
+                                <button type="button" class="color-swatch" style="background: #facc15;" onclick="selectPresetColor('#facc15')" aria-label="Gold"></button>
+                                <button type="button" class="color-swatch" style="background: #c084fc;" onclick="selectPresetColor('#c084fc')" aria-label="Purple"></button>
+                                <button type="button" class="color-swatch" style="background: #fb7185;" onclick="selectPresetColor('#fb7185')" aria-label="Rose"></button>
+                                <input type="color" id="nameColorInput" class="color-picker-input" value="#38bdf8" oninput="updateLivePreview()">
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="avatarUrlInput">Profile Picture URL (Mini Avatar in Chat)</label>
+                            <input type="url" id="avatarUrlInput" class="text-input" placeholder="https://example.com/avatar.jpg" oninput="updateLivePreview()">
+                            <div class="preset-avatars">
+                                <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('https://i.ibb.co/ymmmPBWw/1793782216727.jpg')" title="StreamX Default">
+                                    <img src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Preset 1">
+                                </button>
+                                <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('https://api.dicebear.com/9.x/avataaars/svg?seed=CricketFan')" title="Avatar 2">
+                                    <img src="https://api.dicebear.com/9.x/avataaars/svg?seed=CricketFan" alt="Preset 2">
+                                </button>
+                                <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('https://api.dicebear.com/9.x/bottts-neutral/svg?seed=StreamXPro')" title="Avatar 3">
+                                    <img src="https://api.dicebear.com/9.x/bottts-neutral/svg?seed=StreamXPro" alt="Preset 3">
+                                </button>
+                                <button type="button" class="preset-avatar-btn" onclick="selectPresetAvatar('https://api.dicebear.com/9.x/thumbs/svg?seed=SLFans')" title="Avatar 4">
+                                    <img src="https://api.dicebear.com/9.x/thumbs/svg?seed=SLFans" alt="Preset 4">
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="chat-preview-box">
+                            <div class="chat-preview-label">Live Chat Appearance Preview</div>
+                            <div class="chat-demo-msg">
+                                <img src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Mini Avatar" class="chat-mini-pic" id="previewMiniPic">
+                                <span class="chat-demo-name" id="previewNameSpan" style="color: #38bdf8;">
+                                    <span id="previewNameText">Member</span>
+                                    <i class="fa-solid fa-circle-check" style="color: #38bdf8; font-size: 12px;"></i>
+                                </span>
+                                <span class="chat-demo-text">What a shot! Sixer!</span>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="primary-btn" id="saveProfileBtn">
+                            <i class="fa-solid fa-floppy-disk"></i> Save Profile Changes
+                        </button>
+                        <div class="save-feedback" id="saveFeedbackMsg"></div>
+                    </form>
+                </div>
+
+                <!-- Watched Matches History -->
+                <div class="panel-box">
+                    <h2 class="panel-title"><i class="fa-solid fa-clock-rotate-left" style="color: #38bdf8;"></i> Watched Matches</h2>
+                    <div class="history-list" id="watchHistoryList">
+                        <div style="color: #9ca3af; font-size: 13px;">No matches watched yet.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bottom-nav-bar" aria-label="Bottom Navigation">
+        <a href="/" class="bottom-nav-item"><i class="fa-solid fa-house"></i><span>Home</span></a>
+        <a href="/category/cricket" class="bottom-nav-item"><i class="fa-solid fa-baseball-bat-ball"></i><span>Cricket</span></a>
+        <a href="/category/football" class="bottom-nav-item"><i class="fa-solid fa-futbol"></i><span>Football</span></a>
+        <a href="/profile.html" class="bottom-nav-item active"><i class="fa-solid fa-user"></i><span>Profile</span></a>
+    </nav>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import {
+            getAuth,
+            onAuthStateChanged,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+        const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgKbo_M5Nr-hCxB08LeEbnSECdqkZ8JXw",
+            authDomain: "streamx-98c47.firebaseapp.com",
+            projectId: "streamx-98c47",
+            storageBucket: "streamx-98c47.firebasestorage.app",
+            messagingSenderId: "1069598060706",
+            appId: "1:1069598060706:web:82103ec37e800884eb27fb",
+            measurementId: "G-FW8DVLR3EJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let activeProfile = null;
+
+        function escapeHtml(val) {
+            return String(val || '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function renderTopTwoCategories(categoryCounts = {}) {
+            const box = document.getElementById('topTwoCategoriesBox');
+            if (!box) return;
+
+            const entries = Object.entries(categoryCounts || {})
+                .filter(([k, v]) => Boolean(k) && Number(v) > 0)
+                .sort((a, b) => Number(b[1]) - Number(a[1]))
+                .slice(0, 2);
+
+            if (entries.length === 0) {
+                box.innerHTML = `<div style="color: #9ca3af; font-size: 12.5px;">Watch matches to see your top 2 categories.</div>`;
+                return;
+            }
+
+            box.innerHTML = entries.map(([cat, count], idx) => `
+                <div class="top-cat-pill">
+                    <span>#${idx + 1} ${escapeHtml(cat)}</span>
+                    <span>${Number(count)} views</span>
+                </div>
+            `).join('');
+        }
+
+        function renderWatchHistory(history = []) {
+            const listEl = document.getElementById('watchHistoryList');
+            if (!listEl) return;
+
+            if (!Array.isArray(history) || history.length === 0) {
+                listEl.innerHTML = `<div style="color: #9ca3af; font-size: 13px;">No matches watched yet. Open any match to record your history.</div>`;
+                return;
+            }
+
+            listEl.innerHTML = history.slice(0, 30).map(item => `
+                <div class="history-item">
+                    <div>
+                        <div class="history-title">${escapeHtml(item.title || 'Live Match')}</div>
+                        <div class="history-meta">${escapeHtml(item.watchedAt || 'Recently watched')}</div>
+                    </div>
+                    <span class="cat-badge">${escapeHtml(item.category || 'Sports')}</span>
+                </div>
+            `).join('');
+        }
+
+        window.updateLivePreview = function () {
+            const nameVal = (document.getElementById('displayNameInput')?.value || '').trim() || 'Member';
+            const colorVal = document.getElementById('nameColorInput')?.value || '#38bdf8';
+            const avatarVal = (document.getElementById('avatarUrlInput')?.value || '').trim() || FALLBACK_AVATAR;
+
+            const previewNameText = document.getElementById('previewNameText');
+            const previewNameSpan = document.getElementById('previewNameSpan');
+            const previewMiniPic = document.getElementById('previewMiniPic');
+
+            if (previewNameText) previewNameText.textContent = nameVal;
+            if (previewNameSpan) previewNameSpan.style.color = colorVal;
+            if (previewMiniPic) {
+                previewMiniPic.src = avatarVal;
+                previewMiniPic.onerror = function () { this.src = FALLBACK_AVATAR; };
+            }
+        };
+
+        window.selectPresetColor = function (hex) {
+            const picker = document.getElementById('nameColorInput');
+            if (picker) {
+                picker.value = hex;
+                window.updateLivePreview();
+            }
+        };
+
+        window.selectPresetAvatar = function (url) {
+            const input = document.getElementById('avatarUrlInput');
+            if (input) {
+                input.value = url;
+                window.updateLivePreview();
+            }
+        };
+
+        function populateProfileUi(profile) {
+            activeProfile = profile;
+            document.getElementById('guestStateBox').style.display = 'none';
+            document.getElementById('memberProfileContent').style.display = 'block';
+            document.getElementById('signOutBtn').style.display = 'inline-flex';
+
+            const safeName = profile.name || 'Member';
+            const safeColor = profile.nameColor || '#38bdf8';
+            const safeAvatar = profile.avatar || FALLBACK_AVATAR;
+
+            const heroAvatar = document.getElementById('heroAvatar');
+            heroAvatar.src = safeAvatar;
+            heroAvatar.onerror = function () { this.src = FALLBACK_AVATAR; };
+
+            const heroName = document.getElementById('heroName');
+            heroName.textContent = safeName;
+            heroName.style.color = safeColor;
+
+            document.getElementById('heroEmail').textContent = profile.email || '';
+
+            const history = Array.isArray(profile.watchHistory) ? profile.watchHistory : [];
+            const totalWatched = Number(profile.totalWatched || history.length || 0);
+            document.getElementById('totalWatchedCount').textContent = String(totalWatched);
+
+            const reminders = Array.isArray(profile.reminders) ? profile.reminders : [];
+            document.getElementById('remindersCountVal').textContent = String(reminders.length);
+
+            renderTopTwoCategories(profile.categoryCounts || {});
+            renderWatchHistory(history);
+
+            document.getElementById('displayNameInput').value = safeName;
+            document.getElementById('nameColorInput').value = safeColor;
+            document.getElementById('avatarUrlInput').value = safeAvatar;
+            window.updateLivePreview();
+        }
+
+        window.handleSaveProfile = async function (e) {
+            e.preventDefault();
+            if (!activeProfile) return;
+
+            const nextName = (document.getElementById('displayNameInput')?.value || '').trim() || 'Member';
+            const nextColor = document.getElementById('nameColorInput')?.value || '#38bdf8';
+            const nextAvatar = (document.getElementById('avatarUrlInput')?.value || '').trim() || FALLBACK_AVATAR;
+            const feedback = document.getElementById('saveFeedbackMsg');
+            const saveBtn = document.getElementById('saveProfileBtn');
+
+            if (saveBtn) saveBtn.disabled = true;
+            if (feedback) {
+                feedback.style.color = '#a5b4fc';
+                feedback.textContent = 'Saving changes...';
+            }
+
+            const updated = {
+                ...activeProfile,
+                name: nextName,
+                nameColor: nextColor,
+                avatar: nextAvatar,
+                verified: true
+            };
+
+            localStorage.setItem('streamx_user', JSON.stringify(updated));
+            localStorage.setItem('chat_username', nextName);
+            populateProfileUi(updated);
+
+            if (auth.currentUser) {
+                try {
+                    await setDoc(doc(db, 'users', auth.currentUser.uid), {
+                        name: nextName,
+                        nameColor: nextColor,
+                        avatar: nextAvatar,
+                        verified: true,
+                        updatedAt: serverTimestamp()
+                    }, { merge: true });
+                } catch (err) {
+                    console.warn('[Firestore] Save fallback:', err.message);
+                }
+            }
+
+            if (saveBtn) saveBtn.disabled = false;
+            if (feedback) {
+                feedback.style.color = '#86efac';
+                feedback.textContent = 'Profile updated! Your chat name, color & avatar are now active.';
+            }
+        };
+
+        window.handleSignOut = async function () {
+            localStorage.removeItem('streamx_user');
+            try {
+                await signOut(auth);
+            } catch (e) {}
+            window.location.href = '/';
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                try {
+                    const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
+                    if (cached && (cached.uid || cached.email)) {
+                        populateProfileUi(cached);
+                        return;
+                    }
+                } catch (e) {}
+
+                document.getElementById('signOutBtn').style.display = 'none';
+                document.getElementById('memberProfileContent').style.display = 'none';
+                document.getElementById('guestStateBox').style.display = 'block';
+                return;
+            }
+
+            let baseProfile = {
+                uid: user.uid,
+                email: user.email || '',
+                name: user.displayName || (user.email ? user.email.split('@')[0] : 'Member'),
+                nameColor: '#38bdf8',
+                avatar: user.photoURL || FALLBACK_AVATAR,
+                verified: true,
+                totalWatched: 0,
+                categoryCounts: {},
+                watchHistory: [],
+                reminders: []
+            };
+
+            try {
+                const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
+                if (cached && cached.uid === user.uid) {
+                    baseProfile = { ...baseProfile, ...cached };
+                }
+            } catch (e) {}
+
+            populateProfileUi(baseProfile);
+
+            try {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                if (snap.exists()) {
+                    const merged = { ...baseProfile, ...snap.data(), uid: user.uid, verified: true };
+                    localStorage.setItem('streamx_user', JSON.stringify(merged));
+                    populateProfileUi(merged);
+                }
+            } catch (err) {
+                console.warn('[Firestore] Profile read fallback:', err.message);
+            }
+        });
+    </script>
+</body>
+</html>
