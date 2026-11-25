@@ -78,14 +78,24 @@
         }
 
         .nav-links {
-            list-style: none; display: flex; gap: 18px; margin: 0; padding: 0; align-items: center;
+            list-style: none; display: flex; gap: 14px; margin: 0; padding: 0; align-items: center;
         }
 
         .nav-links a {
-            color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px;
-            display: flex; align-items: center; gap: 6px; transition: color 0.2s ease;
+            color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 13.5px;
+            display: inline-flex; align-items: center; gap: 6px; transition: color 0.2s ease;
         }
         .nav-links a:hover { color: #fff; }
+
+        .nav-profile-badge {
+            background: rgba(99, 102, 241, 0.16);
+            border: 1px solid rgba(129, 140, 248, 0.4);
+            padding: 6px 11px;
+            border-radius: 10px;
+            color: #fff !important;
+            font-weight: 800 !important;
+            font-size: 12px !important;
+        }
 
         .container {
             position: relative;
@@ -610,6 +620,12 @@
         <a href="/" class="logo"><i class="fa-solid fa-play" style="color: var(--primary-color); font-size: 18px;"></i> STREAMX</a>
         <ul class="nav-links">
             <li><a href="/"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li>
+                <a href="/profile.html" class="nav-profile-badge" id="navAuthLink">
+                    <i class="fa-solid fa-right-to-bracket" id="navAuthIcon"></i>
+                    <span id="navAuthLabel">Sign In</span>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -673,6 +689,168 @@
         <a href="/category/basketball" class="bottom-nav-item" id="navBasketball"><i class="fa-solid fa-basketball"></i><span>Basketball</span></a>
         <a href="/category/motorsports" class="bottom-nav-item" id="navMotorsports"><i class="fa-solid fa-flag-checkered"></i><span>Motorsports</span></a>
     </nav>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            arrayUnion,
+            arrayRemove,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgKbo_M5Nr-hCxB08LeEbnSECdqkZ8JXw",
+            authDomain: "streamx-98c47.firebaseapp.com",
+            projectId: "streamx-98c47",
+            storageBucket: "streamx-98c47.firebasestorage.app",
+            messagingSenderId: "1069598060706",
+            appId: "1:1069598060706:web:82103ec37e800884eb27fb",
+            measurementId: "G-FW8DVLR3EJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentMember = null;
+
+        function updateNavAuthUi(profile) {
+            const linkEl = document.getElementById('navAuthLink');
+            const iconEl = document.getElementById('navAuthIcon');
+            const labelEl = document.getElementById('navAuthLabel');
+            if (!linkEl || !iconEl || !labelEl) return;
+
+            if (profile && (profile.uid || profile.name)) {
+                linkEl.href = '/profile.html';
+                iconEl.className = 'fa-solid fa-user-check';
+                labelEl.textContent = profile.name || 'Profile';
+                labelEl.style.color = profile.nameColor || '#ffffff';
+            } else {
+                linkEl.href = '/';
+                iconEl.className = 'fa-solid fa-right-to-bracket';
+                labelEl.textContent = 'Sign In';
+                labelEl.style.color = '#ffffff';
+            }
+        }
+
+        async function syncRemindersFromFirestore(uid, firestoreReminders = []) {
+            const list = Array.isArray(firestoreReminders) ? firestoreReminders : [];
+            const activeIds = new Set(list.map(r => String(r.matchId || '')));
+
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith('streamx_notif_')) {
+                    const encodedId = key.replace('streamx_notif_', '');
+                    const decodedId = decodeURIComponent(encodedId);
+                    localStorage.setItem(key, activeIds.has(decodedId) ? 'true' : 'false');
+                }
+            });
+
+            list.forEach(r => {
+                if (r && r.matchId) {
+                    localStorage.setItem(`streamx_notif_${encodeURIComponent(r.matchId)}`, 'true');
+                }
+            });
+
+            if (typeof window.renderMatches === 'function') {
+                window.renderMatches();
+            }
+        }
+
+        window.isUserSignedInForReminder = function () {
+            if (auth.currentUser || (currentMember && currentMember.uid)) return true;
+            try {
+                const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
+                return Boolean(cached && cached.uid);
+            } catch (e) {
+                return false;
+            }
+        };
+
+        window.persistReminderToFirestore = async function (matchId, matchTitle, isAdded) {
+            const uid = (auth.currentUser && auth.currentUser.uid) || (currentMember && currentMember.uid);
+            if (!uid) return;
+
+            const userRef = doc(db, 'users', uid);
+            const reminderEntry = {
+                matchId: String(matchId),
+                title: String(matchTitle || 'Upcoming Match'),
+                category: String(window.__streamxCategory || 'sports')
+            };
+
+            try {
+                let existingReminders = [];
+                const snap = await getDoc(userRef);
+                if (snap.exists() && Array.isArray(snap.data().reminders)) {
+                    existingReminders = snap.data().reminders;
+                }
+
+                const filtered = existingReminders.filter(item => String(item.matchId) !== String(matchId));
+                if (isAdded) {
+                    filtered.unshift({
+                        ...reminderEntry,
+                        savedAt: new Date().toISOString()
+                    });
+                }
+
+                await setDoc(userRef, {
+                    reminders: filtered,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+
+                try {
+                    const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null') || {};
+                    if (cached.uid === uid) {
+                        cached.reminders = filtered;
+                        localStorage.setItem('streamx_user', JSON.stringify(cached));
+                    }
+                } catch (e) {}
+            } catch (err) {
+                console.warn('[Firestore] Reminder sync error:', err.message);
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                currentMember = null;
+                updateNavAuthUi(null);
+                return;
+            }
+
+            let profile = {
+                uid: user.uid,
+                name: user.displayName || (user.email ? user.email.split('@')[0] : 'Member'),
+                nameColor: '#38bdf8'
+            };
+
+            try {
+                const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
+                if (cached && cached.uid === user.uid) {
+                    profile = { ...profile, ...cached };
+                }
+            } catch (e) {}
+
+            currentMember = profile;
+            updateNavAuthUi(profile);
+
+            try {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                if (snap.exists()) {
+                    const data = snap.data() || {};
+                    currentMember = { ...profile, ...data, uid: user.uid };
+                    localStorage.setItem('streamx_user', JSON.stringify(currentMember));
+                    updateNavAuthUi(currentMember);
+                    await syncRemindersFromFirestore(user.uid, data.reminders || []);
+                }
+            } catch (err) {
+                console.warn('[Firestore] Reminder load fallback:', err.message);
+            }
+        });
+    </script>
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
@@ -802,6 +980,7 @@
             : (new URLSearchParams(window.location.search).get('cat') || 'cricket');
 
         const cat = rawCat.replace(/-/g, ' ').trim().toLowerCase();
+        window.__streamxCategory = cat;
 
         document.getElementById('categoryTitle').innerText = `${cat.toUpperCase()} MATCHES`;
 
@@ -1270,7 +1449,7 @@
             });
         }
 
-        function renderMatches() {
+        window.renderMatches = function renderMatches() {
             const searchQuery = document.getElementById('searchInput').value.toLowerCase().trim();
             const liveGrid = document.getElementById('liveMatchesGrid');
             const upcomingGrid = document.getElementById('upcomingMatchesGrid');
@@ -1318,7 +1497,7 @@
             } else {
                 upcomingGrid.innerHTML = upcomingList.map(match => createUpcomingHorizontalCardHTML(match)).join('');
             }
-        }
+        };
 
         function createLiveVerticalCardHTML(match) {
             return `
@@ -1419,6 +1598,11 @@
         });
 
         function toggleNotification(matchId, matchTitle, bellBtnEl) {
+            if (typeof window.isUserSignedInForReminder === 'function' && !window.isUserSignedInForReminder()) {
+                showNotificationAlert("Sign in first to set match reminders!");
+                return;
+            }
+
             const bellBtn = bellBtnEl || document.querySelector(`[data-bell-id="${CSS.escape(matchId)}"]`);
             if (!bellBtn) return;
             const bellIcon = bellBtn.querySelector('i');
@@ -1434,6 +1618,10 @@
                 bellBtn.classList.remove('active');
                 if (bellIcon) bellIcon.className = 'fa-regular fa-bell';
                 showNotificationAlert(`Reminder removed.`);
+            }
+
+            if (typeof window.persistReminderToFirestore === 'function') {
+                window.persistReminderToFirestore(matchId, matchTitle, newState);
             }
         }
 
