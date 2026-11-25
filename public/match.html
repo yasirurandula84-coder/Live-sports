@@ -64,7 +64,31 @@
             border-bottom: 1px solid var(--border-color);
             position: sticky; top: 0; z-index: 1000;
             display: flex; justify-content: space-between; align-items: center;
-            padding: 15px 30px;
+            padding: 15px 30px; gap: 12px;
+        }
+
+        .nav-links {
+            list-style: none; display: flex; margin: 0; padding: 0; align-items: center; gap: 12px;
+        }
+
+        .nav-profile-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 11px 5px 5px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(129, 140, 248, 0.38);
+            color: #fff;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .nav-profile-pill img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
         }
 
         .container {
@@ -712,7 +736,33 @@
             padding: 10px 14px; border-radius: 12px; font-size: 13px; position: relative;
             animation: fadeIn 0.3s ease;
         }
-        .msg-user { font-weight: 700; margin-bottom: 4px; }
+        .msg-user {
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+        .msg-author-left {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            min-width: 0;
+        }
+        .chat-mini-avatar {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            flex-shrink: 0;
+        }
+        .chat-verified-badge {
+            color: #38bdf8;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
 
         /* Chat-Scoped Reactions Floating Layer (Only inside .chat-box, never over video) */
         .chat-box-reactions-layer {
@@ -961,8 +1011,14 @@
 
     <nav class="navbar">
         <a href="/" class="logo" style="font-weight: 800; background: linear-gradient(to right, #fff, #a5b4fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-decoration: none; font-size: 20px;">STREAMX</a>
-        <ul class="nav-links" style="list-style: none; display: flex; margin: 0; padding: 0;">
+        <ul class="nav-links">
             <li><a href="/" style="color: #cbd5e1; text-decoration: none; font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-house"></i> Home</a></li>
+            <li>
+                <a href="/profile.html" class="nav-profile-pill" id="matchNavProfileLink">
+                    <img id="matchNavAvatar" src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Avatar" style="display: none;">
+                    <span id="matchNavLabel">Sign In</span>
+                </a>
+            </li>
         </ul>
     </nav>
 
@@ -1171,6 +1227,189 @@
         </footer>
     </div>
 
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+        import {
+            getFirestore,
+            doc,
+            getDoc,
+            setDoc,
+            serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+        const FALLBACK_AVATAR = "https://i.ibb.co/ymmmPBWw/1793782216727.jpg";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAgKbo_M5Nr-hCxB08LeEbnSECdqkZ8JXw",
+            authDomain: "streamx-98c47.firebaseapp.com",
+            projectId: "streamx-98c47",
+            storageBucket: "streamx-98c47.firebasestorage.app",
+            messagingSenderId: "1069598060706",
+            appId: "1:1069598060706:web:82103ec37e800884eb27fb",
+            measurementId: "G-FW8DVLR3EJ"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        let currentMemberProfile = null;
+        let recordedWatchKey = "";
+
+        function applyMatchNavbarProfile(profile) {
+            const linkEl = document.getElementById('matchNavProfileLink');
+            const avatarEl = document.getElementById('matchNavAvatar');
+            const labelEl = document.getElementById('matchNavLabel');
+            if (!linkEl || !labelEl) return;
+
+            if (profile && (profile.uid || profile.name)) {
+                linkEl.href = '/profile.html';
+                labelEl.textContent = profile.name || 'Profile';
+                labelEl.style.color = profile.nameColor || '#38bdf8';
+                if (avatarEl) {
+                    avatarEl.style.display = 'inline-block';
+                    avatarEl.src = profile.avatar || FALLBACK_AVATAR;
+                    avatarEl.onerror = function () { this.src = FALLBACK_AVATAR; };
+                }
+            } else {
+                linkEl.href = '/';
+                labelEl.textContent = 'Sign In';
+                labelEl.style.color = '#ffffff';
+                if (avatarEl) avatarEl.style.display = 'none';
+            }
+        }
+
+        window.getActiveMemberChatProfile = function () {
+            if (currentMemberProfile && (currentMemberProfile.uid || currentMemberProfile.name)) {
+                return {
+                    uid: currentMemberProfile.uid || '',
+                    name: currentMemberProfile.name || 'Member',
+                    nameColor: currentMemberProfile.nameColor || '#38bdf8',
+                    avatar: currentMemberProfile.avatar || FALLBACK_AVATAR,
+                    verified: true
+                };
+            }
+            try {
+                const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
+                if (cached && (cached.uid || cached.email)) {
+                    return {
+                        uid: cached.uid || '',
+                        name: cached.name || 'Member',
+                        nameColor: cached.nameColor || '#38bdf8',
+                        avatar: cached.avatar || FALLBACK_AVATAR,
+                        verified: true
+                    };
+                }
+            } catch (e) {}
+            return null;
+        };
+
+        window.recordMatchWatchedIfSignedIn = async function (matchMeta = {}) {
+            const member = window.getActiveMemberChatProfile();
+            const uid = (auth.currentUser && auth.currentUser.uid) || (member && member.uid);
+            if (!uid) return;
+
+            const matchKey = `${uid}::${matchMeta.matchId || ''}`;
+            if (!matchMeta.matchId || recordedWatchKey === matchKey) return;
+            recordedWatchKey = matchKey;
+
+            const title = (matchMeta.title || document.getElementById('matchTitle')?.innerText || 'Live Match').trim();
+            const category = (matchMeta.category || (matchMeta.isLiveTv ? 'live tv' : 'sports')).trim().toLowerCase();
+            const watchedAt = new Date().toLocaleString();
+
+            const userRef = doc(db, 'users', uid);
+            try {
+                const snap = await getDoc(userRef);
+                const existing = snap.exists() ? (snap.data() || {}) : {};
+                const prevHistory = Array.isArray(existing.watchHistory) ? existing.watchHistory : [];
+                const alreadyLogged = prevHistory.some(h => String(h.matchId || '') === String(matchMeta.matchId));
+
+                if (alreadyLogged) return;
+
+                const nextTotal = Number(existing.totalWatched || prevHistory.length || 0) + 1;
+                const nextCounts = { ...(existing.categoryCounts || {}) };
+                nextCounts[category] = Number(nextCounts[category] || 0) + 1;
+
+                const nextHistory = [
+                    {
+                        matchId: String(matchMeta.matchId),
+                        title,
+                        category,
+                        watchedAt
+                    },
+                    ...prevHistory
+                ].slice(0, 50);
+
+                await setDoc(userRef, {
+                    totalWatched: nextTotal,
+                    categoryCounts: nextCounts,
+                    watchHistory: nextHistory,
+                    updatedAt: serverTimestamp()
+                }, { merge: true });
+
+                try {
+                    const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null') || {};
+                    if (cached.uid === uid) {
+                        cached.totalWatched = nextTotal;
+                        cached.categoryCounts = nextCounts;
+                        cached.watchHistory = nextHistory;
+                        localStorage.setItem('streamx_user', JSON.stringify(cached));
+                    }
+                } catch (e) {}
+            } catch (err) {
+                console.warn('[Firestore] Watch history error:', err.message);
+            }
+        };
+
+        onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                currentMemberProfile = null;
+                applyMatchNavbarProfile(null);
+                return;
+            }
+
+            let profile = {
+                uid: user.uid,
+                email: user.email || '',
+                name: user.displayName || (user.email ? user.email.split('@')[0] : 'Member'),
+                nameColor: '#38bdf8',
+                avatar: user.photoURL || FALLBACK_AVATAR,
+                verified: true
+            };
+
+            try {
+                const cached = JSON.parse(localStorage.getItem('streamx_user') || 'null');
+                if (cached && cached.uid === user.uid) {
+                    profile = { ...profile, ...cached };
+                }
+            } catch (e) {}
+
+            currentMemberProfile = profile;
+            localStorage.setItem('chat_username', profile.name);
+            applyMatchNavbarProfile(profile);
+
+            if (typeof window.onMemberAuthReady === 'function') {
+                window.onMemberAuthReady(profile);
+            }
+
+            try {
+                const snap = await getDoc(doc(db, 'users', user.uid));
+                if (snap.exists()) {
+                    currentMemberProfile = { ...profile, ...snap.data(), uid: user.uid, verified: true };
+                    localStorage.setItem('streamx_user', JSON.stringify(currentMemberProfile));
+                    localStorage.setItem('chat_username', currentMemberProfile.name);
+                    applyMatchNavbarProfile(currentMemberProfile);
+                    if (typeof window.onMemberAuthReady === 'function') {
+                        window.onMemberAuthReady(currentMemberProfile);
+                    }
+                }
+            } catch (err) {
+                console.warn('[Firestore] Member profile load fallback:', err.message);
+            }
+        });
+    </script>
+
     <script src="/socket.io/socket.io.js"></script>
     <script>
         const SPORTS_JSON_URL = "https://raw.githubusercontent.com/sm-monirulislam/Upcoming-and-Live-Sports-Data/refs/heads/main/Sports_data.json";
@@ -1220,6 +1459,14 @@
             } catch (e) {
                 return String(val);
             }
+        }
+
+        function escapeHtmlText(str) {
+            return String(str || '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
         }
 
         function getFlagUrlByTeamName(teamName) {
@@ -1369,7 +1616,6 @@
         let lastSmoothVideoTime = -1;
         let smoothAdvanceTicks = 0;
 
-        // Clean Share Link (no stream URL, token, or extra query params)
         function getCleanShareUrl() {
             const baseOrigin = window.location.hostname.includes('streamx.website')
                 ? CANONICAL_SITE_ORIGIN
@@ -1416,7 +1662,6 @@
             });
         }
 
-        // YouTube-Style Reaction Dropdown Toggle (Top-to-Bottom)
         function setReactionDropdownOpen(open) {
             if (!ytReactionDropdown || !reactionsMenuBtn) return;
             ytReactionDropdown.classList.toggle('open', open);
@@ -1432,7 +1677,6 @@
             });
         }
 
-        // Float ONLY inside Chat Box (from touched point/bottom up to the top of the chat box, never over video)
         function spawnChatBoxReaction(data, customLeftPct) {
             if (!chatBoxReactionsLayer || !data || !data.emoji) return;
             const el = document.createElement('div');
@@ -1981,6 +2225,15 @@
                 document.getElementById('matchTitle').innerText = finalTitle;
                 document.title = `${finalTitle} - StreamX`;
 
+                if (typeof window.recordMatchWatchedIfSignedIn === 'function') {
+                    window.recordMatchWatchedIfSignedIn({
+                        matchId: matchedCh.id || matchId,
+                        title: finalTitle,
+                        category: 'live tv',
+                        isLiveTv: true
+                    });
+                }
+
                 const tvObj = {
                     id: matchedCh.id,
                     name: finalTitle,
@@ -2027,7 +2280,7 @@
                         safeDecodeValue(slugId) === matchId ||
                         (queryTitle && title.toLowerCase() === queryTitle.toLowerCase())
                     ) {
-                        matched = { raw: m, title, teamA: tA, teamB: tB, flagA: info.teamAFlag, flagB: info.teamBFlag, info };
+                        matched = { raw: m, slugId, category: m.Category || 'sports', title, teamA: tA, teamB: tB, flagA: info.teamAFlag, flagB: info.teamBFlag, info };
                     }
                 });
 
@@ -2039,9 +2292,12 @@
                         const info = m.eventInfo || {};
                         const tA = info.teamA || m.event_name || "Team A";
                         const tB = info.teamB || "Team B";
+                        const title = m.event_name || `${tA} Vs ${tB}`;
                         matched = {
                             raw: m,
-                            title: m.event_name || `${tA} Vs ${tB}`,
+                            slugId: buildSlugId(m.Category, idxToUse, title),
+                            category: m.Category || 'sports',
+                            title,
                             teamA: tA,
                             teamB: tB,
                             flagA: info.teamAFlag,
@@ -2056,6 +2312,15 @@
 
                 if (!queryTitle) {
                     document.getElementById('matchTitle').innerText = matched.title;
+                }
+
+                if (typeof window.recordMatchWatchedIfSignedIn === 'function') {
+                    window.recordMatchWatchedIfSignedIn({
+                        matchId: matched.slugId || matchId,
+                        title: matched.title,
+                        category: matched.category,
+                        isLiveTv: false
+                    });
                 }
 
                 if (matched.teamA || matched.teamB || matched.flagA || matched.flagB) {
@@ -2457,7 +2722,6 @@
             syncAudioUiState();
         });
 
-        // Fullscreen Chat Drawer Toggle
         function setFullscreenChatOpen(open) {
             if (!fsChatDrawer || !fsChatToggleBtn) return;
             if (open) {
@@ -2536,7 +2800,7 @@
         playerContainer.addEventListener('mousemove', showControls);
         playerContainer.addEventListener('touchstart', showControls);
 
-        // Chat & Room Logic
+        // Chat & Room Logic with Member Avatar, Name Color & Verified Badge
         const modal = document.getElementById('usernameModal');
         const usernameInput = document.getElementById('usernameInput');
         const joinBtn = document.getElementById('joinChatBtn');
@@ -2547,15 +2811,65 @@
 
         let hasJoinedRoom = false;
 
+        function getCurrentSenderPayload() {
+            const member = typeof window.getActiveMemberChatProfile === 'function'
+                ? window.getActiveMemberChatProfile()
+                : null;
+            if (member && member.name) {
+                return {
+                    username: member.name,
+                    nameColor: member.nameColor || '#38bdf8',
+                    avatar: member.avatar || FALLBACK_FLAG,
+                    verified: true
+                };
+            }
+            return {
+                username: username || 'Guest',
+                nameColor: '',
+                avatar: '',
+                verified: false
+            };
+        }
+
         function joinMatchRoom(userLabel) {
             if (!socket) return;
+            const sender = getCurrentSenderPayload();
+            const labelToUse = sender.verified ? sender.name : (userLabel || sender.username || 'Guest');
             if (hasJoinedRoom) {
-                if (userLabel) socket.emit('joinMatch', { matchId, username: userLabel });
+                socket.emit('joinMatch', {
+                    matchId,
+                    username: labelToUse,
+                    nameColor: sender.nameColor,
+                    avatar: sender.avatar,
+                    verified: sender.verified
+                });
                 return;
             }
             hasJoinedRoom = true;
-            socket.emit('joinMatch', { matchId, username: userLabel || 'Guest' });
+            socket.emit('joinMatch', {
+                matchId,
+                username: labelToUse,
+                nameColor: sender.nameColor,
+                avatar: sender.avatar,
+                verified: sender.verified
+            });
         }
+
+        window.onMemberAuthReady = function (memberProfile) {
+            if (memberProfile && memberProfile.name) {
+                username = memberProfile.name;
+                localStorage.setItem('chat_username', username);
+                joinMatchRoom(memberProfile.name);
+            }
+            if (activeMatchFeedItem && typeof window.recordMatchWatchedIfSignedIn === 'function') {
+                window.recordMatchWatchedIfSignedIn({
+                    matchId: activeMatchFeedItem.slugId || matchId,
+                    title: activeMatchFeedItem.title,
+                    category: activeMatchFeedItem.category,
+                    isLiveTv: false
+                });
+            }
+        };
 
         joinMatchRoom(username || 'Guest');
 
@@ -2583,7 +2897,7 @@
             modal.classList.remove('active');
 
             if (socket) {
-                socket.emit('joinMatch', { matchId, username });
+                socket.emit('joinMatch', { matchId, username, verified: false });
             }
 
             const msgToSend = pendingMessage || msgInput.value.trim() || fsMsgInput.value.trim();
@@ -2603,16 +2917,32 @@
             }
         });
 
+        function buildAuthorBadgeHtml(data) {
+            const nameText = data.username || 'User';
+            const userColor = data.nameColor || getUsernameColor(nameText);
+            const avatarHtml = data.avatar
+                ? `<img src="${escapeHtmlText(data.avatar)}" alt="${escapeHtmlText(nameText)}" class="chat-mini-avatar" referrerpolicy="no-referrer" onerror="this.style.display='none'">`
+                : '';
+            const verifiedHtml = data.verified
+                ? `<i class="fa-solid fa-circle-check chat-verified-badge" title="Verified Member"></i>`
+                : '';
+            return {
+                userColor,
+                leftHtml: `${avatarHtml}<span style="color: ${escapeHtmlText(userColor)};">${escapeHtmlText(nameText)}</span>${verifiedHtml}`
+            };
+        }
+
         function appendFullscreenMessage(data) {
             if (!fsChatMessages) return;
-            const userColor = getUsernameColor(data.username || 'User');
+            const { leftHtml } = buildAuthorBadgeHtml(data);
             const item = document.createElement('div');
             item.className = 'fs-chat-msg';
             item.innerHTML = `
-                <div style="font-weight: 700; color: ${userColor}; margin-bottom: 2px;">
-                    ${data.username} <span style="font-weight: 400; font-size: 10px; color: #9ca3af; float: right;">${data.time || ''}</span>
+                <div style="font-weight: 700; margin-bottom: 2px; display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                    <span class="msg-author-left">${leftHtml}</span>
+                    <span style="font-weight: 400; font-size: 10px; color: #9ca3af;">${escapeHtmlText(data.time || '')}</span>
                 </div>
-                <div style="color: #e5e7eb; word-break: break-word;">${data.message}</div>
+                <div style="color: #e5e7eb; word-break: break-word;">${escapeHtmlText(data.message || '')}</div>
             `;
             fsChatMessages.appendChild(item);
             fsChatMessages.scrollTop = fsChatMessages.scrollHeight;
@@ -2621,10 +2951,11 @@
         function renderMessage(data) {
             let replyHtml = '';
             if (data.replyTo) {
+                const replyColor = data.replyTo.nameColor || getUsernameColor(data.replyTo.username || 'User');
                 replyHtml = `
                     <div style="background: rgba(99, 102, 241, 0.15); border-left: 3px solid #6366f1; padding: 4px 8px; margin-bottom: 6px; border-radius: 4px; font-size: 11px; color: #cbd5e1;">
-                        <strong style="color: ${getUsernameColor(data.replyTo.username)};">${data.replyTo.username}</strong>
-                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${data.replyTo.message}</div>
+                        <strong style="color: ${escapeHtmlText(replyColor)};">${escapeHtmlText(data.replyTo.username)}</strong>
+                        <div style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #9ca3af;">${escapeHtmlText(data.replyTo.message)}</div>
                     </div>
                 `;
             }
@@ -2632,23 +2963,23 @@
             const safeMsgId = data.id || ('msg_' + Math.random());
             const safeText = (data.message || '').replace(/'/g, "\\'");
             const safeUser = (data.username || '').replace(/'/g, "\\'");
-            const userColor = getUsernameColor(data.username || 'User');
+            const { leftHtml } = buildAuthorBadgeHtml(data);
 
             chatMessages.innerHTML += `
-                <div class="message" data-msg-id="${safeMsgId}">
+                <div class="message" data-msg-id="${escapeHtmlText(safeMsgId)}">
                     ${replyHtml}
-                    <div class="msg-user" style="color: ${userColor};">
-                        ${data.username} 
-                        <span style="font-weight:normal; font-size:11px; color:#9ca3af; float:right;">${data.time || ''}</span>
+                    <div class="msg-user">
+                        <span class="msg-author-left">${leftHtml}</span>
+                        <span style="font-weight:normal; font-size:11px; color:#9ca3af; margin-right: 16px;">${escapeHtmlText(data.time || '')}</span>
                     </div>
-                    <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${data.message}</div>
+                    <div style="color: #e2e8f0; display: inline-block; width: 85%; word-break: break-word;">${escapeHtmlText(data.message || '')}</div>
                     
-                    <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${safeMsgId}')">
+                    <div style="position: absolute; right: 10px; top: 10px; cursor: pointer; color: #9ca3af; padding: 2px 6px;" onclick="toggleMsgMenu('${escapeHtmlText(safeMsgId)}')">
                         <i class="fa-solid fa-ellipsis-vertical"></i>
                     </div>
                     
-                    <div id="menu-${safeMsgId}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
-                        <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${safeMsgId}', '${safeUser}', '${safeText}')">
+                    <div id="menu-${escapeHtmlText(safeMsgId)}" style="display: none; position: absolute; right: 25px; top: 25px; background: #1f1f2e; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; box-shadow: 0 5px 15px rgba(0,0,0,0.5); z-index: 10; padding: 5px 0;">
+                        <div style="padding: 6px 15px; font-size: 12px; color: #fff; cursor: pointer; white-space: nowrap;" onclick="setReply('${escapeHtmlText(safeMsgId)}', '${escapeHtmlText(safeUser)}', '${escapeHtmlText(safeText)}')">
                             <i class="fa-solid fa-reply"></i> Reply
                         </div>
                     </div>
@@ -2675,12 +3006,23 @@
         }
 
         function sendChatMessage(msg) {
+            const sender = getCurrentSenderPayload();
             if (socket) {
-                socket.emit('chatMessage', { message: msg, replyTo: replyingTo });
+                socket.emit('chatMessage', {
+                    message: msg,
+                    replyTo: replyingTo,
+                    username: sender.username,
+                    nameColor: sender.nameColor,
+                    avatar: sender.avatar,
+                    verified: sender.verified
+                });
             } else {
                 renderMessage({
                     id: 'local_' + Date.now(),
-                    username: username || 'You',
+                    username: sender.username || 'You',
+                    nameColor: sender.nameColor,
+                    avatar: sender.avatar,
+                    verified: sender.verified,
                     message: msg,
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                     replyTo: replyingTo
@@ -2691,12 +3033,19 @@
             cancelReply();
         }
 
+        function hasAnyChatIdentity() {
+            const member = typeof window.getActiveMemberChatProfile === 'function'
+                ? window.getActiveMemberChatProfile()
+                : null;
+            return Boolean((member && member.name) || username);
+        }
+
         chatForm.addEventListener('submit', (e) => {
             e.preventDefault();
             const msg = msgInput.value.trim();
             if (!msg) return;
 
-            if (!username) {
+            if (!hasAnyChatIdentity()) {
                 openUsernameModal(msg);
                 return;
             }
@@ -2710,7 +3059,7 @@
                 const msg = fsMsgInput.value.trim();
                 if (!msg) return;
 
-                if (!username) {
+                if (!hasAnyChatIdentity()) {
                     if (document.fullscreenElement) {
                         document.exitFullscreen().catch(() => {});
                     }
@@ -2743,7 +3092,7 @@
 
             previewBar.innerHTML = `
                 <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 90%;">
-                    <i class="fa-solid fa-reply" style="color: #6366f1;"></i> Replying to <strong style="color: ${getUsernameColor(username)};">${username}</strong>: <span style="color: #9ca3af;">${messageText}</span>
+                    <i class="fa-solid fa-reply" style="color: #6366f1;"></i> Replying to <strong style="color: ${getUsernameColor(username)};">${escapeHtmlText(username)}</strong>: <span style="color: #9ca3af;">${escapeHtmlText(messageText)}</span>
                 </div>
                 <i class="fa-solid fa-xmark" style="cursor: pointer; font-size: 14px; padding: 4px;" onclick="cancelReply()"></i>
             `;
