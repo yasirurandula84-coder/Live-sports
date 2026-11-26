@@ -236,13 +236,33 @@ function parseM3uPlaylist(rawText) {
 // --- 6-Digit Gmail Verification Code (OTP) System ---
 const emailOtpStore = new Map(); // email -> { code, expiresAt, attempts, resendAfter }
 
+const gmailUser = (process.env.GMAIL_USER || '').trim();
+const gmailAppPassword = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
+
 const mailTransporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000,
     auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD
+        user: gmailUser,
+        pass: gmailAppPassword
     }
 });
+
+if (gmailUser && gmailAppPassword) {
+    mailTransporter.verify((err) => {
+        if (err) {
+            console.error('[SMTP VERIFY FAILED]:', err.message);
+        } else {
+            console.log('[SMTP READY] Gmail transporter connected.');
+        }
+    });
+} else {
+    console.warn('[SMTP WARNING] GMAIL_USER or GMAIL_APP_PASSWORD is missing.');
+}
 
 app.post('/api/auth/send-code', async (req, res) => {
     const email = String((req.body && req.body.email) || '').trim().toLowerCase();
@@ -252,7 +272,7 @@ app.post('/api/auth/send-code', async (req, res) => {
         return res.status(400).json({ ok: false, error: 'Please enter a valid email address.' });
     }
 
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    if (!gmailUser || !gmailAppPassword) {
         return res.status(500).json({ ok: false, error: 'Server email sender is not configured yet.' });
     }
 
@@ -273,7 +293,7 @@ app.post('/api/auth/send-code', async (req, res) => {
 
     try {
         await mailTransporter.sendMail({
-            from: `"StreamX" <${process.env.GMAIL_USER}>`,
+            from: `"StreamX" <${gmailUser}>`,
             to: email,
             subject: `${code} is your StreamX verification code`,
             html: `
@@ -292,7 +312,7 @@ app.post('/api/auth/send-code', async (req, res) => {
     } catch (err) {
         console.error('[OTP-MAIL] Error:', err.message);
         emailOtpStore.delete(email);
-        return res.status(502).json({ ok: false, error: 'Failed to send verification email. Check the email address.' });
+        return res.status(502).json({ ok: false, error: `Email send failed: ${err.message}` });
     }
 });
 
