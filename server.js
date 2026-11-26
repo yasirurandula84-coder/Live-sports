@@ -241,8 +241,9 @@ const gmailAppPassword = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, 
 
 const mailTransporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 465,
-    secure: true,
+    port: 587,
+    secure: false, // true for 465, false for 587
+    requireTLS: true,
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 15000,
