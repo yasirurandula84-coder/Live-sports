@@ -404,19 +404,41 @@
             min-height: 18px;
             color: #fca5a5;
         }
-        .otp-action-btn {
-            display: inline-block;
-            background: rgba(99, 102, 241, 0.22);
-            border: 1px solid rgba(165, 180, 252, 0.45);
-            color: #e0e7ff;
-            border-radius: 8px;
-            padding: 5px 10px;
+        .verify-pending-box {
+            display: none;
+            margin-top: 10px;
+            padding: 12px;
+            border-radius: 12px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(165, 180, 252, 0.35);
+            text-align: center;
+            font-size: 12px;
+            color: #e2e8f0;
+            line-height: 1.5;
+        }
+        .verify-action-row {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .verify-action-btn {
+            background: rgba(99, 102, 241, 0.25);
+            border: 1px solid rgba(165, 180, 252, 0.5);
+            color: #fff;
+            border-radius: 9px;
+            padding: 6px 11px;
             font-size: 11.5px;
             font-weight: 700;
             cursor: pointer;
         }
-        .otp-action-btn:hover {
-            background: rgba(99, 102, 241, 0.35);
+        .verify-action-btn.primary {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            border-color: rgba(74, 222, 128, 0.6);
+        }
+        .verify-action-btn:hover {
+            filter: brightness(1.1);
         }
 
         .container {
@@ -1134,7 +1156,7 @@
                 <i class="fa-solid fa-right-to-bracket"></i> Sign In
             </button>
 
-            <a href="/profile.html" class="nav-user-pill" id="navUserPill" style="display: none;" title="Open Profile">
+            <a href="/profile" class="nav-user-pill" id="navUserPill" style="display: none;" title="Open Profile">
                 <img src="https://i.ibb.co/ymmmPBWw/1793782216727.jpg" alt="Avatar" class="nav-user-avatar" id="navUserAvatar">
                 <span id="navUserName">Member</span>
                 <i class="fa-solid fa-circle-check nav-verified-icon" title="Verified Member"></i>
@@ -1155,13 +1177,13 @@
             </button>
         </div>
         <a href="/" class="drawer-link active"><i class="fa-solid fa-house"></i> Home</a>
-        <a href="/profile.html" class="drawer-link"><i class="fa-solid fa-user-check"></i> My Profile</a>
-        <a href="/ranking.html" class="drawer-link"><i class="fa-solid fa-trophy"></i> Cricket Ranking</a>
+        <a href="/profile" class="drawer-link"><i class="fa-solid fa-user-check"></i> My Profile</a>
+        <a href="/ranking" class="drawer-link"><i class="fa-solid fa-trophy"></i> Cricket Ranking</a>
         <a href="https://t.me/your_streamx_group" target="_blank" rel="noopener noreferrer" class="drawer-link"><i class="fa-brands fa-telegram" style="color: #38bdf8;"></i> Telegram Group</a>
         <button type="button" class="drawer-link" style="width: 100%; cursor: pointer; text-align: left;" onclick="toggleRightDrawer(false); openPrivacyModal();"><i class="fa-solid fa-shield-halved" style="color: #a5b4fc;"></i> Privacy Policy</button>
     </aside>
 
-    <!-- Sign In / Sign Up Modal (Google One-Click + 6-Digit Gmail OTP Verification) -->
+    <!-- Sign In / Sign Up Modal (Google One-Click + Firebase Email Verification Link) -->
     <div class="auth-overlay" id="authOverlay" role="dialog" aria-modal="true" aria-labelledby="authModalTitle">
         <div class="auth-modal">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;">
@@ -1199,22 +1221,21 @@
                     <input type="password" id="authPassword" placeholder="At least 6 characters" required minlength="6">
                 </div>
 
-                <!-- 6-Digit Verification Code Box (Shown after sending code) -->
-                <div class="auth-field" id="authCodeField" style="display: none;">
-                    <label for="authOtpCode">6-Digit Gmail Verification Code</label>
-                    <input type="text" id="authOtpCode" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="123456" style="letter-spacing: 6px; font-size: 18px; font-weight: 800; text-align: center;">
-                </div>
-
                 <button type="submit" class="auth-submit-btn" id="authSubmitBtn">Sign In</button>
                 <div class="auth-status-msg" id="authStatusMsg"></div>
 
-                <div id="otpExtraActions" style="display: none; text-align: center; margin-top: 6px;">
-                    <button type="button" class="otp-action-btn" id="resendOtpBtn" onclick="sendOtpToEmail()">
-                        <i class="fa-solid fa-rotate-right"></i> Resend Code
-                    </button>
-                    <button type="button" class="otp-action-btn" style="margin-left: 6px;" onclick="resetRegisterOtpStep()">
-                        Change Email
-                    </button>
+                <div class="verify-pending-box" id="verifyPendingBox">
+                    <div id="verifyPendingText">
+                        Verification link sent to your Gmail. Open your email (or Spam folder), click the verification button/link, then click below:
+                    </div>
+                    <div class="verify-action-row">
+                        <button type="button" class="verify-action-btn primary" id="checkVerifiedBtn" onclick="checkEmailVerifiedAndFinish()">
+                            <i class="fa-solid fa-check"></i> I Have Verified
+                        </button>
+                        <button type="button" class="verify-action-btn" id="resendVerifyLinkBtn" onclick="resendVerificationLink()">
+                            <i class="fa-solid fa-rotate-right"></i> Resend Link
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -1362,6 +1383,7 @@
             signInWithPopup,
             signInWithEmailAndPassword,
             createUserWithEmailAndPassword,
+            sendEmailVerification,
             updateProfile
         } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
         import {
@@ -1390,7 +1412,8 @@
         const googleProvider = new GoogleAuthProvider();
 
         let currentAuthMode = 'login';
-        let otpStepActive = false;
+        let pendingVerificationUser = null;
+        let pendingCustomName = '';
 
         function syncUserCache(profile) {
             if (!profile) {
@@ -1491,6 +1514,13 @@
                 return;
             }
 
+            const isGoogle = firebaseUser.providerData?.some(p => p.providerId === 'google.com');
+            if (!firebaseUser.emailVerified && !isGoogle) {
+                pendingVerificationUser = firebaseUser;
+                renderNavbarAuthState(null);
+                return;
+            }
+
             syncUserCache({
                 uid: firebaseUser.uid,
                 email: firebaseUser.email || '',
@@ -1515,47 +1545,37 @@
             el.textContent = msg || '';
         }
 
-        window.resetRegisterOtpStep = function () {
-            otpStepActive = false;
-            const codeField = document.getElementById('authCodeField');
-            const codeInput = document.getElementById('authOtpCode');
-            const extraActions = document.getElementById('otpExtraActions');
-            const submitBtn = document.getElementById('authSubmitBtn');
-            const emailInput = document.getElementById('authEmail');
-
-            if (codeField) codeField.style.display = 'none';
-            if (codeInput) codeInput.value = '';
-            if (extraActions) extraActions.style.display = 'none';
-            if (emailInput) emailInput.readOnly = false;
-            if (submitBtn) {
-                submitBtn.textContent = currentAuthMode === 'register' ? 'Send Verification Code' : 'Sign In';
+        function showVerifyBox(emailText) {
+            const box = document.getElementById('verifyPendingBox');
+            const txt = document.getElementById('verifyPendingText');
+            if (txt && emailText) {
+                txt.textContent = `Verification link sent to ${emailText}. Click the button/link in your email (check Spam/Promotions if needed), then click "I Have Verified".`;
             }
-            setAuthStatus('');
-        };
+            if (box) box.style.display = 'block';
+        }
+
+        function hideVerifyBox() {
+            const box = document.getElementById('verifyPendingBox');
+            if (box) box.style.display = 'none';
+        }
 
         window.openAuthModal = function (mode = 'login') {
             currentAuthMode = mode;
-            otpStepActive = false;
+            pendingVerificationUser = null;
+            pendingCustomName = '';
             const overlay = document.getElementById('authOverlay');
             const tabLogin = document.getElementById('tabLoginBtn');
             const tabRegister = document.getElementById('tabRegisterBtn');
             const nameField = document.getElementById('authNameField');
-            const codeField = document.getElementById('authCodeField');
-            const codeInput = document.getElementById('authOtpCode');
-            const extraActions = document.getElementById('otpExtraActions');
             const submitBtn = document.getElementById('authSubmitBtn');
-            const emailInput = document.getElementById('authEmail');
 
             setAuthStatus('');
+            hideVerifyBox();
             const isLogin = mode === 'login';
             if (tabLogin) tabLogin.classList.toggle('active', isLogin);
             if (tabRegister) tabRegister.classList.toggle('active', !isLogin);
             if (nameField) nameField.style.display = isLogin ? 'none' : 'block';
-            if (codeField) codeField.style.display = 'none';
-            if (codeInput) codeInput.value = '';
-            if (extraActions) extraActions.style.display = 'none';
-            if (emailInput) emailInput.readOnly = false;
-            if (submitBtn) submitBtn.textContent = isLogin ? 'Sign In' : 'Send Verification Code';
+            if (submitBtn) submitBtn.textContent = isLogin ? 'Sign In' : 'Create Account & Send Link';
 
             if (overlay) overlay.classList.add('active');
         };
@@ -1594,46 +1614,52 @@
             }
         };
 
-        window.sendOtpToEmail = async function () {
-            const email = (document.getElementById('authEmail')?.value || '').trim().toLowerCase();
-            const customName = (document.getElementById('authDisplayName')?.value || '').trim();
-            const submitBtn = document.getElementById('authSubmitBtn');
-            const resendBtn = document.getElementById('resendOtpBtn');
-
-            if (!email) {
-                setAuthStatus('Please enter your Gmail address.', true);
+        window.resendVerificationLink = async function () {
+            const user = pendingVerificationUser || auth.currentUser;
+            const btn = document.getElementById('resendVerifyLinkBtn');
+            if (!user) {
+                setAuthStatus('Please enter your email and password again to resend.', true);
                 return;
             }
+            if (btn) btn.disabled = true;
+            try {
+                await sendEmailVerification(user);
+                setAuthStatus(`Verification link resent to ${user.email}!`, false);
+            } catch (err) {
+                setAuthStatus(err.message || 'Could not resend verification link.', true);
+            } finally {
+                if (btn) btn.disabled = false;
+            }
+        };
 
-            if (submitBtn) submitBtn.disabled = true;
-            if (resendBtn) resendBtn.disabled = true;
-            setAuthStatus('Sending 6-digit code to your Gmail...', false);
+        window.checkEmailVerifiedAndFinish = async function () {
+            const user = pendingVerificationUser || auth.currentUser;
+            const btn = document.getElementById('checkVerifiedBtn');
+            if (!user) {
+                setAuthStatus('Session not found. Please sign in or create account again.', true);
+                return;
+            }
+            if (btn) btn.disabled = true;
+            setAuthStatus('Checking email verification status...', false);
 
             try {
-                const resp = await fetch('/api/auth/send-code', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email, name: customName })
-                });
-                const data = await resp.json();
-
-                if (!resp.ok || !data.ok) {
-                    setAuthStatus(data.error || 'Failed to send verification code.', true);
+                await user.reload();
+                const freshUser = auth.currentUser || user;
+                if (!freshUser.emailVerified) {
+                    setAuthStatus('Email is not verified yet. Click the link in your Gmail first.', true);
                     return;
                 }
 
-                otpStepActive = true;
-                document.getElementById('authCodeField').style.display = 'block';
-                document.getElementById('otpExtraActions').style.display = 'block';
-                document.getElementById('authEmail').readOnly = true;
-                if (submitBtn) submitBtn.textContent = 'Verify & Create Account';
-                setAuthStatus(`6-digit code sent to ${email}. Check Inbox or Spam!`, false);
-                setTimeout(() => document.getElementById('authOtpCode')?.focus(), 50);
+                const fullProfile = await loadOrCreateUserDoc(freshUser, pendingCustomName);
+                syncUserCache(fullProfile);
+                pendingVerificationUser = null;
+                pendingCustomName = '';
+                hideVerifyBox();
+                window.closeAuthModal();
             } catch (err) {
-                setAuthStatus('Network error while sending code.', true);
+                setAuthStatus(err.message || 'Failed to verify email status.', true);
             } finally {
-                if (submitBtn) submitBtn.disabled = false;
-                if (resendBtn) resendBtn.disabled = false;
+                if (btn) btn.disabled = false;
             }
         };
 
@@ -1649,45 +1675,31 @@
                 return;
             }
 
-            if (currentAuthMode === 'register' && !otpStepActive) {
-                await window.sendOtpToEmail();
-                return;
-            }
-
             if (submitBtn) submitBtn.disabled = true;
+            setAuthStatus('');
 
             try {
-                if (currentAuthMode === 'register' && otpStepActive) {
-                    const code = (document.getElementById('authOtpCode')?.value || '').trim();
-                    if (!/^\d{6}$/.test(code)) {
-                        setAuthStatus('Please enter the 6-digit code sent to your Gmail.', true);
-                        return;
-                    }
-
-                    setAuthStatus('Verifying code...', false);
-                    const verifyResp = await fetch('/api/auth/verify-code', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ email, code })
-                    });
-                    const verifyData = await verifyResp.json();
-
-                    if (!verifyResp.ok || !verifyData.ok) {
-                        setAuthStatus(verifyData.error || 'Invalid verification code.', true);
-                        return;
-                    }
-
-                    setAuthStatus('Code verified! Creating your account...', false);
+                if (currentAuthMode === 'register') {
+                    pendingCustomName = customName;
+                    setAuthStatus('Creating account & sending verification link...', false);
                     const cred = await createUserWithEmailAndPassword(auth, email, password);
                     if (customName) {
                         await updateProfile(cred.user, { displayName: customName });
                     }
-                    const fullProfile = await loadOrCreateUserDoc(cred.user, customName);
-                    syncUserCache(fullProfile);
-                    window.closeAuthModal();
+                    await sendEmailVerification(cred.user);
+                    pendingVerificationUser = cred.user;
+                    showVerifyBox(email);
+                    setAuthStatus(`Verification link sent to ${email}!`, false);
                 } else {
                     setAuthStatus('Signing in...', false);
                     const cred = await signInWithEmailAndPassword(auth, email, password);
+                    const isGoogle = cred.user.providerData?.some(p => p.providerId === 'google.com');
+                    if (!cred.user.emailVerified && !isGoogle) {
+                        pendingVerificationUser = cred.user;
+                        showVerifyBox(email);
+                        setAuthStatus('Please verify your email using the link sent to your inbox.', true);
+                        return;
+                    }
                     const fullProfile = await loadOrCreateUserDoc(cred.user, customName);
                     syncUserCache(fullProfile);
                     window.closeAuthModal();
