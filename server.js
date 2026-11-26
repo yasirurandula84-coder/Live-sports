@@ -3,7 +3,6 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
 
 const app = express();
 const server = http.createServer(app);
@@ -233,118 +232,6 @@ function parseM3uPlaylist(rawText) {
     return channels;
 }
 
-// --- 6-Digit Gmail Verification Code (OTP) System ---
-const emailOtpStore = new Map(); // email -> { code, expiresAt, attempts, resendAfter }
-
-const gmailUser = (process.env.GMAIL_USER || '').trim();
-const gmailAppPassword = (process.env.GMAIL_APP_PASSWORD || '').replace(/\s+/g, '');
-
-const mailTransporter = nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // true for 465, false for 587
-    requireTLS: true,
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000,
-    auth: {
-        user: gmailUser,
-        pass: gmailAppPassword
-    }
-});
-
-if (gmailUser && gmailAppPassword) {
-    mailTransporter.verify((err) => {
-        if (err) {
-            console.error('[SMTP VERIFY FAILED]:', err.message);
-        } else {
-            console.log('[SMTP READY] Gmail transporter connected.');
-        }
-    });
-} else {
-    console.warn('[SMTP WARNING] GMAIL_USER or GMAIL_APP_PASSWORD is missing.');
-}
-
-app.post('/api/auth/send-code', async (req, res) => {
-    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
-    const displayName = String((req.body && req.body.name) || 'Member').trim().slice(0, 30);
-
-    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        return res.status(400).json({ ok: false, error: 'Please enter a valid email address.' });
-    }
-
-    if (!gmailUser || !gmailAppPassword) {
-        return res.status(500).json({ ok: false, error: 'Server email sender is not configured yet.' });
-    }
-
-    const now = Date.now();
-    const existing = emailOtpStore.get(email);
-    if (existing && now < existing.resendAfter) {
-        const waitSec = Math.ceil((existing.resendAfter - now) / 1000);
-        return res.status(429).json({ ok: false, error: `Please wait ${waitSec}s before requesting a new code.` });
-    }
-
-    const code = String(crypto.randomInt(100000, 1000000));
-    emailOtpStore.set(email, {
-        code,
-        expiresAt: now + 10 * 60 * 1000,
-        attempts: 0,
-        resendAfter: now + 45 * 1000
-    });
-
-    try {
-        await mailTransporter.sendMail({
-            from: `"StreamX" <${gmailUser}>`,
-            to: email,
-            subject: `${code} is your StreamX verification code`,
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 460px; margin: 0 auto; background: #0f111a; color: #f8fafc; padding: 24px; border-radius: 14px; border: 1px solid #272b3f;">
-                    <h2 style="margin: 0 0 10px 0; color: #818cf8;">StreamX Verification</h2>
-                    <p style="font-size: 14px; color: #cbd5e1; line-height: 1.5;">Hi <strong>${displayName.replace(/</g, '&lt;')}</strong>, enter this 6-digit verification code to create your StreamX account:</p>
-                    <div style="margin: 20px 0; padding: 14px; text-align: center; background: #181c2e; border: 1px dashed #6366f1; border-radius: 10px; font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #ffffff;">
-                        ${code}
-                    </div>
-                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">This code expires in 10 minutes. If you didn't request this, ignore this email.</p>
-                </div>
-            `
-        });
-
-        return res.json({ ok: true, message: `6-digit code sent to ${email}` });
-    } catch (err) {
-        console.error('[OTP-MAIL] Error:', err.message);
-        emailOtpStore.delete(email);
-        return res.status(502).json({ ok: false, error: `Email send failed: ${err.message}` });
-    }
-});
-
-app.post('/api/auth/verify-code', (req, res) => {
-    const email = String((req.body && req.body.email) || '').trim().toLowerCase();
-    const code = String((req.body && req.body.code) || '').trim();
-
-    const record = emailOtpStore.get(email);
-    if (!record) {
-        return res.status(400).json({ ok: false, error: 'No verification code found. Please request a new code.' });
-    }
-
-    if (Date.now() > record.expiresAt) {
-        emailOtpStore.delete(email);
-        return res.status(400).json({ ok: false, error: 'Code expired. Please request a new code.' });
-    }
-
-    record.attempts += 1;
-    if (record.attempts > 5) {
-        emailOtpStore.delete(email);
-        return res.status(429).json({ ok: false, error: 'Too many wrong attempts. Request a new code.' });
-    }
-
-    if (record.code !== code) {
-        return res.status(400).json({ ok: false, error: 'Invalid verification code. Please try again.' });
-    }
-
-    emailOtpStore.delete(email);
-    return res.json({ ok: true });
-});
-
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -355,6 +242,10 @@ app.get('/category/:name', (req, res) => {
 
 app.get('/match', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'match.html'));
+});
+
+app.get('/profile', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'profile.html'));
 });
 
 app.get('/ranking', (req, res) => {
